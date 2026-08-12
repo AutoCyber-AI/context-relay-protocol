@@ -1,0 +1,11 @@
+{#-
+  Header logo partial override.
+  Provides descriptive alt text for the site logo while keeping the rest of
+  the Material header markup unchanged.
+-#}
+{% if config.theme.logo %}
+  <img src="{{ config.theme.logo | url }}" alt="Context Relay Protocol home" width="128" height="128" draggable="false">
+{% else %}
+  {% set icon = config.theme.icon.logo or "material/library" %}
+  {% include ".icons/" ~ icon ~ ".svg" %}
+{% endif %}

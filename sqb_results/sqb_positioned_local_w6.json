@@ -1,0 +1,45 @@
+{
+  "backends": [
+    {
+      "backend": "LOCAL\u00b7meta-llama-3.1-8b-instruct",
+      "mean_f1": 0.531,
+      "mean_repetition": 0.2058,
+      "mean_judge": 0.0,
+      "rows": [
+        {
+          "case": "sqb-001",
+          "domain": "technical",
+          "words": 2380,
+          "windows": 6,
+          "recall": 1.0,
+          "f1": 0.84,
+          "repetition": 0.1552,
+          "coverage": 0.667,
+          "judge": 0.0
+        },
+        {
+          "case": "sqb-002",
+          "domain": "regulatory",
+          "words": 2751,
+          "windows": 6,
+          "recall": 0.875,
+          "f1": 0.282,
+          "repetition": 0.1779,
+          "coverage": 0.4,
+          "judge": 0.0
+        },
+        {
+          "case": "sqb-003",
+          "domain": "multihop",
+          "words": 2967,
+          "windows": 6,
+          "recall": 0.8,
+          "f1": 0.471,
+          "repetition": 0.2844,
+          "coverage": 0.0,
+          "judge": 0.0
+        }
+      ]
+    }
+  ]
+}

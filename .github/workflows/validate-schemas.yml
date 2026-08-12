@@ -1,0 +1,34 @@
+name: Validate JSON Schemas
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'schemas/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'schemas/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Validate all schemas
+        run: |
+          echo "Validating JSON Schema files..."
+          for schema in schemas/*.json; do
+            echo "  Validating: $schema"
+            ajv compile -s "$schema" --spec=draft2020 -c ajv-formats || exit 1
+          done
+          echo "All schemas valid!"

@@ -1,0 +1,45 @@
+{
+  "backends": [
+    {
+      "backend": "KIMI\u00b7kimi-k2.6",
+      "mean_f1": 0.332,
+      "mean_repetition": 0.0366,
+      "mean_judge": 6.73,
+      "rows": [
+        {
+          "case": "sqb-001",
+          "domain": "technical",
+          "words": 3606,
+          "windows": 10,
+          "recall": 0.9,
+          "f1": 0.589,
+          "repetition": 0.0266,
+          "coverage": 0.667,
+          "judge": 7.4
+        },
+        {
+          "case": "sqb-002",
+          "domain": "regulatory",
+          "words": 4451,
+          "windows": 10,
+          "recall": 0.75,
+          "f1": 0.2,
+          "repetition": 0.0333,
+          "coverage": 0.4,
+          "judge": 4.6
+        },
+        {
+          "case": "sqb-003",
+          "domain": "multihop",
+          "words": 3987,
+          "windows": 10,
+          "recall": 0.8,
+          "f1": 0.208,
+          "repetition": 0.0499,
+          "coverage": 0.0,
+          "judge": 8.2
+        }
+      ]
+    }
+  ]
+}

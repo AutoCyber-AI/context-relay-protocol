@@ -1,0 +1,178 @@
+# Copyright © 2025 Constantinos Vidiniotis. All rights reserved.
+# Licensed under Elastic License 2.0 — see LICENSE.md for details.
+
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crprotocol"
+dynamic = ["version"]
+description = "Context Relay Protocol — unbounded context, unbounded generation, amplified reasoning for LLMs"
+readme = "README.md"
+license = "LicenseRef-Elastic-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Constantinos Vidiniotis" },
+]
+keywords = ["llm", "context", "protocol", "relay", "crp"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+full = [
+    "sentence-transformers>=2.2,<4",
+    "transformers>=4.40,<5",
+    "faiss-cpu>=1.7,<2",
+    "hnswlib>=0.7,<1",
+    "spacy>=3.5,<4",
+    "gliner>=0.2,<2",
+    "blake3>=0.3,<2",
+    "cryptography>=41.0,<44",
+    "httpx>=0.24,<1",
+    "openai>=1.0,<3",
+    "anthropic>=0.7,<2",
+    "leidenalg>=0.10,<1",
+    "igraph>=0.11,<1",
+    "prometheus-client>=0.17,<1",
+    "click>=8.0,<9",
+]
+nlp = [
+    "sentence-transformers>=2.2,<4",
+    "transformers>=4.40,<5",
+    "faiss-cpu>=1.7,<2",
+    "hnswlib>=0.7,<1",
+    "spacy>=3.5,<4",
+    "gliner>=0.2,<2",
+]
+security = [
+    "blake3>=0.3,<2",
+    "cryptography>=41.0,<44",
+]
+cli = [
+    "click>=8.0,<9",
+]
+dev = [
+    "pytest>=7.4,<9",
+    "pytest-asyncio>=0.21,<1",
+    "pytest-cov>=4.1,<6",
+    "ruff>=0.1,<1",
+    "mypy>=1.5,<2",
+    "pip-audit>=2.6,<3",
+]
+docs = [
+    "mkdocs-material>=9.5,<10",
+    "mkdocstrings[python]>=1.0,<2",
+    "mkdocs-minify-plugin>=0.7,<1",
+    "mkdocs-redirects>=1.2,<2",
+    "mkdocs-git-revision-date-localized-plugin>=1.2,<2",
+    "mkdocs-git-authors-plugin>=0.10,<1",
+    "mkdocs-glightbox>=0.5,<1",
+    "lxml>=5.0,<7",
+]
+mcp = [
+    "mcp>=1.12.0",
+    "pyyaml>=6.0",
+    "httpx>=0.24,<1",
+    "pyjwt[crypto]>=2.8,<3",
+    "stripe>=7.0,<16",
+    "google-auth>=2.0,<3",
+]
+
+[project.scripts]
+crp = "crp.cli.main:cli"
+crp-mcp = "crp_mcp.server:main"
+
+[project.urls]
+Homepage = "https://crprotocol.io"
+Documentation = "https://crprotocol.io"
+Repository = "https://github.com/AutoCyber-AI/context-relay-protocol"
+Issues = "https://github.com/AutoCyber-AI/context-relay-protocol/issues"
+Changelog = "https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "crp/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["crp", "crp_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"site-docs/spec" = "crp_mcp/spec_corpus/spec"
+"site-docs/topics" = "crp_mcp/spec_corpus/topics"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "crp/**/*.py",
+    "crp/**/*.json",
+    "crp_mcp/**/*.py",
+    "crp_mcp/**/*.json",
+    "schemas/*.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "pyproject.toml",
+]
+exclude = [
+    "model_artifacts/**",
+    "checkpoints/**",
+    "crp_sessions/**",
+    "site/**",
+    "dist/**",
+    ".cache/**",
+    ".venv*/**",
+    ".hypothesis/**",
+    ".mypy_cache/**",
+    ".pytest_cache/**",
+    ".ruff_cache/**",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "E731",   # lambda assignment — used in tests for brevity
+    "SIM102", # collapsible-if — sometimes clearer expanded
+    "SIM105", # suppressible-exception — contextlib.suppress not always clearer
+    "SIM108", # if-else-block — ternary not always clearer
+    "SIM114", # if-with-same-arms — intentional in some cases
+    "B905",   # zip-without-strict — Python 3.10+ default is fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "F401",  # unused imports — test files verify imports exist
+    "E402",  # module-level import not at top — tests use inline imports
+    "F841",  # unused variable — test assertions sometimes need intermediate vars
+    "B007",  # unused loop variable — intentional in test loops
+]
+
+[tool.mypy]
+python_version = "3.10"
+# Strict subset — catch real bugs, tolerate optional-dep patterns
+check_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+strict_equality = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "llm: tests requiring a local LLM endpoint (e.g. LM Studio)",
+]

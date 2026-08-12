@@ -1,0 +1,466 @@
+site_name: CRP™ - Context Relay Protocol
+site_description: >-
+  Context Relay Protocol (CRP) is the evidence layer for AI security and safety: the open
+  HTTP-header standard that proves AI controls operate on every call for EU AI Act, AIUC-1,
+  ISO 42001, NIST AI RMF, and SOC 2-for-AI. 58 safety headers · Provider-agnostic · Zero lock-in.
+site_url: https://crprotocol.io
+site_author: AutoCyber AI Pty Ltd
+
+repo_name: AutoCyber-AI/context-relay-protocol
+repo_url: https://github.com/AutoCyber-AI/context-relay-protocol
+edit_uri: edit/main/site-docs/
+
+copyright: >-
+  &copy; 2025–2026 <strong>AutoCyber AI Pty Ltd</strong> (ABN 22 697 087 166) ·
+  Sydney, Australia ·
+  Context Relay Protocol™ and CRP™ are trademarks of Constantinos Vidiniotis / AutoCyber AI Pty Ltd ·
+  <br/>
+  <a href="/legal/privacy-policy/">Privacy</a> ·
+  <a href="/legal/cookie-policy/">Cookies</a> ·
+  <a href="/legal/information-security-policy/">Information Security</a> ·
+  <a href="/legal/ai-policy/">AI Policy</a> ·
+  <a href="/terms-of-service/">Terms</a> ·
+  <a href="/legal/">Legal Hub</a> ·
+  <a href="https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/LICENSE.md">Elastic License 2.0</a>
+  <br/>
+  Contact: <a href="mailto:info@crprotocol.io">info@crprotocol.io</a> ·
+  Security: <a href="mailto:security@crprotocol.io">security@crprotocol.io</a> ·
+  AI Governance: <a href="mailto:ai-governance@crprotocol.io">ai-governance@crprotocol.io</a> ·
+  Standards: <a href="mailto:standards@crprotocol.io">standards@crprotocol.io</a>
+  <br/>
+  Aligned with <strong>AIUC-1</strong>, <strong>OWASP Top 10 (2025)</strong>, <strong>ISO/IEC 42001:2023</strong>, <strong>EU AI Act (Regulation 2024/1689)</strong>, <strong>ISO/IEC 27001:2022</strong>, and <strong>NIST AI RMF</strong>.
+
+docs_dir: site-docs
+
+theme:
+  name: material
+  custom_dir: overrides
+  language: en
+  features:
+    # Sidebar navigation (no horizontal tabs - prevents nav overflow on docs-heavy site)
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - navigation.prune
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.path
+    - toc.follow
+    - header.autohide
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - content.tabs.link
+    - content.tooltips
+    - content.footnote.tooltips
+    - content.action.edit
+    - content.action.view
+    - announce.dismiss
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  logo: assets/logo-small.png
+  favicon: assets/favicon/favicon.ico
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/ticker.js
+
+hooks:
+  - hooks/mkdocs_hooks.py
+
+plugins:
+  - autorefs:
+      resolve_closest: true
+  - search:
+      lang: en
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [crp]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            members_order: source
+  - meta
+  - tags:
+      tags_hierarchy: true
+      listings_toc: false
+  - privacy:
+      enabled: true
+      links: true
+      assets: true
+  # Note: optimize is powerful but requires pngquant/oxipng/svgo binaries.
+  # Images are already optimized manually; enable locally only if those tools are installed.
+  # - optimize:
+  #     enabled: true
+  - minify:
+      minify_html: true
+  - redirects:
+      redirect_maps: {}
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      enable_git_follow: false
+      strict: false
+  - git-authors:
+      strict: false
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      slide_effect: slide
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+      skip_classes:
+        - hero-logo
+      auto_caption: false
+
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AutoCyber-AI/context-relay-protocol
+      name: CRP on GitHub
+    - icon: fontawesome/brands/x-twitter
+      link: https://twitter.com/autocyberai
+      name: AutoCyber AI on X
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/autocyberai
+      name: AutoCyber AI on LinkedIn
+    - icon: fontawesome/solid/envelope
+      link: mailto:info@crprotocol.io
+      name: General enquiries
+    - icon: fontawesome/solid/shield-halved
+      link: mailto:security@crprotocol.io
+      name: Report a security issue
+  analytics:
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: Thank you for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            <a href="https://github.com/AutoCyber-AI/context-relay-protocol/issues/new?title=[Docs+feedback]" target="_blank" rel="noopener">opening an issue</a>.
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path:
+        - site-docs
+        - docs
+  - pymdownx.mark
+  - pymdownx.critic
+  - pymdownx.keys
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - def_list
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section for reference
+  - abbr
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Products:
+    - products/index.md
+    - CRP Gateway: products/gateway.md
+    - CRP Comply: products/comply.md
+    - CRP Scan: products/scan.md
+    - CRP Visualise: products/visualise.md
+    - CRP Scribe: products/scribe.md
+  - Pricing: pricing.md
+  - Getting Started:
+    - getting-started/index.md
+    - Quick Start: getting-started/quickstart.md
+    - Installation: getting-started/installation.md
+    - Providers: getting-started/providers.md
+    - Local Models & LM Studio: getting-started/local-models.md
+    - CLI Reference: getting-started/cli.md
+    - Operating the Ecosystem: getting-started/operating-the-ecosystem.md
+    - Licensing & IP Protection: getting-started/licensing.md
+  - Capabilities: capabilities.md
+  - Why CRP?: why-crp.md
+  - Who is it for?: who-is-it-for.md
+  - Control Evidence: control-evidence.md
+  - AIUC-1 Aligned: aiuc-1.md
+  - CRPv5 Roadmap: crpv5-roadmap.md
+  - CRPv6:
+    - CRPv6 Overview: crpv6/index.md
+    - CRPv6 Roadmap: crpv6/roadmap.md
+    - Completeness Roadmap: crpv6/completeness-roadmap.md
+    - MCP Compatibility: crpv6/mcp-compatibility.md
+    - Coding Agent Compatibility: crpv6/coding-agent-compatibility.md
+    - Operational Readiness: crpv6/operational-readiness.md
+    - Model Training Guide: crpv6/model-training-guide.md
+    - Hosting & Backends: crpv6/hosting-and-backends.md
+    - Agent SDK Usage: crpv6/agent-sdk-usage.md
+    - Site Update Plan: crpv6/site-update-plan.md
+  - Topics:
+    - topics/index.md
+    - AI Safety: topics/ai-safety.md
+    - AI Governance: topics/ai-governance.md
+    - AI Compliance: topics/ai-compliance.md
+    - Context Management: topics/context-management.md
+    - CRP vs RAG, MCP & Agents: topics/crp-vs-rag-mcp.md
+  - FAQ: faq.md
+  - Protocol:
+    - protocol/index.md
+    - Core Protocol: protocol/core.md
+    - Context Envelope: protocol/envelope.md
+    - Context Sources: protocol/context-sources.md
+    - Headers Reference: protocol/headers.md
+    - Safety Policy: protocol/safety-policy.md
+    - Session Token: protocol/session-token.md
+    - Dispatch Strategies: protocol/dispatch-strategies.md
+    - Continuation & Stitching: protocol/continuation.md
+    - Extraction Pipeline: protocol/extraction.md
+    - Contextual Knowledge Fabric: protocol/ckf.md
+    - Quality Tiers: protocol/quality-tiers.md
+    - Provenance & Hallucination Detection: protocol/provenance.md
+    - Multi-Agent Safety: protocol/multi-agent.md
+    - Zero-CKF Mode: protocol/zero-ckf-mode.md
+    - Conformance Levels: protocol/conformance.md
+    - Meta-Learning: protocol/meta-learning.md
+    - Research Foundations: protocol/research.md
+  - Safety:
+    - The Safety Case: safety/index.md
+    - DPE Pipeline: safety/dpe.md
+    - Safety Policy Language: safety/safety-policy.md
+    - Coverage & Limits: safety/coverage.md
+    - The Black-Box Question: safety/black-box.md
+  - Compliance:
+    - compliance/index.md
+    - EU AI Act: compliance/eu-ai-act.md
+    - ISO 42001: compliance/iso-42001.md
+    - GDPR: compliance/gdpr.md
+    - NIST AI RMF: compliance/nist-ai-rmf.md
+    - Security: compliance/security.md
+  - Spec:
+    - Overview: spec/index.md
+    - CRP-SPEC-001 Core Protocol Specification: spec/CRP-SPEC-001-core-protocol.md
+    - CRP-SPEC-002 Header Field Specification: spec/CRP-SPEC-002-headers.md
+    - CRP-SPEC-003 Context Envelope & Packing Specification: spec/CRP-SPEC-003-envelope.md
+    - CRP-SPEC-004 Window Continuation & DAG Specification: spec/CRP-SPEC-004-continuation.md
+    - CRP-SPEC-005 Decision Provenance Engine (DPE) Specification: spec/CRP-SPEC-005-dpe.md
+    - CRP-SPEC-006 Safety Policy Directive Language: spec/CRP-SPEC-006-safety-policy.md
+    - CRP-SPEC-007 Session Token & State Relay: spec/CRP-SPEC-007-session-token.md
+    - CRP-SPEC-008 Dispatch Strategy Specification: spec/CRP-SPEC-008-dispatch.md
+    - CRP-SPEC-009 Contextual Knowledge Fabric (CKF) Specification: spec/CRP-SPEC-009-ckf.md
+    - CRP-SPEC-010 Regulatory Controls Mapping: spec/CRP-SPEC-010-regulatory-mapping.md
+    - CRP-SPEC-011 Audit Trail & HMAC Chain Specification: spec/CRP-SPEC-011-audit-trail.md
+    - CRP-SPEC-012 Multi-Agent Safety Protocol: spec/CRP-SPEC-012-multi-agent-safety.md
+    - CRP-SPEC-013 GitHub Action & Scanner Specification: spec/CRP-SPEC-013-github-action.md
+    - CRP-SPEC-014 Conformance & Test Suite Specification: spec/CRP-SPEC-014-conformance.md
+    - CRP-SPEC-015 Security & Privacy Specification: spec/CRP-SPEC-015-security-privacy.md
+    - CRP-SPEC-016 Gateway Service Specification: spec/CRP-SPEC-016-gateway-service.md
+    - CRP-SPEC-017 Zero-CKF Mode & Progressive Activation: spec/CRP-SPEC-017-zero-ckf-mode.md
+    - CRP-SPEC-018 Adaptive Intelligence Relay (AIR): spec/CRP-SPEC-018-air.md
+    - CRP-SPEC-019 Cognitive Quality Relay (CQR) & Reasoning Scaffold Protocol: spec/CRP-SPEC-019-cognitive-quality.md
+    - CRP-SPEC-020 Cognitive Load Distribution (CLD): spec/CRP-SPEC-020-cognitive-load-distribution.md
+    - CRP-SPEC-021 Reasoning Orchestration & Self-Consistency (ROS): spec/CRP-SPEC-021-reasoning-orchestration.md
+    - CRP-SPEC-022 Parallel Execution Fabric (PEF) & Amplification Economics: spec/CRP-SPEC-022-execution-fabric.md
+    - CRP-SPEC-023 The Amplification Boundary - Protocol Layering & Opt-In Capability Model: spec/CRP-SPEC-023-amplification-boundary.md
+    - CRP-SPEC-024 Coverage-Differential Retrieval (CDR): spec/CRP-SPEC-024-coverage-differential-retrieval.md
+    - CRP-SPEC-025 Coverage-Differential Graph Retrieval (CDGR): spec/CRP-SPEC-025-graph-retrieval.md
+    - CRP-SPEC-026 Semantic Quality Benchmark (SQB): spec/CRP-SPEC-026-semantic-quality-benchmark.md
+    - CRP-SPEC-027 Retrieval Integrity - Concurrency, Conflict Resolution & Recency: spec/CRP-SPEC-027-retrieval-integrity.md
+    - CRP-SPEC-028 Multi-Horizon Context Model & Conversational Retrieval: spec/CRP-SPEC-028-conversational-context.md
+    - CRP-SPEC-029 Ephemeral & Tool Context (Tier E): spec/CRP-SPEC-029-ephemeral-tool-context.md
+    - CRP-SPEC-030 The Cognitive State Object & State Relay Protocol: spec/CRP-SPEC-030-cognitive-state-relay.md
+    - CRP-SPEC-031 The Semantic Task Layer (STL) - Positioning, Not Injection: spec/CRP-SPEC-031-semantic-task-layer.md
+    - CRP-SPEC-032 Developer Experience & The Progressive Disclosure SDK: spec/CRP-SPEC-032-developer-experience.md
+    - CRP-SPEC-033 The Safety Control Plane & Inline Human-in-the-Loop: spec/CRP-SPEC-033-safety-control-plane.md
+    - CRP-SPEC-034 AI Safety Coverage Map & Checkpoint Lifecycle: spec/CRP-SPEC-034-safety-coverage.md
+    - CRP-SPEC-035 Context Lifecycle & Access Tiering - The Storage Engine: spec/CRP-SPEC-035-context-lifecycle.md
+    - CRP-SPEC-036 CRP Scan Remediation Engine: spec/CRP-SPEC-036-scan-remediation.md
+    - CRP-SPEC-037 The Unified Configuration - One File Governs Everything: spec/CRP-SPEC-037-unified-config.md
+    - CRP-SPEC-038 Pluggable Storage Backends - Bring Your Own Store: spec/CRP-SPEC-038-storage-backends.md
+    - CRP-SPEC-039 Semantic Codebase Ingestion - CRP Scanning With CRP: spec/CRP-SPEC-039-semantic-code-ingestion.md
+    - CRP-SPEC-040 CRP Comply - The Three-Layer AI Compliance & Governance Platform: spec/CRP-SPEC-040-crp-comply.md
+    - CRP-SPEC-041 Adoption & Ecosystem - Time-to-Value, Integrations, and Growth: spec/CRP-SPEC-041-adoption-ecosystem.md
+    - CRP-SPEC-042 CRP Comply v2→v4 Upgrade & Ecosystem Integration: spec/CRP-SPEC-042-comply-upgrade-integration.md
+    - CRP-SPEC-043 The Gateway as Runtime Product & The Visual Console: spec/CRP-SPEC-043-gateway-runtime-product.md
+    - CRP-SPEC-044 The Authoritative Domain Agent: spec/CRP-SPEC-044-authoritative-domain-agent.md
+    - CRP-SPEC-045 Session & Persistent Knowledge Learning: spec/CRP-SPEC-045-knowledge-learning.md
+    - CRP-SPEC-046 User-Defined Cognition - The Thinking Process Compiler: spec/CRP-SPEC-046-user-defined-cognition.md
+    - CRP-SPEC-047 Monetisation, Payments & Clerk–Stripe Account Linkage: spec/CRP-SPEC-047-monetisation-payments.md
+    - CRP-SPEC-048 No-Code Governance via Scan, GitHub Connection & Result-Preserving Signup: spec/CRP-SPEC-048-comply-lowcode-github.md
+    - CRP™ Hosting, Control & Data Architecture: spec/CRP-SPEC-HOSTING-CONTROL.md
+    - Submission Guide: spec/CRP-SUBMISSION-GUIDE.md
+  - Guides:
+    - guides/index.md
+    - SDK Guide: guides/sdk.md
+    - SDK Coverage Phases: guides/sdk-phases.md
+    - Demo App: guides/demo-app.md
+    - Streaming: guides/streaming.md
+    - Multi-Turn Conversations: guides/multi-turn.md
+    - Data Ingestion: guides/ingestion.md
+    - Session Persistence: guides/session-persistence.md
+    - HTTP Sidecar: guides/sidecar.md
+    - Self-Hosting: guides/gateway-railway.md
+  - SDK Reference:
+    - sdk/index.md
+    - Agent SDK: sdk/agent-sdk.md
+    - Context Management: sdk/context-management.md
+    - AI Safety: sdk/ai-safety.md
+    - Tools & Agents: sdk/tools-and-agents.md
+    - Configuration: sdk/configuration.md
+    - Async Usage: sdk/async.md
+    - Error Reference: sdk/errors.md
+  - API Reference:
+    - api/index.md
+    - Client: api/client.md
+    - Dispatch Methods: api/dispatch.md
+    - Compliance API: api/compliance.md
+    - JSON Schemas: api/schemas.md
+    - SDK Namespaces:
+      - Activation: api/activation.md
+      - Advanced: api/advanced.md
+      - Agent: api/agent.md
+      - CLI: api/cli.md
+      - Cognitive State Object: api/cso.md
+      - Comply: api/comply.md
+      - Continuation: api/continuation.md
+      - Core: api/core.md
+      - Contextual Knowledge Fabric: api/ckf.md
+      - Envelope: api/envelope.md
+      - Errors: api/errors.md
+      - Events: api/events.md
+      - Extraction: api/extraction.md
+      - Gateway: api/gateway.md
+      - Headers: api/headers.md
+      - Observability: api/observability.md
+      - Policy: api/policy.md
+      - Provenance: api/provenance.md
+      - Providers: api/providers.md
+      - Reasoning: api/reasoning.md
+      - Resources: api/resources.md
+      - Safety: api/safety.md
+      - Scan: api/scan.md
+      - Security: api/security.md
+      - State: api/state.md
+    - Internal Modules:
+      - Core: api/core.md
+      - Envelope: api/envelope.md
+      - Continuation: api/continuation.md
+      - State: api/state.md
+      - Security: api/security.md
+      - Config: api/config.md
+      - Errors: api/errors.md
+    - Full Module Reference:
+      - Overview: api/modules/index.md
+      - Activation: api/modules/activation.md
+      - Adapters: api/modules/adapters.md
+      - Advanced: api/modules/advanced.md
+      - Agent: api/modules/agent.md
+      - Agent Sdk: api/modules/agent_sdk.md
+      - Btf: api/modules/btf.md
+      - Ckf: api/modules/ckf.md
+      - Cli: api/modules/cli.md
+      - Clr: api/modules/clr.md
+      - Comply: api/modules/comply.md
+      - Config: api/modules/config.md
+      - Config Schema: api/modules/config_schema.md
+      - Continuation: api/modules/continuation.md
+      - Core: api/modules/core.md
+      - Envelope: api/modules/envelope.md
+      - Ep: api/modules/ep.md
+      - Eval: api/modules/eval.md
+      - Extraction: api/modules/extraction.md
+      - Frontend: api/modules/frontend.md
+      - Gateway: api/modules/gateway.md
+      - Headers: api/modules/headers.md
+      - Infrastructure: api/modules/infrastructure.md
+      - Integrations: api/modules/integrations.md
+      - Isa: api/modules/isa.md
+      - License Guard: api/modules/license_guard.md
+      - Ml: api/modules/ml.md
+      - Observability: api/modules/observability.md
+      - Policy: api/modules/policy.md
+      - Pp: api/modules/pp.md
+      - Provenance: api/modules/provenance.md
+      - Providers: api/modules/providers.md
+      - Qsr: api/modules/qsr.md
+      - Resources: api/modules/resources.md
+      - Scan: api/modules/scan.md
+      - Schemas: api/modules/schemas.md
+      - Sdk: api/modules/sdk.md
+      - Security: api/modules/security.md
+      - State: api/modules/state.md
+      - Stl: api/modules/stl.md
+      - Tel: api/modules/tel.md
+      - Tools: api/modules/tools.md
+      - Vr: api/modules/vr.md
+  - Testing & Benchmarks:
+    - testing/index.md
+    - Running Tests: testing/running-tests.md
+    - Benchmarks: testing/benchmarks.md
+    - Reproduce Benchmarks: testing/reproduce.md
+  - Standards Track: standards.md
+  - Cite CRP: cite.md
+  - Contributing: contributing.md
+  - Legal:
+    - Overview: legal/index.md
+    - Privacy Policy: legal/privacy-policy.md
+    - Cookie Policy: legal/cookie-policy.md
+    - Information Security Policy: legal/information-security-policy.md
+    - AI Policy (ISO 42001 · EU AI Act): legal/ai-policy.md
+    - Terms of Service: terms-of-service.md
+  - Tags: tags.md

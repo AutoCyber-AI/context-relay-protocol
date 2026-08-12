@@ -1,0 +1,36 @@
+name: Spec Clarification
+description: Request clarification on a specification section
+title: "[Clarification]: "
+labels: ["clarification"]
+body:
+  - type: textarea
+    id: section
+    attributes:
+      label: Section Reference
+      description: Which section(s) need clarification?
+      placeholder: "e.g., §6.10.2 TaskIntent schema, §3.8 CKF retrieval modes"
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What is unclear or ambiguous?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Clarification
+      description: If you have a suggestion for how to clarify, include it here
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact Level
+      description: How does this ambiguity affect implementation?
+      options:
+        - Blocking — cannot implement without clarification
+        - Significant — multiple valid interpretations possible
+        - Minor — wording improvement, intent is clear
+    validations:
+      required: true

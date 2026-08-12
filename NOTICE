@@ -1,0 +1,18 @@
+Context Relay Protocol (CRP)
+Copyright © 2026 Constantinos Vidiniotis. All rights reserved.
+
+This product is the original work of Constantinos Vidiniotis.
+
+LICENSING
+=========
+- Protocol specification documents: CC BY-SA 4.0
+- SDK implementation code: Elastic License 2.0 (ELv2)
+  See LICENSE.md for terms, including the managed-service exclusion.
+
+See LICENSE.md for full terms.
+
+COMMERCIAL LICENSING
+====================
+For production use licensing inquiries:
+  GitHub: https://github.com/Constantinos-uni
+  Repository: https://github.com/Constantinos-uni/context-relay-protocol

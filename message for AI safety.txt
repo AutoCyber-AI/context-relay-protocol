@@ -1,0 +1,26 @@
+Hi Constantinos,
+
+Great to be connected and thanks for accepting my invitation.
+
+A little more information on the opportunity I mentioned.
+
+We're working with a technology-focused investment bank that has built a genuinely AI-first engineering culture. Unlike many organisations that are still experimenting with AI, this business is already using AI to drive meaningful outcomes across the organisation, from engineering and integration teams through to quantitative analytics, trading functions and broader business operations.
+
+Importantly, this is a zero-legacy environment. The bank was built from the ground up only a few years ago, giving engineers the ability to move quickly without the constraints of decades-old platforms and processes.
+
+As AI adoption continues to accelerate, they're establishing a dedicated AI Security capability embedded directly alongside the AI Engineering team. The focus is not governance, audit or policy. It's about helping ensure AI agents, LLM applications, RAG solutions and AI-enabled workflows are designed, built and deployed securely while maintaining the pace of innovation.
+
+Areas of focus include:
+
+• AI agents and agentic workflows
+• LLM applications and enterprise AI platforms
+• Prompt injection, jailbreak and data exfiltration testing
+• Agent permissions and secure tool integrations
+• AI threat modelling and security reviews
+• Security controls embedded into AI delivery pipelines
+
+This isn't about cleaning up someone's inbox with Copilot. It's about enabling and securing AI systems that are driving real business velocity across a modern investment bank.
+
+The engagement is initially a 6-month contract with a strong expectation of extension and potential longer-term opportunities.
+
+If this sounds relevant to your background, I'd be happy to share more details and arrange a confidential discussion.

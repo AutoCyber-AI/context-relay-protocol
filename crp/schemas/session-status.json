@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SessionStatus",
+  "description": "Returned by session_status(). MUST always be available for OBSERVER role or above.",
+  "type": "object",
+  "required": ["session_id", "windows_completed", "total_input_tokens", "total_output_tokens", "facts_in_warm_state", "overhead_ratio"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 identifying the session."
+    },
+    "windows_completed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total windows completed in this session (including continuations)."
+    },
+    "total_input_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cumulative input tokens sent to the LLM across all windows."
+    },
+    "total_output_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cumulative output tokens received from the LLM across all windows."
+    },
+    "facts_in_warm_state": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current fact count in warm state (Tier 2)."
+    },
+    "overhead_ratio": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Current overhead windows / productive windows ratio."
+    },
+    "remaining_budget": {
+      "type": ["object", "null"],
+      "description": "Remaining budget against cost caps. NULL if no caps set.",
+      "properties": {
+        "windows_remaining": {
+          "type": ["integer", "null"],
+          "description": "Windows remaining before max_windows_per_session cap."
+        },
+        "input_tokens_remaining": {
+          "type": ["integer", "null"],
+          "description": "Input tokens remaining before max_total_input_tokens cap."
+        },
+        "output_tokens_remaining": {
+          "type": ["integer", "null"],
+          "description": "Output tokens remaining before max_total_output_tokens cap."
+        }
+      }
+    }
+  }
+}

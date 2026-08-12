@@ -1,0 +1,1 @@
+--8<-- "docs/CRPv6_Operational_Readiness_Report.md"

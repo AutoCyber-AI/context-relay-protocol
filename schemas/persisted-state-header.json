@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PersistedStateHeader",
+  "description": "Header for all persisted CRP data structures (cold state, event log, exported state). Enables schema migration across versions.",
+  "type": "object",
+  "required": ["schema_version", "protocol_version", "created_at", "checksum"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "SemVer for the persisted format (e.g., '2.0.0'). Implementations MUST read state from the same Major version."
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "CRP protocol version that wrote this state."
+    },
+    "created_at": {
+      "type": "number",
+      "description": "Timestamp of state creation (seconds since epoch)."
+    },
+    "checksum": {
+      "type": "string",
+      "description": "BLAKE3 integrity hash of the payload. If verification fails, implementations MUST raise StateCorrupted (code 1030)."
+    }
+  }
+}

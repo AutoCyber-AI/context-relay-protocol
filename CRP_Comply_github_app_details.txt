@@ -1,0 +1,45 @@
+Webhook URL
+https://comply.crprotocol.io/api/github/webhook
+Events will POST to this URL. Read our webhook documentation for more information.
+
+GITHUB_APP_WEBHOOK_SECRET : fb5c58980e5333393ededb03838a1acaad1f7994a758da0ae055ad3b57d25aee
+
+
+Homepage URL
+https://comply.crprotocol.io
+The full URL to your GitHub App’s website.
+
+
+Callback URL
+https://comply.crprotocol.io/api/github/callback
+ Expire user authorization tokens
+
+
+
+Owned by: @Constantinos-uni
+
+App ID: 3971977
+
+Using your App ID to get installation tokens? You can now use your Client ID instead.
+
+Client ID: Iv23liT20jEe4rCyvTRv
+
+
+
+Public link: https://github.com/apps/crp-comply
+
+
+Private key : Private key
+SHA256:72wJy8zRor2GUz0Hsvpgfv1fKiZOykjuryc5WAYyYUQ=
+Added now by Constantinos-uni 
+
+Under file crp-comply.2026-06-05.private-key.pem
+
+
+
+Client-secret:  e01c91062c60efcd74f31fbd363e73876de478d1 
+Added now by Constantinos-uni
+Never used
+
+You cannot delete the only client secret. Generate a new client secret first.
+

@@ -1,0 +1,823 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CRP HTTP Sidecar API",
+    "description": "Context Relay Protocol — lightweight REST API for inter-process context sharing (§9.3). Exposes all CRP dispatch variants, knowledge management, and session lifecycle over HTTP.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "AutoCyber AI",
+      "url": "https://autocyberai.com",
+      "email": "contact@autocyberai.com"
+    },
+    "license": {
+      "name": "Elastic License 2.0",
+      "url": "https://github.com/Constantinos-uni/context-relay-protocol/blob/main/LICENSE.md"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8900",
+      "description": "Local sidecar (default loopback)"
+    }
+  ],
+  "security": [
+    {},
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "tags": ["Admin"],
+        "responses": {
+          "200": {
+            "description": "Sidecar is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "active_sessions": { "type": "integer" },
+                    "max_sessions": { "type": "integer" },
+                    "auth_required": { "type": "boolean" },
+                    "rate_limit": { "type": "string", "example": "60/60s" },
+                    "version": { "type": "string", "example": "2.0.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Readiness probe (K8s/ECS)",
+        "operationId": "getReady",
+        "tags": ["Admin"],
+        "responses": {
+          "200": {
+            "description": "Sidecar can accept new sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ready": { "type": "boolean" },
+                    "active_sessions": { "type": "integer" },
+                    "max_sessions": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sidecar at capacity"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Prometheus-compatible metrics",
+        "operationId": "getMetrics",
+        "tags": ["Admin"],
+        "responses": {
+          "200": {
+            "description": "Prometheus text format metrics",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "get": {
+        "summary": "List active sessions",
+        "operationId": "listSessions",
+        "tags": ["Session"],
+        "responses": {
+          "200": {
+            "description": "List of active session IDs and metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "session_id": { "type": "string", "format": "uuid" },
+                          "model": { "type": "string" },
+                          "windows_completed": { "type": "integer" },
+                          "facts_in_warm_state": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new CRP session",
+        "operationId": "createSession",
+        "tags": ["Session"],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "system_prompt": { "type": "string", "description": "System prompt for the session" },
+                  "model": { "type": "string", "description": "LLM model name (auto-detected if omitted)" },
+                  "config": {
+                    "type": "object",
+                    "description": "CRP configuration overrides",
+                    "properties": {
+                      "max_continuations": { "type": "integer" },
+                      "max_windows_per_session": { "type": "integer" },
+                      "max_total_input_tokens": { "type": "integer" },
+                      "session_timeout": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionHandle" }
+              }
+            }
+          },
+          "503": {
+            "description": "Max sessions reached"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/status": {
+      "get": {
+        "summary": "Get session status and metrics",
+        "operationId": "getSessionStatus",
+        "tags": ["Session"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionStatus" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sessions/{sessionId}/close": {
+      "post": {
+        "summary": "Close a session",
+        "operationId": "closeSession",
+        "tags": ["Session"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session closed"
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch": {
+      "post": {
+        "summary": "Basic push-based dispatch",
+        "operationId": "dispatch",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DispatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dispatch result with quality report",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch/tools": {
+      "post": {
+        "summary": "Tool-mediated pull-based dispatch",
+        "operationId": "dispatchTools",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  { "$ref": "#/components/schemas/DispatchRequest" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "tools": {
+                        "type": "array",
+                        "items": { "type": "object" },
+                        "description": "Tool definitions for the LLM"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dispatch result with tool calls",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch/reflexive": {
+      "post": {
+        "summary": "Reflexive verify-then-refine dispatch",
+        "operationId": "dispatchReflexive",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DispatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reflexive dispatch result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch/progressive": {
+      "post": {
+        "summary": "Progressive index-then-detail dispatch",
+        "operationId": "dispatchProgressive",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DispatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Progressive dispatch result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch/stream-augmented": {
+      "post": {
+        "summary": "Stream-augmented real-time context injection dispatch",
+        "operationId": "dispatchStreamAugmented",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DispatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stream-augmented dispatch result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/dispatch/agentic": {
+      "post": {
+        "summary": "Agentic LLM-in-the-loop cognitive engine dispatch (§22)",
+        "operationId": "dispatchAgentic",
+        "tags": ["Dispatch"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  { "$ref": "#/components/schemas/DispatchRequest" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "tools": {
+                        "type": "array",
+                        "items": { "type": "object" },
+                        "description": "Tool definitions for the agentic loop"
+                      },
+                      "max_steps": {
+                        "type": "integer",
+                        "description": "Maximum agentic reasoning steps",
+                        "default": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agentic dispatch result with reasoning trace",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DispatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/ingest": {
+      "post": {
+        "summary": "Zero-LLM fact ingestion",
+        "operationId": "ingest",
+        "tags": ["Knowledge"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string", "description": "Raw text to extract facts from" },
+                  "source_label": { "type": "string", "description": "Label for the source document" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extraction result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "facts_extracted": { "type": "integer" },
+                    "source_label": { "type": "string" },
+                    "fact_ids": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/facts": {
+      "get": {
+        "summary": "Query extracted facts",
+        "operationId": "getFacts",
+        "tags": ["Knowledge"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" },
+          {
+            "name": "top_k",
+            "in": "query",
+            "schema": { "type": "integer" },
+            "description": "Return only the top K ranked facts"
+          },
+          {
+            "name": "include_superseded",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false },
+            "description": "Include superseded facts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of facts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "facts": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Fact" }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/facts/share": {
+      "post": {
+        "summary": "Share facts to another session (inter-LLM sharing)",
+        "operationId": "shareFacts",
+        "tags": ["Knowledge"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_session_id"],
+                "properties": {
+                  "target_session_id": { "type": "string", "format": "uuid" },
+                  "fact_ids": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Specific fact IDs to share (all if omitted)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Facts shared successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "facts_shared": { "type": "integer" },
+                    "target_session_id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/facts/feedback": {
+      "post": {
+        "summary": "Provide feedback on facts (boost/penalize/reject)",
+        "operationId": "factFeedback",
+        "tags": ["Knowledge"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fact_id", "action"],
+                "properties": {
+                  "fact_id": { "type": "string" },
+                  "action": {
+                    "type": "string",
+                    "enum": ["boost", "penalize", "reject"]
+                  },
+                  "delta": { "type": "number", "description": "Confidence adjustment" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback applied"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/envelope": {
+      "get": {
+        "summary": "Preview the current envelope without dispatching",
+        "operationId": "previewEnvelope",
+        "tags": ["Knowledge"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" },
+          {
+            "name": "system_prompt",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "task_input",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Envelope preview",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnvelopePreview" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/estimate": {
+      "post": {
+        "summary": "Cost estimation for a dispatch",
+        "operationId": "estimateSession",
+        "tags": ["Session"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["system_prompt", "task_input"],
+                "properties": {
+                  "system_prompt": { "type": "string" },
+                  "task_input": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cost estimate",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CostEstimate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/providers": {
+      "post": {
+        "summary": "Register a fallback LLM provider",
+        "operationId": "registerProvider",
+        "tags": ["Session"],
+        "parameters": [
+          { "$ref": "#/components/parameters/sessionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["provider_type"],
+                "properties": {
+                  "provider_type": {
+                    "type": "string",
+                    "enum": ["openai", "anthropic", "ollama"]
+                  },
+                  "model": { "type": "string" },
+                  "api_key": { "type": "string" },
+                  "priority": { "type": "integer", "default": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider registered"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Required when binding to non-loopback interfaces (--bind-all). Set via --auth-token flag."
+      }
+    },
+    "parameters": {
+      "sessionId": {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "CRP session identifier"
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Session not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" },
+                "detail": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SessionHandle": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string", "format": "uuid" },
+          "protocol_version": { "type": "string", "example": "2.0.0" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "expires_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SessionStatus": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string", "format": "uuid" },
+          "is_active": { "type": "boolean" },
+          "windows_completed": { "type": "integer" },
+          "total_input_tokens": { "type": "integer" },
+          "total_output_tokens": { "type": "integer" },
+          "facts_in_warm_state": { "type": "integer" },
+          "facts_in_ckf": { "type": "integer" },
+          "model": { "type": "string" },
+          "context_window": { "type": "integer" }
+        }
+      },
+      "DispatchRequest": {
+        "type": "object",
+        "required": ["system_prompt", "task_input"],
+        "properties": {
+          "system_prompt": { "type": "string", "description": "System prompt for the LLM" },
+          "task_input": { "type": "string", "description": "User task / question" },
+          "generation_reserve": { "type": "integer", "description": "Reserved tokens for generation" }
+        }
+      },
+      "DispatchResponse": {
+        "type": "object",
+        "properties": {
+          "output": { "type": "string", "description": "LLM-generated output" },
+          "quality_report": { "$ref": "#/components/schemas/QualityReport" },
+          "session_id": { "type": "string", "format": "uuid" },
+          "window_id": { "type": "string" },
+          "continuation_windows": { "type": "integer" },
+          "total_input_tokens": { "type": "integer" },
+          "total_output_tokens": { "type": "integer" }
+        }
+      },
+      "QualityReport": {
+        "type": "object",
+        "properties": {
+          "tier": { "type": "string", "enum": ["S", "A", "B", "C", "D"] },
+          "facts_extracted": { "type": "integer" },
+          "facts_in_envelope": { "type": "integer" },
+          "envelope_saturation": { "type": "number" },
+          "security_flags": {
+            "type": "object",
+            "properties": {
+              "injection_detected": { "type": "boolean" },
+              "pii_detected": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "Fact": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "extraction_type": { "type": "string" },
+          "source_window_id": { "type": "string" },
+          "is_superseded": { "type": "boolean" }
+        }
+      },
+      "EnvelopePreview": {
+        "type": "object",
+        "properties": {
+          "envelope_text": { "type": "string" },
+          "facts_included": { "type": "integer" },
+          "saturation": { "type": "number" },
+          "budget_tokens": { "type": "integer" },
+          "used_tokens": { "type": "integer" }
+        }
+      },
+      "CostEstimate": {
+        "type": "object",
+        "properties": {
+          "estimated_input_tokens": { "type": "integer" },
+          "estimated_output_tokens": { "type": "integer" },
+          "estimated_windows": { "type": "integer" },
+          "estimated_cost_usd": { "type": "number" }
+        }
+      }
+    }
+  }
+}

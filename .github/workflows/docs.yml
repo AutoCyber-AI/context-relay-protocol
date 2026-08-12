@@ -1,0 +1,41 @@
+# Copyright © 2025 Constantinos Vidiniotis. All rights reserved.
+# Licensed under Elastic License 2.0 - see LICENSE.md for details.
+
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site-docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DISABLE_MKDOCS_2_WARNING: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install docs dependencies
+        run: pip install -e ".[docs]"
+
+      - name: Regenerate API reference
+        run: python scripts/generate_api_reference.py
+
+      - name: Build and deploy
+        run: mkdocs gh-deploy --force --strict

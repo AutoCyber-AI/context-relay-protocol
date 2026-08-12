@@ -1,0 +1,29 @@
+{
+  "schema_version": "v6-phaseA-1",
+  "models": {
+    "crp.isa.intent": {
+      "repo_id": "AutoCyberAI/crp-intent-setfit",
+      "revision": "main",
+      "local_name": "crp-intent-setfit",
+      "sha256": "39a4e71b3ba068c43a85886c12db3b6694290671f278529ee2b9314d6e1fddcd"
+    },
+    "crp.vr.prm": {
+      "repo_id": "AutoCyberAI/crp-prm-deberta-v1",
+      "revision": "main",
+      "local_name": "crp-prm-deberta-v1",
+      "sha256": "734c36226e3b0a763a0c3b90b5f5b59a363e768eba9e2fcc608ca9b086716aa4"
+    },
+    "crp.security.safety": {
+      "repo_id": "AutoCyberAI/crp-safety-deberta-v1",
+      "revision": "main",
+      "local_name": "crp-safety-deberta-v1",
+      "sha256": "0e87fa6e2a146973b215a53845fdd3b180cf4171d0fc75e914d09df2e770ad70"
+    },
+    "crp.embeddings.default": {
+      "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "main",
+      "local_name": "all-MiniLM-L6-v2",
+      "sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+    }
+  }
+}

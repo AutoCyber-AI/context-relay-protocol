@@ -1,0 +1,50 @@
+name: Bug Report
+description: Report an issue with the CRP specification or schemas
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the specification is affected?
+      options:
+        - Core Protocol (02_CORE_PROTOCOL.md)
+        - Context Envelope (03_CONTEXT_ENVELOPE.md)
+        - Token Generation (04_TOKEN_GENERATION_PROTOCOL.md)
+        - System Integration (05_SYSTEM_WIDE_INTEGRATION.md)
+        - Implementation Plan (06_IMPLEMENTATION_PLAN.md)
+        - Security (07_SECURITY.md)
+        - Monetization (08_MONETIZATION.md)
+        - Deployment (09_DEPLOYMENT.md)
+        - JSON Schemas
+        - Examples
+        - README
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the issue
+      placeholder: Describe the bug or inconsistency...
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Location
+      description: Specific section, line numbers, or schema files affected
+      placeholder: "e.g., §3.8, line 1400 in 02_CORE_PROTOCOL.md"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should the specification say?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional context, references, or related sections

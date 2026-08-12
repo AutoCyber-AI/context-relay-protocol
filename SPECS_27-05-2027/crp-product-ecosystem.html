@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRP Product Ecosystem — Complete Design</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080c;--bg2:#0c0e14;--bg3:#11141c;--bg4:#171b24;--bg5:#1c2130;
+  --border:rgba(255,255,255,0.055);--border2:rgba(255,255,255,0.1);
+  --text:#e1e7f5;--text2:#8b93ab;--text3:#454d66;
+  --purple:#7c6ef5;--purple2:#a08fff;--pd:rgba(124,110,245,0.12);
+  --teal:#2de0c0;--td:rgba(45,224,192,0.1);
+  --coral:#ff6b52;--cd:rgba(255,107,82,0.1);
+  --amber:#f5a623;--ad:rgba(245,166,35,0.1);
+  --blue:#4fa8ff;--bd:rgba(79,168,255,0.1);
+  --green:#3dda84;--gd:rgba(61,218,132,0.1);
+  --red:#ff4757;--rd:rgba(255,71,87,0.1);
+  --gold:#ffd700;--gld:rgba(255,215,0,0.09);
+  --pink:#ff6eb4;--pkd:rgba(255,110,180,0.1);
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6}
+a{color:var(--purple2);text-decoration:none}
+
+/* LAYOUT */
+.shell{display:flex;min-height:100vh}
+.rail{width:256px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.body{flex:1;max-width:880px;padding:52px 56px}
+
+/* RAIL */
+.rail-head{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.rail-badge{display:inline-flex;align-items:center;gap:5px;background:var(--pd);border:1px solid rgba(124,110,245,.3);color:var(--purple2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;letter-spacing:.08em;margin-bottom:7px}
+.rail-badge::before{content:'';width:5px;height:5px;background:var(--purple);border-radius:50%;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.rail-title{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3}
+.rail-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.rail-nav{padding:10px 8px;flex:1}
+.rg{margin-bottom:4px}
+.rgl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:7px 10px 3px}
+.ri{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11.5px;color:var(--text2);transition:all .15s;text-decoration:none;line-height:1.3}
+.ri:hover{background:var(--bg4);color:var(--text)}
+.ri.on{background:var(--pd);color:var(--purple2)}
+.rdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.rnum{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+
+/* TYPE */
+h1{font-size:32px;font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:12px}
+h2{font-size:20px;font-weight:700;margin:50px 0 13px;color:var(--text);letter-spacing:-.01em}
+h3{font-size:14.5px;font-weight:600;margin:26px 0 9px;color:var(--text)}
+h4{font-size:12px;font-weight:700;margin:18px 0 7px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+p{color:var(--text2);margin-bottom:13px;line-height:1.78;font-size:13.5px}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg4);padding:1px 5px;border-radius:3px;color:var(--amber)}
+strong{color:var(--text);font-weight:600}
+hr{border:none;border-top:1px solid var(--border);margin:44px 0}
+.sec{scroll-margin-top:28px}
+
+/* CALLOUTS */
+.cl{border-radius:8px;padding:13px 15px;margin:13px 0;font-size:13px;line-height:1.65;display:flex;gap:9px}
+.cl .i{font-size:14px;flex-shrink:0;margin-top:1px}.cl .t{color:var(--text2)}.cl .t strong{color:var(--text)}
+.cl-i{background:var(--bd);border:1px solid rgba(79,168,255,.2)}
+.cl-w{background:var(--ad);border:1px solid rgba(245,166,35,.2)}
+.cl-s{background:var(--gd);border:1px solid rgba(61,218,132,.2)}
+.cl-g{background:var(--gld);border:1px solid rgba(255,215,0,.22)}
+.cl-p{background:var(--pd);border:1px solid rgba(124,110,245,.22)}
+
+/* PRODUCT HERO CARDS */
+.products{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
+.prod{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color .2s;cursor:default}
+.prod:hover{border-color:var(--border2)}
+.prod-icon{font-size:28px;margin-bottom:10px}
+.prod-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
+.prod-sub{font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px}
+.prod-desc{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.prod-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:4px}
+.st-live{background:var(--gd);color:var(--green);border:1px solid rgba(61,218,132,.3)}
+.st-build{background:var(--ad);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.st-plan{background:var(--bd);color:var(--blue);border:1px solid rgba(79,168,255,.3)}
+
+/* DEPENDENCY MAP */
+.dep-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px 0}
+.dep-row{display:flex;align-items:center;gap:0;margin-bottom:14px}
+.dep-row:last-child{margin-bottom:0}
+.dep-node{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;flex-shrink:0}
+.dep-node .dn-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.dep-node .dn-name{font-size:13px;font-weight:600}
+.dep-arrow{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 8px}
+.dep-arrow-line{width:100%;height:2px;background:linear-gradient(90deg,var(--border2),var(--border2));position:relative}
+.dep-arrow-line::after{content:'▶';position:absolute;right:-6px;top:-7px;font-size:10px;color:var(--text3)}
+.dep-trigger{font-size:10px;font-family:var(--mono);color:var(--amber);white-space:nowrap;margin-bottom:3px;text-align:center}
+.dep-cta{font-size:10px;color:var(--text3);white-space:nowrap;text-align:center}
+
+/* TIER TABLES */
+.tier-wrap{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0}
+.tier-col{border-right:1px solid var(--border)}
+.tier-col:last-child{border-right:none}
+.tier-head{padding:16px 14px;border-bottom:1px solid var(--border)}
+.tier-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.tier-price{font-family:var(--mono);font-size:18px;font-weight:700;margin-bottom:2px}
+.tier-price span{font-size:11px;font-weight:400;color:var(--text3)}
+.tier-target{font-size:10.5px;color:var(--text3)}
+.tier-features{padding:14px}
+.tf{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
+.tf::before{content:'✓';color:var(--green);font-size:12px;flex-shrink:0;margin-top:1px}
+.tf.no::before{content:'—';color:var(--text3)}
+.tier-btn{margin:0 14px 14px;display:block;text-align:center;padding:7px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none}
+.btn-free{background:var(--bg5);color:var(--text2);border:1px solid var(--border2)}
+.btn-pro{background:var(--purple);color:#fff}
+.btn-ent{background:var(--teal);color:#111}
+.btn-api{background:var(--amber);color:#111}
+
+/* FEATURE ROWS */
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.feat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px}
+.feat-card .fc-icon{font-size:20px;margin-bottom:8px}
+.feat-card .fc-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+.feat-card .fc-desc{font-size:12px;color:var(--text2);line-height:1.55}
+.feat-card .fc-lock{font-size:10px;font-family:var(--mono);margin-top:8px;padding:2px 7px;border-radius:4px;display:inline-block}
+.lock-pro{background:var(--pd);color:var(--purple2);border:1px solid rgba(124,110,245,.3)}
+.lock-ent{background:var(--td);color:var(--teal);border:1px solid rgba(45,224,192,.3)}
+.lock-api{background:var(--ad);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.lock-free{background:var(--gd);color:var(--green);border:1px solid rgba(61,218,132,.3)}
+
+/* VISUALISER MOCKUP */
+.viz-mock{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0}
+.viz-toolbar{background:var(--bg4);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:10px}
+.vt-dot{width:10px;height:10px;border-radius:50%}
+.vt-title{font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:8px}
+.vt-tabs{display:flex;gap:2px;margin-left:auto}
+.vt-tab{font-size:10px;padding:3px 10px;border-radius:4px;color:var(--text3);cursor:pointer;font-family:var(--mono)}
+.vt-tab.on{background:var(--pd);color:var(--purple2)}
+.viz-canvas{padding:20px;min-height:280px;position:relative;display:flex;align-items:center;justify-content:center}
+.viz-node{position:absolute;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:11px;font-family:var(--mono)}
+.vn-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.vn-name{font-weight:600}
+.vn-badge{font-size:9px;padding:1px 5px;border-radius:3px;margin-top:4px;display:inline-block}
+.viz-edge{position:absolute;pointer-events:none}
+.viz-legend{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap}
+.vleg{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text3)}
+.vleg-dot{width:8px;height:8px;border-radius:50%}
+
+/* GATEWAY ARCHITECTURE */
+.gw-stack{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0}
+.gw-layer{padding:14px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center}
+.gw-layer:last-child{border-bottom:none}
+.gw-layer:hover{background:rgba(255,255,255,.01)}
+.gwl-name{font-size:12.5px;font-weight:600}
+.gwl-type{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.gwl-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.gwl-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.gt{font-size:9.5px;font-family:var(--mono);padding:1.5px 6px;border-radius:3px;background:var(--bg5);border:1px solid var(--border);color:var(--text3)}
+.gt.hi{border-color:var(--border2);color:var(--text2)}
+
+/* CODE */
+.cb{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:12px 0}
+.cbh{background:var(--bg4);border-bottom:1px solid var(--border);padding:7px 15px;display:flex;justify-content:space-between}
+.cbt{font-size:10.5px;font-family:var(--mono);color:var(--text3)}.cbl{font-size:10px;color:var(--text3)}
+.cbb{padding:15px;overflow-x:auto}.cbb pre{font-family:var(--mono);font-size:11.5px;line-height:1.75}
+.kw{color:var(--purple2)}.str{color:var(--green)}.val{color:var(--amber)}.cm{color:var(--text3)}.hd{color:var(--teal)}.hv{color:var(--coral)}
+
+/* FUNNEL */
+.funnel{display:flex;flex-direction:column;gap:0;margin:16px 0}
+.fl{background:var(--bg3);border:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.fl:first-child{border-radius:10px 10px 0 0}
+.fl:last-child{border-radius:0 0 10px 10px;border-top:none}
+.fl:not(:first-child):not(:last-child){border-top:none}
+.fl:hover{border-color:var(--border2)}
+.fl-num{font-family:var(--mono);font-size:18px;font-weight:700;min-width:36px;color:var(--text3)}
+.fl-content{flex:1}
+.fl-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.fl-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.fl-cta{font-size:10.5px;font-family:var(--mono);padding:3px 10px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+
+/* REVENUE TABLE */
+.rev-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12.5px}
+.rev-table th{background:var(--bg4);color:var(--text3);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.rev-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+.rev-table tr:last-child td{border-bottom:none}
+.rev-table tr:hover td{background:rgba(255,255,255,.012)}
+.mono{font-family:var(--mono);font-size:11.5px}
+
+/* COMPARISON */
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.comp-col{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.comp-head{padding:12px 16px;border-bottom:1px solid var(--border)}
+.comp-head .ch-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.comp-head .ch-sub{font-size:10.5px;color:var(--text3)}
+.comp-body{padding:12px 16px}
+.comp-item{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--text2);margin-bottom:7px;line-height:1.4}
+.ci-icon{font-size:12px;flex-shrink:0;margin-top:1px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+@media(max-width:880px){.shell{flex-direction:column}.rail{width:100%;height:auto;position:relative}.body{padding:24px 18px}.products,.feat-grid,.comp-grid{grid-template-columns:1fr}.tier-wrap{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- RAIL -->
+<nav class="rail">
+<div class="rail-head">
+  <div class="rail-badge">PRODUCT DESIGN</div>
+  <div class="rail-title">CRP Ecosystem</div>
+  <div class="rail-sub">Comply · Gateway · Visualise · GitHub</div>
+</div>
+<div class="rail-nav">
+  <div class="rg"><div class="rgl">Overview</div>
+    <a class="ri on" href="#overview"><span class="rdot" style="background:var(--purple)"></span>The Ecosystem Map<span class="rnum">§1</span></a>
+    <a class="ri" href="#compete"><span class="rdot" style="background:var(--blue)"></span>vs Competitors<span class="rnum">§2</span></a>
+    <a class="ri" href="#dependency"><span class="rdot" style="background:var(--teal)"></span>Dependency Architecture<span class="rnum">§3</span></a>
+  </div>
+  <div class="rg"><div class="rgl">Products</div>
+    <a class="ri" href="#comply"><span class="rdot" style="background:var(--amber)"></span>CRP Comply<span class="rnum">§4</span></a>
+    <a class="ri" href="#gateway"><span class="rdot" style="background:var(--blue)"></span>CRP Gateway<span class="rnum">§5</span></a>
+    <a class="ri" href="#visualise"><span class="rdot" style="background:var(--pink)"></span>CRP Visualise<span class="rnum">§6</span></a>
+    <a class="ri" href="#github"><span class="rdot" style="background:var(--green)"></span>GitHub Extension<span class="rnum">§7</span></a>
+  </div>
+  <div class="rg"><div class="rgl">Monetisation</div>
+    <a class="ri" href="#funnel"><span class="rdot" style="background:var(--coral)"></span>The Funnel<span class="rnum">§8</span></a>
+    <a class="ri" href="#pricing"><span class="rdot" style="background:var(--gold)"></span>Pricing Architecture<span class="rnum">§9</span></a>
+    <a class="ri" href="#revenue"><span class="rdot" style="background:var(--green)"></span>Revenue Model<span class="rnum">§10</span></a>
+  </div>
+</div>
+</nav>
+
+<!-- BODY -->
+<main class="body">
+
+<!-- §1 OVERVIEW -->
+<div class="sec" id="overview">
+<div style="display:inline-flex;align-items:center;gap:8px;background:var(--pd);border:1px solid rgba(124,110,245,.3);color:var(--purple2);font-size:12px;padding:4px 14px;border-radius:20px;margin-bottom:18px">CRP™ Product Ecosystem Design</div>
+<h1>Four Products.<br>One Dependency Chain.</h1>
+<p class="subtitle" style="font-size:15px;color:var(--text2);max-width:620px;margin-bottom:28px;line-height:1.7">The protocol is open and free. Revenue flows from the platform layer — exactly how HTTP drives Cloudflare, AWS, and Vercel. Here's how every CRP touchpoint converts to recurring revenue.</p>
+
+<div class="products">
+  <div class="prod">
+    <div class="prod-icon">⚖️</div>
+    <div class="prod-name">CRP Comply</div>
+    <div class="prod-sub">comply.crprotocol.io</div>
+    <div class="prod-desc">The compliance platform. Transforms CRP protocol headers and audit trails into EU AI Act, ISO 42001, GDPR, and NIST evidence packs. The destination every other product funnels to.</div>
+    <span class="prod-status st-live">● Live — needs upgrade</span>
+  </div>
+  <div class="prod">
+    <div class="prod-icon">🔀</div>
+    <div class="prod-name">CRP Gateway</div>
+    <div class="prod-sub">gateway.crprotocol.io</div>
+    <div class="prod-desc">Managed hosted sidecar. The AI equivalent of Cloudflare — sits in front of every LLM call, emits all 58 headers, enforces safety policies, routes to providers. Zero SDK install required.</div>
+    <span class="prod-status st-build">◐ Build next</span>
+  </div>
+  <div class="prod">
+    <div class="prod-icon">🔭</div>
+    <div class="prod-name">CRP Visualise</div>
+    <div class="prod-sub">visualise.crprotocol.io</div>
+    <div class="prod-desc">Live visual tracing of AI calls, context windows, agent chains, risk nodes, and provenance DAGs. For developers, security teams, and auditors who need to see what's happening — not just read logs.</div>
+    <span class="prod-status st-plan">○ Plan & build</span>
+  </div>
+  <div class="prod">
+    <div class="prod-icon">🔍</div>
+    <div class="prod-name">CRP Scan (GitHub)</div>
+    <div class="prod-sub">GitHub Marketplace</div>
+    <div class="prod-desc">GitHub Action and VS Code extension. Scans repos for ungoverned AI calls, generates SARIF findings with header gap analysis, links every finding back to CRP Comply for remediation.</div>
+    <span class="prod-status st-build">◐ Build with Gateway</span>
+  </div>
+</div>
+</div>
+
+<hr>
+
+<!-- §2 COMPETITIVE -->
+<div class="sec" id="compete">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§2 · </span>What Makes CRP Different</h2>
+<p>Competitors like Vanta, Regulativ, ISMS.online, and GDPR Register are fundamentally <strong>document-generation tools</strong> — you fill in a questionnaire, they produce a PDF. They have no connection to your actual AI system at runtime. CRP's entire architecture is inverted: it generates compliance evidence <em>automatically from live protocol data</em>.</p>
+
+<div class="comp-grid">
+  <div class="comp-col">
+    <div class="comp-head" style="background:var(--rd)">
+      <div class="ch-title" style="color:var(--red)">Competitors (Vanta, Regulativ, Kertos)</div>
+      <div class="ch-sub">Document-generation compliance tools</div>
+    </div>
+    <div class="comp-body">
+      <div class="comp-item"><span class="ci-icon">✗</span>You fill in questionnaires — manual, periodic work</div>
+      <div class="comp-item"><span class="ci-icon">✗</span>Disconnected from actual AI runtime — snapshots, not live</div>
+      <div class="comp-item"><span class="ci-icon">✗</span>No provenance — evidence is assertions, not cryptographic proof</div>
+      <div class="comp-item"><span class="ci-icon">✗</span>No hallucination detection — can't detect what they don't measure</div>
+      <div class="comp-item"><span class="ci-icon">✗</span>One-size frameworks — not built for the AI call as the unit of compliance</div>
+      <div class="comp-item"><span class="ci-icon">✗</span>Compliance as a project — scheduled audits, not continuous</div>
+    </div>
+  </div>
+  <div class="comp-col">
+    <div class="comp-head" style="background:var(--gd)">
+      <div class="ch-title" style="color:var(--green)">CRP Comply + Protocol</div>
+      <div class="ch-sub">Live, protocol-driven compliance infrastructure</div>
+    </div>
+    <div class="comp-body">
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>Evidence generated automatically from every AI call — zero manual work</div>
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>CRP headers carry real-time risk, provenance, and classification data</div>
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>HMAC-SHA256 tamper-evident chain — cryptographically verifiable</div>
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>DPE 13-module hallucination detection is a core protocol feature</div>
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>Per-call EU AI Act classification — each response knows its risk class</div>
+      <div class="comp-item"><span class="ci-icon" style="color:var(--green)">✓</span>Continuous compliance — every call is an audit event, not a scheduled snapshot</div>
+    </div>
+  </div>
+</div>
+
+<div class="cl cl-g">
+  <div class="i">✦</div>
+  <div class="t"><strong>The moat:</strong> The dependency between CRP headers and CRP Comply evidence is <em>architectural</em>, not contractual. A Vanta customer can switch to Regulativ with a CSV export. A CRP Comply customer's evidence pack is generated from a live HMAC chain that only exists inside the CRP protocol. Switching means losing your entire continuous compliance history — and starting over with manual questionnaires.</div>
+</div>
+</div>
+
+<hr>
+
+<!-- §3 DEPENDENCY ARCHITECTURE -->
+<div class="sec" id="dependency">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§3 · </span>The Dependency Architecture</h2>
+<p>The protocol is free and open. But every valuable feature that matters in production — managed hosting, compliance evidence, visual tracing, audit export, certified evidence packs — exists only in the platform layer. Here's how each touchpoint creates the next dependency.</p>
+
+<div class="dep-wrap">
+  <div class="dep-row">
+    <div class="dep-node">
+      <div class="dn-label">Entry</div>
+      <div class="dn-name" style="color:var(--green)">crp-scan (GitHub)</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"3 ungoverned AI calls found"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Links to CRP Comply to fix them</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Trigger</div>
+      <div class="dn-name" style="color:var(--amber)">CRP Comply</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"Connect your AI calls to generate evidence"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Needs live data → Gateway</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Upgrade</div>
+      <div class="dn-name" style="color:var(--blue)">CRP Gateway</div>
+    </div>
+  </div>
+  <div class="dep-row">
+    <div class="dep-node">
+      <div class="dn-label">Self-host SDK</div>
+      <div class="dn-name" style="color:var(--text2)">CRP Protocol</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"Headers emitted, audit trail growing"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Need to make sense of the data</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Visualise</div>
+      <div class="dn-name" style="color:var(--pink)">CRP Visualise</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"EU AI Act audit coming up"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Need certified evidence pack</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Certify</div>
+      <div class="dn-name" style="color:var(--amber)">CRP Comply Pro/Ent</div>
+    </div>
+  </div>
+  <div class="dep-row">
+    <div class="dep-node">
+      <div class="dn-label">Auditor</div>
+      <div class="dn-name" style="color:var(--teal)">Third-party auditor</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"Share Visualise session / evidence pack"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Auditor needs CRP Visualise access</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Expand</div>
+      <div class="dn-name" style="color:var(--pink)">CRP Visualise (Auditor)</div>
+    </div>
+    <div class="dep-arrow">
+      <div class="dep-trigger">"Auditor uses CRP for their own clients"</div>
+      <div class="dep-arrow-line"></div>
+      <div class="dep-cta">Auditor becomes a reseller</div>
+    </div>
+    <div class="dep-node">
+      <div class="dn-label">Channel</div>
+      <div class="dn-name" style="color:var(--gold)">Partner/Reseller</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<hr>
+
+<!-- §4 CRP COMPLY -->
+<div class="sec" id="comply">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§4 · </span>CRP Comply — Redesigned</h2>
+<p>Currently CRP Comply generates FRIA, DPIA, transparency declarations, and audit evidence from LLM-powered form flows using BYOK. That's the foundation. Here's what it needs to become: a <strong>live, continuous compliance engine</strong> that ingests CRP protocol headers and converts them into regulatory evidence automatically — with the document generation as just one output layer.</p>
+
+<h3>What needs to be added</h3>
+
+<div class="feat-grid">
+  <div class="feat-card">
+    <div class="fc-icon">📡</div>
+    <div class="fc-title">Live Protocol Ingestion</div>
+    <div class="fc-desc">Comply receives <code>CRP-Compliance-Audit-Trail-URI</code> headers from every CRP call and automatically imports the event into the evidence chain. No manual upload — the protocol feeds Comply continuously.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🏛️</div>
+    <div class="fc-title">Per-Call EU AI Act Classification</div>
+    <div class="fc-desc">Every imported call carries <code>CRP-Compliance-EU-AI-Act: LIMITED</code> etc. Comply aggregates these into a live risk register — showing which AI systems are in which risk category, updated in real-time.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🔐</div>
+    <div class="fc-title">HMAC Chain Verifier</div>
+    <div class="fc-desc">Comply verifies the HMAC chain on import. A broken chain (<code>CRP-Provenance-Chain-Integrity: BROKEN</code>) raises an incident. Auditors can verify any evidence pack was not tampered with post-generation.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">📄</div>
+    <div class="fc-title">One-Click Evidence Pack</div>
+    <div class="fc-desc">For any date range, system, or regulation: generate a downloadable, pre-filled FRIA, DPIA, Technical Documentation (Art. 11 EU AI Act), or ISO 42001 Annex B evidence pack — built from live protocol data, not questionnaires.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">⚠️</div>
+    <div class="fc-title">Continuous Compliance Alerts</div>
+    <div class="fc-desc">Webhook-triggered alerts when <code>CRP-Safety-Hallucination-Risk: CRITICAL</code>, when EU AI Act risk class changes, when PII is detected in a call, or when a new AI system type is detected in the audit trail.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🤝</div>
+    <div class="fc-title">Auditor Access & Sharing</div>
+    <div class="fc-desc">Share a read-only, time-limited Comply session with an external auditor. They see the verified evidence chain, the risk register, the HMAC proofs. No PDF export — a live, verifiable session. They can't tamper with it.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🌏</div>
+    <div class="fc-title">Multi-Regulation Dashboard</div>
+    <div class="fc-desc">Single view of compliance posture across EU AI Act, GDPR, ISO 42001, NIST AI RMF, SOC 2, and Australian AI Ethics Framework simultaneously. Color-coded coverage: green = evidence exists, amber = gaps, red = violations.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🔗</div>
+    <div class="fc-title">CRP Visualise Integration</div>
+    <div class="fc-desc">Any compliance finding in Comply links directly to the CRP Visualise session that produced it — click from a FRIA document to the live trace of the specific AI calls that generated the evidence. Comply and Visualise are the same data, two views.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+</div>
+
+<div class="cl cl-w">
+  <div class="i">⚠</div>
+  <div class="t"><strong>The BYOK model needs a dual track:</strong> Keep BYOK for developers who want to self-host. But add <strong>CRP Gateway as the premium track</strong> — you connect CRP Gateway, and Comply gets data automatically without any SDK work. The Gateway is the upgrade path that makes Comply hands-off. BYOK requires developer effort; Gateway requires a credit card. That's the tier.</div>
+</div>
+</div>
+
+<hr>
+
+<!-- §5 CRP GATEWAY -->
+<div class="sec" id="gateway">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§5 · </span>CRP Gateway — Expanded</h2>
+<p>The Gateway is <strong>the most important product CRP doesn't have yet</strong>. It is the hosted, managed version of the CRP sidecar — a reverse proxy that sits between your application and any LLM provider. Think Cloudflare Workers, but for AI calls. One DNS/endpoint change, and every AI call is governed.</p>
+
+<h3>Architecture: what the Gateway does</h3>
+
+<div class="gw-stack">
+  <div class="gw-layer" style="background:var(--pd)">
+    <div>
+      <div class="gwl-name" style="color:var(--purple2)">Inbound Request Handler</div>
+      <div class="gwl-type">ENTRY LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Receives AI requests from client. Reads <code>CRP-Safety-Policy</code>, <code>CRP-Accept-Strategy</code>, <code>CRP-Session-Token</code> from request headers. Authenticates API key (Gateway key, not LLM provider key). Starts audit event.</div>
+      <div class="gwl-tags"><span class="gt hi">Auth</span><span class="gt hi">Policy parse</span><span class="gt hi">Session restore</span><span class="gt hi">Audit start</span></div>
+    </div>
+  </div>
+  <div class="gw-layer">
+    <div>
+      <div class="gwl-name" style="color:var(--green)">Context Envelope Builder</div>
+      <div class="gwl-type">CKF LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Checks <code>CRP-Context-If-Match</code> — returns 304 if ETag matches and facts unchanged. Otherwise runs 3-phase fact selection, builds envelope, sets <code>CRP-Context-ETag</code>, packs context into LLM request.</div>
+      <div class="gwl-tags"><span class="gt hi">ETag check</span><span class="gt hi">3-phase pack</span><span class="gt hi">CKF query</span><span class="gt hi">Quality tier</span></div>
+    </div>
+  </div>
+  <div class="gw-layer">
+    <div>
+      <div class="gwl-name" style="color:var(--blue)">Provider Router</div>
+      <div class="gwl-type">DISPATCH LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Selects dispatch strategy from <code>CRP-Accept-Strategy</code> or auto-detects from TaskIntent. Routes to OpenAI, Anthropic, Gemini, Azure OpenAI, Ollama, or Bedrock. Strips all CRP headers before forwarding (Axiom 4). Manages provider credentials — clients never touch LLM keys.</div>
+      <div class="gwl-tags"><span class="gt hi">Provider vault</span><span class="gt hi">Strategy select</span><span class="gt hi">Header strip</span><span class="gt hi">Failover</span></div>
+    </div>
+  </div>
+  <div class="gw-layer">
+    <div>
+      <div class="gwl-name" style="color:var(--coral)">DPE Safety Engine</div>
+      <div class="gwl-type">ANALYSIS LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Runs the 13-module DPE on the LLM response. Scores hallucination risk. Applies regulatory amplifiers. Evaluates against <code>CRP-Safety-Policy</code>. If CRITICAL and <code>halt-on CRITICAL</code> set — returns HTTP 451 before response reaches client. Fires webhook to <code>report-uri</code>.</div>
+      <div class="gwl-tags"><span class="gt hi">DPE 13-module</span><span class="gt hi">Policy enforce</span><span class="gt hi">451 halt</span><span class="gt hi">Webhook fire</span></div>
+    </div>
+  </div>
+  <div class="gw-layer">
+    <div>
+      <div class="gwl-name" style="color:var(--teal)">Header Injection</div>
+      <div class="gwl-type">RESPONSE LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Injects all 58 CRP headers onto the response. Signs session token. Updates HMAC chain. Emits <code>CRP-Set-Session</code> with updated state. Sets <code>CRP-Compliance-Audit-Trail-URI</code> deep-linking to CRP Comply for this call.</div>
+      <div class="gwl-tags"><span class="gt hi">58 headers</span><span class="gt hi">Session sign</span><span class="gt hi">HMAC extend</span><span class="gt hi">Comply link</span></div>
+    </div>
+  </div>
+  <div class="gw-layer">
+    <div>
+      <div class="gwl-name" style="color:var(--amber)">Comply Export</div>
+      <div class="gwl-type">COMPLIANCE LAYER</div>
+    </div>
+    <div>
+      <div class="gwl-desc">Streams the audit event to CRP Comply in real-time. Every call appears in the Comply evidence chain within seconds of completion. No batch uploads, no manual evidence collection. If Comply detects a new risk class or regulation trigger, it fires an alert back to the Gateway webhook.</div>
+      <div class="gwl-tags"><span class="gt hi">Real-time stream</span><span class="gt hi">Comply push</span><span class="gt hi">Bidirectional</span></div>
+    </div>
+  </div>
+</div>
+
+<h3>Why clients use Gateway over self-hosted SDK</h3>
+<div class="feat-grid">
+  <div class="feat-card">
+    <div class="fc-icon">🔑</div>
+    <div class="fc-title">LLM Key Vault</div>
+    <div class="fc-desc">Gateway holds all LLM provider credentials. Your application has one key — the Gateway key. Rotate LLM providers without touching application code. Eliminate LLM key exposure in environment variables.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🌐</div>
+    <div class="fc-title">One Endpoint, Any Provider</div>
+    <div class="fc-desc">Point your app at <code>gateway.crprotocol.io/v1/chat</code>. Gateway routes to OpenAI, Anthropic, Gemini, Ollama — based on strategy, cost, or latency. Switch providers with a single config change, zero code change.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">📊</div>
+    <div class="fc-title">Automatic Comply Feed</div>
+    <div class="fc-desc">Self-hosted SDK requires you to wire Comply integration manually. Gateway does it automatically — every call streams to your Comply account. No BYOK needed, no SDK config. Comply works out of the box.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">⚡</div>
+    <div class="fc-title">Zero-Install Safety</div>
+    <div class="fc-desc">No Python, no npm, no Docker. Change your OpenAI base URL to Gateway. Every AI call in every language is now governed. Works with LangChain, LlamaIndex, raw fetch() — anything that calls an OpenAI-compatible endpoint.</div>
+    <span class="fc-lock lock-free">FREE TIER</span>
+  </div>
+</div>
+
+<div class="cb">
+<div class="cbh"><span class="cbt">OpenAI SDK — one line change to use CRP Gateway</span><span class="cbl">python</span></div>
+<div class="cbb"><pre><span class="cm"># Before: direct OpenAI</span>
+<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+client = OpenAI(api_key=<span class="str">"sk-..."</span>)
+
+<span class="cm"># After: CRP Gateway (one change, full governance)</span>
+<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+client = OpenAI(
+    api_key=<span class="str">"crp_gw_key_..."</span>,  <span class="cm"># Gateway key, not OpenAI key</span>
+    base_url=<span class="str">"https://gateway.crprotocol.io/v1"</span>
+)
+<span class="cm"># That's it. Every response now carries all 58 CRP headers.
+# Comply account gets the audit event. Safety policy enforced.
+# Works with LangChain, LlamaIndex, AutoGen — anything OpenAI-compatible.</span></span></pre>
+</div></div>
+</div>
+
+<hr>
+
+<!-- §6 CRP VISUALISE -->
+<div class="sec" id="visualise">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§6 · </span>CRP Visualise — New Product</h2>
+<p>This is the highest-leverage new product in the ecosystem — and justifiably the most expensive. Every AI system is a black box to the people who need to govern it: CTOs, security teams, compliance officers, and auditors. CRP Visualise makes the black box transparent — as a live, interactive visual environment.</p>
+
+<div class="cl cl-p">
+  <div class="i">★</div>
+  <div class="t"><strong>The insight:</strong> A compliance officer cannot read HMAC chains and JSON logs. An auditor cannot trace agent behaviour from a CSV export. But they <em>can</em> understand a node graph showing exactly which AI calls happened, what risk each produced, how context flowed between them, and where human oversight was triggered. Visualise is what offloads the auditor's entire investigative workload onto a screen.</div>
+</div>
+
+<h3>What Visualise shows</h3>
+
+<!-- VISUALISE MOCKUP -->
+<div class="viz-mock">
+  <div class="viz-toolbar">
+    <div class="vt-dot" style="background:#ff5f57"></div>
+    <div class="vt-dot" style="background:#febc2e"></div>
+    <div class="vt-dot" style="background:#28c840"></div>
+    <div class="vt-title">CRP Visualise — Session crp_sess_7f3a · Live</div>
+    <div class="vt-tabs">
+      <span class="vt-tab on">Trace</span>
+      <span class="vt-tab">Risk</span>
+      <span class="vt-tab">Provenance</span>
+      <span class="vt-tab">Comply</span>
+    </div>
+  </div>
+  <div class="viz-canvas" style="height:320px;position:relative">
+    <!-- Client node -->
+    <div class="viz-node" style="left:20px;top:130px;border-color:var(--border2)">
+      <div class="vn-label">Application</div>
+      <div class="vn-name" style="color:var(--text)">my-app</div>
+      <div class="vn-badge" style="background:var(--gd);color:var(--green)">connected</div>
+    </div>
+    <!-- Gateway node -->
+    <div class="viz-node" style="left:180px;top:110px;border-color:var(--purple);min-width:120px">
+      <div class="vn-label">CRP Gateway</div>
+      <div class="vn-name" style="color:var(--purple2)">gateway</div>
+      <div class="vn-badge" style="background:var(--pd);color:var(--purple2)">Quality: A</div>
+    </div>
+    <!-- W1 node -->
+    <div class="viz-node" style="left:360px;top:40px;border-color:var(--green)">
+      <div class="vn-label">Window 1</div>
+      <div class="vn-name" style="color:var(--green)">dispatch_push</div>
+      <div class="vn-badge" style="background:var(--gd);color:var(--green)">LOW · 0.14</div>
+    </div>
+    <!-- W2 node -->
+    <div class="viz-node" style="left:360px;top:150px;border-color:var(--amber)">
+      <div class="vn-label">Window 2</div>
+      <div class="vn-name" style="color:var(--amber)">dispatch_reflexive</div>
+      <div class="vn-badge" style="background:var(--ad);color:var(--amber)">HIGH · 0.51 ↑</div>
+    </div>
+    <!-- W3 node -->
+    <div class="viz-node" style="left:360px;top:250px;border-color:var(--teal)">
+      <div class="vn-label">Window 3</div>
+      <div class="vn-name" style="color:var(--teal)">dispatch_agentic</div>
+      <div class="vn-badge" style="background:var(--td);color:var(--teal)">LOW · 0.18</div>
+    </div>
+    <!-- Comply node -->
+    <div class="viz-node" style="right:20px;top:110px;border-color:var(--amber)">
+      <div class="vn-label">CRP Comply</div>
+      <div class="vn-name" style="color:var(--amber)">evidence chain</div>
+      <div class="vn-badge" style="background:var(--ad);color:var(--amber)">3 events</div>
+    </div>
+    <!-- Oversight node -->
+    <div class="viz-node" style="left:520px;top:150px;border-color:var(--coral)">
+      <div class="vn-label">Oversight Event</div>
+      <div class="vn-name" style="color:var(--coral)">human-review</div>
+      <div class="vn-badge" style="background:var(--cd);color:var(--coral)">Art.14 triggered</div>
+    </div>
+    <!-- SVG EDGES -->
+    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" overflow="visible">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        </marker>
+        <marker id="b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="rgba(245,166,35,0.4)" stroke-width="1.5"/>
+        </marker>
+      </defs>
+      <!-- app → gateway -->
+      <line x1="156" y1="155" x2="178" y2="150" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" marker-end="url(#a)"/>
+      <!-- gateway → w1 -->
+      <line x1="296" y1="130" x2="358" y2="85" stroke="rgba(61,218,132,0.35)" stroke-width="1.5" marker-end="url(#a)"/>
+      <!-- gateway → w2 -->
+      <line x1="296" y1="145" x2="358" y2="175" stroke="rgba(245,166,35,0.4)" stroke-width="1.5" marker-end="url(#b)"/>
+      <!-- gateway → w3 -->
+      <line x1="296" y1="155" x2="358" y2="268" stroke="rgba(45,224,192,0.3)" stroke-width="1.5" marker-end="url(#a)"/>
+      <!-- w2 → oversight -->
+      <line x1="484" y1="180" x2="518" y2="185" stroke="rgba(255,107,82,0.5)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a)"/>
+      <!-- gateway → comply -->
+      <line x1="296" y1="135" x2="730" y2="140" stroke="rgba(245,166,35,0.25)" stroke-width="1" stroke-dasharray="5 4" marker-end="url(#a)"/>
+    </svg>
+  </div>
+  <div class="viz-legend">
+    <div class="vleg"><div class="vleg-dot" style="background:var(--green)"></div>LOW risk call</div>
+    <div class="vleg"><div class="vleg-dot" style="background:var(--amber)"></div>HIGH risk call</div>
+    <div class="vleg"><div class="vleg-dot" style="background:var(--coral)"></div>Oversight triggered</div>
+    <div class="vleg"><div class="vleg-dot" style="background:var(--teal)"></div>Agentic dispatch</div>
+    <div class="vleg" style="margin-left:auto;font-size:10px;color:var(--text3)">Live · 3 windows · Safety budget: 0.63</div>
+  </div>
+</div>
+
+<h3>Views available in Visualise</h3>
+<div class="feat-grid">
+  <div class="feat-card">
+    <div class="fc-icon">🕸️</div>
+    <div class="fc-title">Session Trace Graph</div>
+    <div class="fc-desc">Live node graph of every AI call in a session. Nodes sized by token usage, coloured by risk level, connected by context continuation edges. Click any node to inspect its full header set and DPE report.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">📈</div>
+    <div class="fc-title">Risk Timeline</div>
+    <div class="fc-desc">Time-series view of hallucination risk and safety budget across a session or organisation. Identify patterns: which prompt types produce HIGH risk, which users trigger oversight, which systems are risk hot-spots.</div>
+    <span class="fc-lock lock-pro">PRO+</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🔗</div>
+    <div class="fc-title">Provenance DAG</div>
+    <div class="fc-desc">The Window DAG rendered as a navigable graph. Trace exactly how context flowed from Window 1 through fan-out to N sub-agents and back via fan-in. Click any window to see which facts from the CKF were used.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🏛️</div>
+    <div class="fc-title">Compliance Map View</div>
+    <div class="fc-desc">Overlay regulatory classification on the session graph. Each node shows its EU AI Act risk class, which ISO 42001 controls it satisfies, and whether it triggered any GDPR obligations. Designed for auditors.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🤖</div>
+    <div class="fc-title">Agent Loop Inspector</div>
+    <div class="fc-desc">For agentic sessions: shows each agent's cognitive phase (ANALYZE → PLAN → EXECUTE), loop depth, safety budget at each hop, and which tool calls fired. See exactly where autonomous AI made decisions.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+  <div class="feat-card">
+    <div class="fc-icon">🎬</div>
+    <div class="fc-title">Session Replay</div>
+    <div class="fc-desc">Replay any past session frame-by-frame. Pause at any window. See exactly what context was in the envelope at that moment. Invaluable for incident investigation — reconstruct exactly what an AI system saw and said.</div>
+    <span class="fc-lock lock-ent">ENTERPRISE</span>
+  </div>
+</div>
+
+<div class="cl cl-g">
+  <div class="i">★</div>
+  <div class="t"><strong>Why Visualise is high-cost justified:</strong> A single compliance audit of an AI system costs an enterprise €20,000–€100,000 in consultant time. CRP Visualise reduces that to hours by giving the auditor a navigable, verifiable, live view of the entire system. At €500–€2,000/month, it pays for itself in the first audit. That's the pricing conversation — not "what does the software cost" but "what does the audit currently cost you."</div>
+</div>
+</div>
+
+<hr>
+
+<!-- §7 GITHUB -->
+<div class="sec" id="github">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§7 · </span>GitHub Extension — The Top of the Funnel</h2>
+<p>The GitHub Action is the widest-reach product in the ecosystem. It touches every developer, in every repo, inside their existing workflow. Its job is one thing: <strong>create a CRP Comply account</strong>. Everything else flows from there.</p>
+
+<h3>The free/paid split</h3>
+<div class="tier-wrap" style="grid-template-columns:1fr 1fr">
+  <div class="tier-col">
+    <div class="tier-head">
+      <div class="tier-name" style="color:var(--green)">crp-scan Free</div>
+      <div class="tier-price">$0 <span>/forever</span></div>
+      <div class="tier-target">Any developer · Any repo</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">Detects AI integration points (OpenAI, Anthropic, LangChain, etc.)</div>
+      <div class="tf">Identifies ungoverned calls (missing CRP wrapper)</div>
+      <div class="tf">SARIF output — renders in GitHub Security tab</div>
+      <div class="tf">PR annotations showing which lines need governance</div>
+      <div class="tf">Links every finding to CRP Comply signup</div>
+      <div class="tf no">Header gap analysis (which specific headers are missing)</div>
+      <div class="tf no">Auto-remediation PR generation</div>
+      <div class="tf no">EU AI Act pre-classification of detected AI systems</div>
+      <div class="tf no">CRP Comply evidence sync</div>
+    </div>
+    <button class="tier-btn btn-free">Install Free</button>
+  </div>
+  <div class="tier-col" style="background:var(--pd)">
+    <div class="tier-head" style="border-color:rgba(124,110,245,.3)">
+      <div class="tier-name" style="color:var(--purple2)">crp-scan Pro</div>
+      <div class="tier-price" style="color:var(--purple2)">$29 <span>/repo/mo</span></div>
+      <div class="tier-target">Teams with CRP Comply account</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">Everything in Free</div>
+      <div class="tf">Full header gap analysis — which of 58 headers each call is missing</div>
+      <div class="tf">Auto-remediation PR: generates the CRP wrapper code for each finding</div>
+      <div class="tf">EU AI Act pre-classification of every detected AI system</div>
+      <div class="tf">CRP Comply sync — findings appear in your Comply evidence dashboard</div>
+      <div class="tf">Block merge on configurable risk levels</div>
+      <div class="tf">Weekly governance report emailed to team</div>
+    </div>
+    <button class="tier-btn btn-pro">Requires Comply account →</button>
+  </div>
+</div>
+
+<div class="cb">
+<div class="cbh"><span class="cbt">GitHub Action — free tier output linking to Comply</span><span class="cbl">SARIF annotation</span></div>
+<div class="cbb"><pre><span class="hd">src/api/chat.py:47</span> — <span class="hv">UNGOVERNED_AI_CALL</span> [HIGH]
+  Unwrapped OpenAI call. No CRP governance.
+
+  <span class="cm">What you're missing:</span>
+  <span class="str">· Hallucination risk monitoring (CRP-Safety-*)</span>
+  <span class="str">· Tamper-evident audit trail (CRP-Provenance-HMAC)</span>
+  <span class="str">· EU AI Act classification (CRP-Compliance-EU-AI-Act)</span>
+  <span class="str">· Continuous compliance evidence (CRP-Compliance-Audit-Trail-URI)</span>
+
+  <span class="cm">Fix this in 2 minutes:</span>
+  <span class="val">→ Connect CRP Gateway: gateway.crprotocol.io (free tier available)</span>
+  <span class="val">→ Generate your evidence pack: comply.crprotocol.io</span>
+
+  <span class="cm">Pro: get auto-remediation PR + Comply sync → crprotocol.io/github-pro</span></pre>
+</div></div>
+</div>
+
+<hr>
+
+<!-- §8 FUNNEL -->
+<div class="sec" id="funnel">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§8 · </span>The Conversion Funnel</h2>
+
+<div class="funnel">
+  <div class="fl">
+    <div class="fl-num" style="color:var(--green)">1</div>
+    <div class="fl-content">
+      <div class="fl-title">Developer installs crp-scan</div>
+      <div class="fl-desc">Free GitHub Action. Finds ungoverned AI calls. Every finding links to comply.crprotocol.io. Zero friction, no account required to install.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--gd);color:var(--green);border:1px solid rgba(61,218,132,.3)">100% free</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--blue)">2</div>
+    <div class="fl-content">
+      <div class="fl-title">Developer signs up for CRP Comply free tier</div>
+      <div class="fl-desc">Clicking a scan finding goes to Comply with the detected AI system pre-populated. Free tier: 1 AI system, 100 calls/day, 30-day audit history. BYOK LLM key for document generation. Real value, no cost.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--bd);color:var(--blue);border:1px solid rgba(79,168,255,.3)">Free tier</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--amber)">3</div>
+    <div class="fl-content">
+      <div class="fl-title">Comply free tier hits limits</div>
+      <div class="fl-desc">Second AI system detected. Audit history exceeds 30 days. EU AI Act audit coming up. Team member needs access. Every limit is designed to hit at the moment compliance becomes real and urgent.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--ad);color:var(--amber);border:1px solid rgba(245,166,35,.3)">Natural upgrade</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--purple2)">4</div>
+    <div class="fl-content">
+      <div class="fl-title">Comply Pro — live protocol data</div>
+      <div class="fl-desc">$149/mo. Unlimited AI systems, 1-year audit history, full evidence pack generation (FRIA, DPIA, Technical Documentation), continuous alerts, 5 team seats. To get live data automatically — upgrade to Gateway.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--pd);color:var(--purple2);border:1px solid rgba(124,110,245,.3)">$149/mo</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--blue)">5</div>
+    <div class="fl-content">
+      <div class="fl-title">CRP Gateway — zero-SDK governance</div>
+      <div class="fl-desc">$0.002/call (100K calls/mo = $200). One endpoint change. All 58 headers. Automatic Comply feed. LLM key vault. Provider routing. For teams who want governance without SDK work — which is most teams.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--bd);color:var(--blue);border:1px solid rgba(79,168,255,.3)">$0.002/call</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--pink)">6</div>
+    <div class="fl-content">
+      <div class="fl-title">CRP Visualise — for audits and security teams</div>
+      <div class="fl-desc">$499/mo per org. Live trace graphs, risk timelines, provenance DAG, compliance map. Triggered when: ISO 42001 audit starts, security team requests visibility, or CISO sees the demo. Auditor access is a separate line item.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--pkd);color:var(--pink);border:1px solid rgba(255,110,180,.3)">$499/mo</span>
+  </div>
+  <div class="fl">
+    <div class="fl-num" style="color:var(--gold)">7</div>
+    <div class="fl-content">
+      <div class="fl-title">Enterprise — CRP Comply + Gateway + Visualise bundle</div>
+      <div class="fl-desc">Custom pricing from $2,000/mo. Dedicated Gateway instance, on-premises option, SSO, SIEM integration, quarterly compliance review call, certified evidence packs for EU AI Act authority submissions.</div>
+    </div>
+    <span class="fl-cta" style="background:var(--gld);color:var(--gold);border:1px solid rgba(255,215,0,.3)">$2K+/mo</span>
+  </div>
+</div>
+</div>
+
+<hr>
+
+<!-- §9 PRICING -->
+<div class="sec" id="pricing">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§9 · </span>Pricing Architecture</h2>
+
+<div class="tier-wrap" style="grid-template-columns:1fr 1fr 1fr 1fr">
+  <!-- FREE -->
+  <div class="tier-col">
+    <div class="tier-head">
+      <div class="tier-name" style="color:var(--green)">Free</div>
+      <div class="tier-price">$0</div>
+      <div class="tier-target">Developers · Try it</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">crp-scan GitHub Action</div>
+      <div class="tf">CRP Comply: 1 AI system</div>
+      <div class="tf">100 calls/day audit trail</div>
+      <div class="tf">30-day history</div>
+      <div class="tf">BYOK document generation</div>
+      <div class="tf">Community support</div>
+      <div class="tf no">Live protocol ingestion</div>
+      <div class="tf no">Evidence pack download</div>
+      <div class="tf no">CRP Gateway access</div>
+      <div class="tf no">CRP Visualise</div>
+    </div>
+    <button class="tier-btn btn-free">Start free</button>
+  </div>
+  <!-- PRO -->
+  <div class="tier-col" style="background:rgba(124,110,245,0.05)">
+    <div class="tier-head" style="border-color:rgba(124,110,245,.2)">
+      <div class="tier-name" style="color:var(--purple2)">Pro</div>
+      <div class="tier-price" style="color:var(--purple2)">$149 <span>/mo</span></div>
+      <div class="tier-target">Teams · Startups</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">Unlimited AI systems</div>
+      <div class="tf">Unlimited calls/day</div>
+      <div class="tf">1-year audit history</div>
+      <div class="tf">FRIA, DPIA, Tech Doc generation</div>
+      <div class="tf">Continuous compliance alerts</div>
+      <div class="tf">5 team seats</div>
+      <div class="tf">crp-scan Pro</div>
+      <div class="tf">Gateway access (pay/call)</div>
+      <div class="tf no">CRP Visualise</div>
+      <div class="tf no">Auditor sharing</div>
+    </div>
+    <button class="tier-btn btn-pro">Start Pro</button>
+  </div>
+  <!-- ENTERPRISE -->
+  <div class="tier-col" style="background:rgba(45,224,192,0.04)">
+    <div class="tier-head" style="border-color:rgba(45,224,192,.2)">
+      <div class="tier-name" style="color:var(--teal)">Business</div>
+      <div class="tier-price" style="color:var(--teal)">$499 <span>/mo</span></div>
+      <div class="tier-target">Scale-ups · Compliance teams</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">Everything in Pro</div>
+      <div class="tf">CRP Visualise included</div>
+      <div class="tf">Auditor sharing (5 auditor seats)</div>
+      <div class="tf">5-year audit history</div>
+      <div class="tf">20 team seats</div>
+      <div class="tf">ISO 42001 control mapping</div>
+      <div class="tf">SIEM webhook integration</div>
+      <div class="tf">Priority support (4hr SLA)</div>
+      <div class="tf no">Dedicated Gateway instance</div>
+      <div class="tf no">On-premises deployment</div>
+    </div>
+    <button class="tier-btn btn-ent">Start Business</button>
+  </div>
+  <!-- API/GATEWAY -->
+  <div class="tier-col" style="background:rgba(245,166,35,0.04)">
+    <div class="tier-head" style="border-color:rgba(245,166,35,.2)">
+      <div class="tier-name" style="color:var(--amber)">Enterprise</div>
+      <div class="tier-price" style="color:var(--amber)">Custom</div>
+      <div class="tier-target">Enterprise · Government</div>
+    </div>
+    <div class="tier-features">
+      <div class="tf">Everything in Business</div>
+      <div class="tf">Dedicated Gateway instance</div>
+      <div class="tf">On-premises / private cloud</div>
+      <div class="tf">Unlimited auditor seats</div>
+      <div class="tf">Unlimited seats</div>
+      <div class="tf">Custom regulation mapping</div>
+      <div class="tf">EU AI Act authority submission support</div>
+      <div class="tf">Quarterly compliance review</div>
+      <div class="tf">CRP certification program</div>
+      <div class="tf">SLA 99.99% uptime</div>
+    </div>
+    <button class="tier-btn btn-api">Contact sales</button>
+  </div>
+</div>
+
+<h4>Gateway add-on pricing (all tiers)</h4>
+<table class="rev-table">
+<tr><th>Volume</th><th>Price/call</th><th>Monthly cost</th><th>Typical user</th></tr>
+<tr><td class="mono">0 – 50K calls/mo</td><td class="mono" style="color:var(--green)">$0.003</td><td class="mono">Up to $150</td><td class="tdesc">Early-stage startup</td></tr>
+<tr><td class="mono">50K – 500K calls/mo</td><td class="mono" style="color:var(--amber)">$0.002</td><td class="mono">$100 – $1,000</td><td class="tdesc">Growing SaaS / scale-up</td></tr>
+<tr><td class="mono">500K – 5M calls/mo</td><td class="mono" style="color:var(--blue)">$0.001</td><td class="mono">$500 – $5,000</td><td class="tdesc">Enterprise AI platform</td></tr>
+<tr><td class="mono">5M+ calls/mo</td><td class="mono" style="color:var(--purple2)">Negotiated</td><td class="mono">Custom</td><td class="tdesc">Hyperscale / government</td></tr>
+</table>
+</div>
+
+<hr>
+
+<!-- §10 REVENUE -->
+<div class="sec" id="revenue">
+<h2><span style="color:var(--text3);font-size:14px;font-family:var(--mono);font-weight:400">§10 · </span>Revenue Model Summary</h2>
+
+<table class="rev-table">
+<tr><th>Stream</th><th>Product</th><th>Model</th><th>Target ARR potential</th><th>Margin</th></tr>
+<tr>
+  <td><strong style="color:var(--amber)">Comply SaaS</strong></td>
+  <td class="tdesc">CRP Comply Pro/Business/Enterprise</td>
+  <td class="mono">$149–$499/mo + custom</td>
+  <td class="mono" style="color:var(--green)">High</td>
+  <td class="mono">85%+</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--blue)">Gateway usage</strong></td>
+  <td class="tdesc">CRP Gateway per-call metering</td>
+  <td class="mono">$0.001–0.003/call</td>
+  <td class="mono" style="color:var(--green)">Very high at scale</td>
+  <td class="mono">70%+</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--pink)">Visualise SaaS</strong></td>
+  <td class="tdesc">CRP Visualise (included in Business+)</td>
+  <td class="mono">Bundled / add-on $299</td>
+  <td class="mono" style="color:var(--amber)">Medium · High ACV</td>
+  <td class="mono">90%+</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--green)">GitHub Pro</strong></td>
+  <td class="tdesc">crp-scan Pro tier</td>
+  <td class="mono">$29/repo/mo</td>
+  <td class="mono" style="color:var(--amber)">Medium · High volume</td>
+  <td class="mono">90%+</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--gold)">Enterprise contracts</strong></td>
+  <td class="tdesc">Custom deployment + compliance support</td>
+  <td class="mono">$2K–$20K/mo</td>
+  <td class="mono" style="color:var(--green)">Very high ACV</td>
+  <td class="mono">60%+</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--teal)">Certification</strong></td>
+  <td class="tdesc">"CRP-Compliant" cert for AI products</td>
+  <td class="mono">$5K–$25K per cert</td>
+  <td class="mono" style="color:var(--amber)">Medium · grows with standard adoption</td>
+  <td class="mono">75%+</td>
+</tr>
+</table>
+
+<div class="cl cl-g">
+  <div class="i">★</div>
+  <div class="t"><strong>The number that matters:</strong> 1,000 companies on Comply Pro ($149/mo) = $1.79M ARR. 100 companies on Business ($499/mo) = $599K ARR. 50 enterprise contracts at $3K/mo = $1.8M ARR. 500M Gateway calls/mo at $0.002 = $12M ARR. The Gateway becomes the dominant revenue stream at scale — the same way Stripe's transaction fee, not its SaaS, is the business. CRP Comply gets customers. CRP Gateway gets revenue.</div>
+</div>
+
+<div style="height:40px"></div>
+<div style="text-align:center;color:var(--text3);font-size:11px;font-family:var(--mono);padding:20px 0;border-top:1px solid var(--border)">
+  CRP™ Product Ecosystem Design · © 2025–2026 AutoCyber AI Pty Ltd<br>
+  crprotocol.io · comply.crprotocol.io · gateway.crprotocol.io · visualise.crprotocol.io
+</div>
+</main>
+</div>
+
+<script>
+const items = document.querySelectorAll('.ri');
+const secs = document.querySelectorAll('.sec');
+const obs = new IntersectionObserver(e => {
+  e.forEach(entry => {
+    if(entry.isIntersecting) {
+      const id = entry.target.id;
+      items.forEach(i => i.classList.toggle('on', i.getAttribute('href') === '#' + id));
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px' });
+secs.forEach(s => obs.observe(s));
+items.forEach(i => i.addEventListener('click', e => {
+  e.preventDefault();
+  document.querySelector(i.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+}));
+// Visualise tab switching (cosmetic)
+document.querySelectorAll('.vt-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.vt-tab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>

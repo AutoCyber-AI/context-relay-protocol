@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StreamEvent",
+  "description": "Events emitted by dispatch_stream(). The stream MUST emit exactly one 'done' event as the final event (or one 'error').",
+  "type": "object",
+  "required": ["event_type", "data"],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": ["token", "extraction", "continuation", "window_complete", "done", "error"],
+      "description": "Discriminator for the event type. Concatenating all 'token' data values MUST produce the same string as non-streaming dispatch() output."
+    },
+    "data": {
+      "description": "Event payload. Type depends on event_type: token=string, extraction=ExtractionProgress, continuation=ContinuationInfo, window_complete=WindowSummary, done=QualityReport, error=CRPError."
+    }
+  },
+  "discriminator": { "propertyName": "event_type" }
+}

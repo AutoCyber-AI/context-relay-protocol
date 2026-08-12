@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRP Headers — Protocol Specification v3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #111318;
+    --bg3: #181b22;
+    --bg4: #1e222b;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e4e8f0;
+    --text2: #8b92a6;
+    --text3: #4f566b;
+    --purple: #7c6ef5;
+    --purple-dim: rgba(124,110,245,0.15);
+    --teal: #2de0c0;
+    --teal-dim: rgba(45,224,192,0.12);
+    --coral: #ff6b52;
+    --coral-dim: rgba(255,107,82,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --blue: #4fa8ff;
+    --blue-dim: rgba(79,168,255,0.12);
+    --green: #42d392;
+    --green-dim: rgba(66,211,146,0.12);
+    --red: #ff4757;
+    --red-dim: rgba(255,71,87,0.12);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .badge {
+    display: inline-block;
+    background: var(--purple-dim);
+    border: 1px solid var(--purple);
+    color: var(--purple);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .sidebar-logo h1 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .sidebar-logo p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .nav-section { padding: 0 12px; margin-bottom: 4px; }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    padding: 8px 8px 4px;
+    text-transform: uppercase;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text2);
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--bg4); color: var(--text); }
+  .nav-item.active { background: var(--purple-dim); color: var(--purple); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .content { flex: 1; padding: 48px 56px; max-width: 900px; }
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────── */
+  h1 { font-size: 32px; font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+  h2 { font-size: 22px; font-weight: 600; margin: 48px 0 16px; color: var(--text); }
+  h3 { font-size: 16px; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+  p { color: var(--text2); margin-bottom: 16px; line-height: 1.75; }
+  code { font-family: var(--mono); font-size: 12px; }
+
+  /* ── HERO ───────────────────────────────────────────────── */
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--purple-dim);
+    border: 1px solid rgba(124,110,245,0.3);
+    color: var(--purple);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .hero-tag::before { content: ''; display: block; width: 6px; height: 6px; background: var(--purple); border-radius: 50; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .subtitle { font-size: 16px; color: var(--text2); max-width: 580px; margin-bottom: 28px; }
+
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 40px; }
+  .stat { 
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 20px;
+    flex: 1; min-width: 130px;
+  }
+  .stat .val { font-size: 24px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .stat .lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ── SECTION DIVIDER ────────────────────────────────────── */
+  .section { padding-top: 8px; margin-bottom: 0; }
+  .section-anchor { scroll-margin-top: 32px; }
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* ── ANALOGY BLOCK ──────────────────────────────────────── */
+  .analogy {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .analogy-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: stretch;
+  }
+  .analogy-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .analogy-cell {
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .analogy-cell.http { color: var(--text2); }
+  .analogy-cell.crp  { color: var(--purple); }
+  .analogy-cell.meaning { color: var(--teal); font-family: var(--sans); font-size: 12px; padding: 12px; }
+  .analogy-arrow { display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 16px; }
+  .analogy-header .analogy-cell { color: var(--text3); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--sans); font-weight: 600; padding: 10px 16px; background: var(--bg4); }
+
+  /* ── HEADER NAMESPACE CARDS ─────────────────────────────── */
+  .namespace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+  .ns-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .ns-card:hover { border-color: var(--border2); }
+  .ns-card .ns-label {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .ns-card .ns-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .ns-card .ns-count {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .ns-card.purple { border-left: 3px solid var(--purple); }
+  .ns-card.purple .ns-label { color: var(--purple); }
+  .ns-card.purple .ns-count { background: var(--purple-dim); color: var(--purple); }
+
+  .ns-card.coral { border-left: 3px solid var(--coral); }
+  .ns-card.coral .ns-label { color: var(--coral); }
+  .ns-card.coral .ns-count { background: var(--coral-dim); color: var(--coral); }
+
+  .ns-card.teal { border-left: 3px solid var(--teal); }
+  .ns-card.teal .ns-label { color: var(--teal); }
+  .ns-card.teal .ns-count { background: var(--teal-dim); color: var(--teal); }
+
+  .ns-card.amber { border-left: 3px solid var(--amber); }
+  .ns-card.amber .ns-label { color: var(--amber); }
+  .ns-card.amber .ns-count { background: var(--amber-dim); color: var(--amber); }
+
+  .ns-card.blue { border-left: 3px solid var(--blue); }
+  .ns-card.blue .ns-label { color: var(--blue); }
+  .ns-card.blue .ns-count { background: var(--blue-dim); color: var(--blue); }
+
+  .ns-card.green { border-left: 3px solid var(--green); }
+  .ns-card.green .ns-label { color: var(--green); }
+  .ns-card.green .ns-count { background: var(--green-dim); color: var(--green); }
+
+  /* ── HEADER TABLE ───────────────────────────────────────── */
+  .header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12.5px;
+  }
+  .header-table th {
+    background: var(--bg4);
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .header-table tr:last-child td { border-bottom: none; }
+  .header-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .header-name { font-family: var(--mono); font-size: 11.5px; }
+  .header-type { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-family: var(--mono); }
+  .type-req { background: var(--blue-dim); color: var(--blue); }
+  .type-res { background: var(--green-dim); color: var(--green); }
+  .type-both { background: var(--purple-dim); color: var(--purple); }
+  .header-values { color: var(--text2); font-size: 12px; }
+  .header-values code { background: var(--bg4); padding: 1px 5px; border-radius: 3px; color: var(--amber); font-size: 11px; }
+  .header-source { color: var(--text3); font-size: 11px; font-style: italic; }
+
+  /* ── CODE BLOCK ─────────────────────────────────────────── */
+  .code-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .code-block-header {
+    background: var(--bg4);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .code-block-title { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+  .code-block-lang { font-size: 10px; color: var(--text3); }
+  .code-body { padding: 16px; overflow-x: auto; }
+  .code-body pre { font-family: var(--mono); font-size: 12px; line-height: 1.7; }
+  
+  .kw { color: var(--purple); }
+  .str { color: var(--green); }
+  .val { color: var(--amber); }
+  .cmt { color: var(--text3); }
+  .hdr { color: var(--teal); }
+  .hdr-val { color: var(--coral); }
+  .directive { color: var(--blue); }
+
+  /* ── CALLOUT BOXES ───────────────────────────────────────── */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout-text { color: var(--text2); }
+  .callout-text strong { color: var(--text); }
+  .callout.info { background: var(--blue-dim); border: 1px solid rgba(79,168,255,0.2); }
+  .callout.warn { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.2); }
+  .callout.new  { background: var(--green-dim); border: 1px solid rgba(66,211,146,0.2); }
+  .callout.crit { background: var(--coral-dim); border: 1px solid rgba(255,107,82,0.2); }
+
+  /* ── FLOW DIAGRAM ────────────────────────────────────────── */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  .flow-node {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    min-width: 150px;
+    flex-shrink: 0;
+  }
+  .flow-node .fn-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .flow-node .fn-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--text3);
+    position: relative;
+  }
+  .flow-arrow::before { content: '──►'; font-family: var(--mono); font-size: 14px; color: var(--border2); }
+  .flow-arrow .header-tag {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 9.5px;
+    font-family: var(--mono);
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    color: var(--teal);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  /* ── COOKIE SPEC ─────────────────────────────────────────── */
+  .cookie-spec {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .cookie-spec-title {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .cookie-fields { display: flex; flex-direction: column; gap: 6px; }
+  .cookie-field {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    align-items: baseline;
+  }
+  .cf-key { font-family: var(--mono); color: var(--amber); min-width: 160px; }
+  .cf-val { color: var(--text2); }
+  .cf-attr { color: var(--teal); font-size: 11px; }
+
+  /* ── POLICY BUILDER ──────────────────────────────────────── */
+  .policy-builder {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .pb-header {
+    background: var(--bg4);
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .pb-body { padding: 16px; }
+  .pb-row { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .pb-label { font-size: 11px; color: var(--text3); min-width: 120px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .pb-options { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pb-opt {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .pb-opt.sel { border-color: var(--purple); color: var(--purple); background: var(--purple-dim); }
+  .pb-opt:hover:not(.sel) { border-color: var(--border2); color: var(--text); }
+  .pb-output {
+    margin-top: 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--teal);
+    word-break: break-all;
+    min-height: 44px;
+  }
+
+  /* ── TAG CHIPS ───────────────────────────────────────────── */
+  .chip { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; margin: 1px; }
+  .chip.new { background: var(--green-dim); color: var(--green); border: 1px solid rgba(66,211,146,0.3); }
+  .chip.extends { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(124,110,245,0.3); }
+
+  /* ── IMPROVEMENT CARDS ───────────────────────────────────── */
+  .improvement-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .imp-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .imp-card .before {
+    font-size: 11px;
+    color: var(--red);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .imp-card .after {
+    font-size: 11px;
+    color: var(--green);
+    font-family: var(--mono);
+    margin-bottom: 10px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .imp-card .imp-desc { font-size: 12px; color: var(--text2); }
+
+  /* ── SCROLLBAR ───────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── RESPONSIVE ──────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .content { padding: 24px 20px; }
+    .namespace-grid, .improvement-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="badge">SPECIFICATION v3.0</div>
+    <h1>CRP Headers</h1>
+    <p>Protocol Extension · AI Safety & Governance</p>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <a class="nav-item active" href="#motivation"><span class="nav-dot" style="background:var(--purple)"></span>Motivation & Analogy</a>
+    <a class="nav-item" href="#architecture"><span class="nav-dot" style="background:var(--blue)"></span>Architecture</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Header Namespaces</div>
+    <a class="nav-item" href="#crp-context"><span class="nav-dot" style="background:var(--purple)"></span>CRP-Context-*</a>
+    <a class="nav-item" href="#crp-safety"><span class="nav-dot" style="background:var(--coral)"></span>CRP-Safety-*</a>
+    <a class="nav-item" href="#crp-provenance"><span class="nav-dot" style="background:var(--teal)"></span>CRP-Provenance-*</a>
+    <a class="nav-item" href="#crp-compliance"><span class="nav-dot" style="background:var(--amber)"></span>CRP-Compliance-*</a>
+    <a class="nav-item" href="#crp-agent"><span class="nav-dot" style="background:var(--blue)"></span>CRP-Agent-*</a>
+    <a class="nav-item" href="#crp-memory"><span class="nav-dot" style="background:var(--green)"></span>CRP-Memory-*</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Session & State</div>
+    <a class="nav-item" href="#crp-session"><span class="nav-dot" style="background:var(--amber)"></span>CRP-Session Token</a>
+    <a class="nav-item" href="#crp-cache"><span class="nav-dot" style="background:var(--blue)"></span>Context Cache-Control</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Safety Policies</div>
+    <a class="nav-item" href="#safety-policy"><span class="nav-dot" style="background:var(--coral)"></span>CRP-Safety-Policy</a>
+    <a class="nav-item" href="#oversight"><span class="nav-dot" style="background:var(--red)"></span>Oversight & Escalation</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Protocol Impact</div>
+    <a class="nav-item" href="#improvements"><span class="nav-dot" style="background:var(--green)"></span>What Headers Fix</a>
+    <a class="nav-item" href="#multi-hop"><span class="nav-dot" style="background:var(--purple)"></span>Multi-hop Agents</a>
+    <a class="nav-item" href="#github-action"><span class="nav-dot" style="background:var(--blue)"></span>GitHub Action</a>
+  </div>
+</nav>
+
+<!-- ── CONTENT ───────────────────────────────────────────────── -->
+<main class="content">
+
+  <!-- HERO -->
+  <div class="hero-tag">CRP Protocol v3.0 · Header Extension</div>
+  <h1>CRP Header Specification</h1>
+  <p class="subtitle">A complete HTTP-inspired header system for AI context, safety, provenance, and governance — mapped directly from every layer of the CRP protocol.</p>
+
+  <div class="stat-row">
+    <div class="stat"><div class="val">6</div><div class="lbl">Namespaces</div></div>
+    <div class="stat"><div class="val">58</div><div class="lbl">Headers defined</div></div>
+    <div class="stat"><div class="val">11</div><div class="lbl">Improvements</div></div>
+    <div class="stat"><div class="val">10</div><div class="lbl">Axioms preserved</div></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- SECTION 1: MOTIVATION -->
+  <section class="section section-anchor" id="motivation">
+    <h2>Motivation: HTTP did this for the web</h2>
+    <p>Before HTTP headers, every client-server interaction was bespoke — you sent a request, you got bytes back, and nothing in between knew what had happened. Headers created a universal metadata contract: any hop in the chain could read it, act on it, forward it, or gate on it — without touching the payload.</p>
+
+    <p>AI calls are in exactly that chaos today. A raw LLM response carries zero standardised metadata. Was it grounded? Did it hallucinate? What session is this? What was the risk classification? Nobody knows without bespoke instrumentation bolted on top.</p>
+
+    <p>CRP already computes all of this internally. The Quality Report, the DPE analysis, the HMAC chain, the EU AI Act classification, the 4-tier memory state — it all exists. <strong>Headers make it portable, language-agnostic, and interceptable by any middleware.</strong></p>
+
+    <h3>The mapping</h3>
+    <div class="analogy">
+      <div class="analogy-row analogy-header">
+        <div class="analogy-cell">HTTP header</div>
+        <div class="analogy-arrow"></div>
+        <div class="analogy-cell">CRP header equivalent</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Content-Type: text/html</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Context-Quality-Tier: A</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Cache-Control: max-age=3600</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Context-Cache: reuse-ckf, max-age=3600</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">ETag: "33a64df551425fcc"</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Context-ETag: sha256:4fa8e921...</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Set-Cookie: session=abc; HttpOnly</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Set-Session: token=...; Path=/; Signed</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Content-Security-Policy: default-src 'self'</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Safety-Policy: default-src context; block-ungrounded</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Strict-Transport-Security: max-age=31536000</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Safety-Mode: strict; halt-on=CRITICAL</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">X-Frame-Options: DENY</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Oversight-Mode: human-review</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Access-Control-Allow-Origin: *</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Allow-Origins: trusted-agent-1</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Accept: application/json, q=0.9</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Accept-Quality: S, A; CRP-Accept-Risk: MEDIUM</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">Retry-After: 120</div>
+        <div class="analogy-arrow">→</div>
+        <div class="analogy-cell crp">CRP-Safety-Retry-After: 120; oversight-required</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 2: ARCHITECTURE -->
+  <section class="section section-anchor" id="architecture">
+    <h2>Architecture</h2>
+    <p>Headers flow in both directions through the CRP gateway (sidecar). On a <strong>request</strong>, the client sends preference and policy headers. On a <strong>response</strong>, the gateway emits state and signal headers computed from the dispatch pipeline.</p>
+
+    <div class="flow">
+      <div class="flow-node" style="border-color:var(--border2)">
+        <div class="fn-label">Client</div>
+        <div class="fn-name" style="color:var(--text)">Your app</div>
+      </div>
+      <div class="flow-arrow" style="position:relative;padding:0 20px">
+        <div class="header-tag">CRP-Accept-* CRP-Safety-Policy CRP-Session-Token</div>
+        <span style="color:var(--border2);font-size:20px">──►</span>
+      </div>
+      <div class="flow-node" style="border-color:var(--purple)">
+        <div class="fn-label">Gateway</div>
+        <div class="fn-name" style="color:var(--purple)">CRP Sidecar</div>
+      </div>
+      <div class="flow-arrow" style="position:relative;padding:0 20px">
+        <div class="header-tag" style="top:-22px">stripped — Axiom 4</div>
+        <span style="color:var(--border2);font-size:20px">──►</span>
+      </div>
+      <div class="flow-node" style="border-color:var(--blue)">
+        <div class="fn-label">Provider</div>
+        <div class="fn-name" style="color:var(--blue)">LLM</div>
+      </div>
+    </div>
+
+    <div class="flow" style="margin-top:6px">
+      <div class="flow-node" style="border-color:var(--border2)">
+        <div class="fn-label">Client</div>
+        <div class="fn-name" style="color:var(--text)">reads headers</div>
+      </div>
+      <div class="flow-arrow" style="position:relative;padding:0 20px">
+        <div class="header-tag" style="top:-22px; color:var(--coral)">CRP-Safety-* CRP-Context-* CRP-Provenance-* CRP-Set-Session</div>
+        <span style="color:var(--border2);font-size:20px">◄──</span>
+      </div>
+      <div class="flow-node" style="border-color:var(--purple)">
+        <div class="fn-label">Gateway</div>
+        <div class="fn-name" style="color:var(--purple)">injects headers</div>
+      </div>
+      <div class="flow-arrow" style="position:relative;padding:0 20px">
+        <span style="color:var(--border2);font-size:20px">◄──</span>
+      </div>
+      <div class="flow-node" style="border-color:var(--blue)">
+        <div class="fn-label">Provider</div>
+        <div class="fn-name" style="color:var(--blue)">raw output</div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ</div>
+      <div class="callout-text"><strong>Axiom 4 preserved:</strong> CRP headers are <em>never</em> forwarded to the LLM provider. The model remains ignorant of the protocol. Headers live entirely in the CRP gateway layer.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 3: NAMESPACES OVERVIEW -->
+  <section class="section section-anchor" id="namespaces">
+    <h2>Header Namespaces</h2>
+    <p>Six namespaces, each mapping directly to an existing layer of the CRP protocol. Nothing is invented — everything is a header-form expression of data CRP already produces.</p>
+
+    <div class="namespace-grid">
+      <div class="ns-card purple">
+        <div class="ns-label">CRP-Context-*</div>
+        <div class="ns-desc">Envelope state: quality tier, saturation, window position, token budget, dispatch strategy, CKF hits.</div>
+        <span class="ns-count">14 headers</span>
+      </div>
+      <div class="ns-card coral">
+        <div class="ns-label">CRP-Safety-*</div>
+        <div class="ns-desc">DPE output: hallucination risk, attribution type, fidelity, entailment, fabrications, oversight mode, safety policy.</div>
+        <span class="ns-count">16 headers</span>
+      </div>
+      <div class="ns-card teal">
+        <div class="ns-label">CRP-Provenance-*</div>
+        <div class="ns-desc">Audit chain: HMAC root, DAG hash, claim count, chain integrity, window lineage, report URI.</div>
+        <span class="ns-count">9 headers</span>
+      </div>
+      <div class="ns-card amber">
+        <div class="ns-label">CRP-Compliance-*</div>
+        <div class="ns-desc">Regulatory classification: EU AI Act risk class, NIST tier, GDPR PII flag, audit trail deep-link to CRP Comply.</div>
+        <span class="ns-count">8 headers</span>
+      </div>
+      <div class="ns-card blue">
+        <div class="ns-label">CRP-Agent-*</div>
+        <div class="ns-desc">Agentic dispatch state: cognitive phase, loop depth, safety budget, tool calls, parent session.</div>
+        <span class="ns-count">7 headers</span>
+      </div>
+      <div class="ns-card green">
+        <div class="ns-label">CRP-Memory-*</div>
+        <div class="ns-desc">4-tier memory state: tier accessed, CKF community, knowledge freshness, cross-session references.</div>
+        <span class="ns-count">4 headers</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-CONTEXT-* -->
+  <section class="section section-anchor" id="crp-context">
+    <h2><span style="color:var(--purple)">CRP-Context-*</span> — Envelope State Headers</h2>
+    <p>Sourced directly from the <strong>Context Envelope</strong> and <strong>Quality Report</strong>. Every field maps 1:1 to an existing CRP internal value.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>CRP Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Quality-Tier</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>S</code> <code>A</code> <code>B</code> <code>C</code> <code>D</code></td>
+        <td class="header-source">QualityReport.quality_tier</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Window</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>3/5</code> — current/total</td>
+        <td class="header-source">continuation_windows</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Saturation</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.994</code> — 0.0–1.0</td>
+        <td class="header-source">EnvelopePreview.saturation</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Facts-Used</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>47/312</code> — used/available</td>
+        <td class="header-source">preview.facts_included/available</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Tokens-Used</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>105816</code> envelope tokens</td>
+        <td class="header-source">preview.envelope_tokens</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Strategy</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>push</code> <code>reflexive</code> <code>agentic</code> etc.</td>
+        <td class="header-source">TaskIntent.strategy</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Session-Id</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>crp_sess_7f3a9...</code></td>
+        <td class="header-source">Session UUID</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-ETag</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>sha256:4fa8e921abcd...</code></td>
+        <td class="header-source">Hash of current fact-set + CKF state</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Cache</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>reuse-ckf</code> <code>no-store</code> <code>max-age=3600</code></td>
+        <td class="header-source">Controls CKF read/write behaviour</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Accept-Quality</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>S, A</code> — reject lower tiers</td>
+        <td class="header-source">Client preference; gateway retries/escalates</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Accept-Strategy</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>reflexive, push</code> — ordered preference</td>
+        <td class="header-source">Overrides auto-strategy selection</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Continuation-Id</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>crp_cont_9a2f...</code></td>
+        <td class="header-source">Window DAG continuation pointer</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Memory-Tier</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>2</code> — highest tier accessed (0–3)</td>
+        <td class="header-source">Four-tier memory hierarchy</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--purple)">CRP-Context-Protocol-Version</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>3.0.0</code></td>
+        <td class="header-source">CRP spec version</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-SAFETY-* -->
+  <section class="section section-anchor" id="crp-safety">
+    <h2><span style="color:var(--coral)">CRP-Safety-*</span> — Hallucination & Risk Headers</h2>
+    <p>Sourced from the <strong>Decision Provenance Engine (DPE)</strong> — the 13-module pipeline that runs after every dispatch. These are the most important headers for downstream applications: any middleware can now gate on AI safety signals without touching the CRP SDK.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>DPE Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Hallucination-Risk</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>CRITICAL</code> <code>HIGH</code> <code>MEDIUM</code> <code>LOW</code></td>
+        <td class="header-source">DPE Stage 5 — peak risk level</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Hallucination-Score</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.72</code> — 0.0–1.0 fused signal</td>
+        <td class="header-source">DPE Stage 5 — weighted fused score</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Attribution</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>CONTEXT_GROUNDED</code> <code>MIXED</code> <code>PARAMETRIC</code></td>
+        <td class="header-source">DPE Stage 2 — dominant attribution type</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Grounding-Pct</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.87</code> — % context-grounded claims</td>
+        <td class="header-source">DPE report.grounding_percentage</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Fabrications</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0</code> — count of fabricated entities</td>
+        <td class="header-source">DPE Stage 3 — fabrication detection</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Distortions</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>2</code> — NUMBER_CHANGED, NEGATION_FLIP</td>
+        <td class="header-source">DPE Stage 3 — fidelity verification</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Contradictions</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0</code> — intra + cross-window</td>
+        <td class="header-source">DPE Stage 3 — contradiction detection</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Omissions</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>CRITICAL:1, HIGH:2</code></td>
+        <td class="header-source">DPE Stage 3 — omission analysis</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Entailment-Score</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.91</code> — NLI cross-encoder score</td>
+        <td class="header-source">DPE Stage 4 — entailment verification</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Oversight-Mode</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>auto</code> <code>human-review</code> <code>halt</code></td>
+        <td class="header-source">EU AI Act Art. 14 — human oversight</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Mode</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>strict</code> <code>warn</code> <code>permissive</code></td>
+        <td class="header-source">Client-set; gateway enforces</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Policy</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>default-src context; block-ungrounded; halt-on CRITICAL</code></td>
+        <td class="header-source">CSP-inspired directive string (see below)</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Report-URI</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>https://comply.crprotocol.io/reports</code></td>
+        <td class="header-source">Webhook for safety violations</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Accept-Risk</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-req">REQ</span></td>
+        <td class="header-values"><code>MEDIUM</code> — max tolerated risk level</td>
+        <td class="header-source">Gateway retries or escalates above threshold</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Retry-After</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>120; oversight-required</code></td>
+        <td class="header-source">Emitted when output halted; signals client</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--coral)">CRP-Safety-Nonce</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>base64:nZ8fXw==</code> — session-bound nonce</td>
+        <td class="header-source">Prevents safety policy replay attacks</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-PROVENANCE-* -->
+  <section class="section section-anchor" id="crp-provenance">
+    <h2><span style="color:var(--teal)">CRP-Provenance-*</span> — Audit Chain Headers</h2>
+    <p>Sourced from the <strong>HMAC-SHA256 session binding</strong> and <strong>Window DAG</strong>. These headers make tamper-evidence portable — any downstream system can verify chain integrity without having the full audit log locally.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>CRP Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-HMAC</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>sha256:4fa8e921abcd1234...</code></td>
+        <td class="header-source">HMAC-SHA256 session chain root</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Window-HMAC</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>sha256:9bce472f...</code></td>
+        <td class="header-source">Per-window HMAC for chain verification</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-DAG-Root</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>dag:crp_win_a7f3...</code></td>
+        <td class="header-source">Window DAG root node ID</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Chain-Integrity</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>VALID</code> <code>BROKEN</code> <code>PARTIAL</code></td>
+        <td class="header-source">HMAC chain verification result</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Claim-Count</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>47</code> — factual claims detected</td>
+        <td class="header-source">DPE Stage 1 — claim detection</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Attribution-Score</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.91</code> — composite attribution</td>
+        <td class="header-source">DPE Stage 2 — weighted average</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Fidelity-Score</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>0.88</code> — fidelity signal (0.25 weight)</td>
+        <td class="header-source">DPE Stage 3 — fidelity verification</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Report-URI</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>https://comply.crprotocol.io/p/abc123</code></td>
+        <td class="header-source">Deep link to full DPE report</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--teal)">CRP-Provenance-Window-Lineage</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>win_a7f3 → win_b9c2 → win_c1d4</code></td>
+        <td class="header-source">DAG continuation chain</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-COMPLIANCE-* -->
+  <section class="section section-anchor" id="crp-compliance">
+    <h2><span style="color:var(--amber)">CRP-Compliance-*</span> — Regulatory Headers</h2>
+    <p>Sourced from <strong>CRP Comply</strong> and the compliance pipeline. The audit trail URI is the killer header — it deep-links every AI response to its regulatory evidence pack in CRP Comply. One click from a log entry to the full EU AI Act report.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-EU-AI-Act</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>MINIMAL</code> <code>LIMITED</code> <code>HIGH</code> <code>UNACCEPTABLE</code></td>
+        <td class="header-source">EU AI Act Art. 6 risk classification</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-NIST-Tier</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>TIER-2</code> — 1 to 4</td>
+        <td class="header-source">NIST AI RMF tier mapping</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-GDPR-PII</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>true</code> <code>false</code> — PII detected in payload</td>
+        <td class="header-source">CRP Comply PII scanner</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-ISO-42001</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>A.6.1.2, A.9.4</code> — control IDs satisfied</td>
+        <td class="header-source">ISO 42001 AIMS control mapping</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-Audit-Trail-Id</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>crp_trail_7fa3bc...</code></td>
+        <td class="header-source">HMAC-chained audit trail ID</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-Audit-Trail-URI</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>https://comply.crprotocol.io/t/7fa3bc</code></td>
+        <td class="header-source">Deep link → CRP Comply evidence pack</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-Data-Residency</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>EU</code> <code>AU</code> <code>US</code> — jurisdiction</td>
+        <td class="header-source">GDPR data residency assertion</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--amber)">CRP-Compliance-Controls-Met</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>33/35</code> — EU AI Act controls satisfied</td>
+        <td class="header-source">CRP Comply control assessment</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-AGENT-* -->
+  <section class="section section-anchor" id="crp-agent">
+    <h2><span style="color:var(--blue)">CRP-Agent-*</span> — Agentic Dispatch Headers</h2>
+    <p>Sourced from <code>dispatch_agentic()</code>'s 8-phase cognitive loop. The <strong>Safety Budget</strong> is the most novel header here — a first-of-its-kind mechanism that exposes remaining risk tolerance as an observable, gatable signal in multi-agent chains.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>CRP Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Phase</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>ANALYZE</code> <code>PLAN</code> <code>GENERATE</code> <code>EVALUATE</code> …</td>
+        <td class="header-source">dispatch_agentic() 8-phase loop</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Loop-Depth</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>2</code> — nesting level in agent chain</td>
+        <td class="header-source">Agentic dispatch recursion counter</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Safety-Budget</span> <span class="chip new">NEW</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>0.42</code> — remaining risk tolerance (0.0–1.0)</td>
+        <td class="header-source">Decrements with each HIGH/CRITICAL signal</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Tool-Calls</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>3</code> — tool invocations this session</td>
+        <td class="header-source">dispatch_with_tools() call counter</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Session-Parent</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>crp_sess_4b2f...</code> — parent session ID</td>
+        <td class="header-source">Fan-out/fan-in DAG parent</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Dispatch-Strategy</span></td>
+        <td><span class="header-type type-both">BOTH</span></td>
+        <td class="header-values"><code>agentic</code> <code>hierarchical</code> <code>batch</code></td>
+        <td class="header-source">Active dispatch_*() method</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--blue)">CRP-Agent-Revision-Round</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>1/2</code> — reflexive revision pass</td>
+        <td class="header-source">dispatch_reflexive() pass counter</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-MEMORY-* -->
+  <section class="section section-anchor" id="crp-memory">
+    <h2><span style="color:var(--green)">CRP-Memory-*</span> — 4-Tier Memory Headers</h2>
+    <p>Sourced from the <strong>4-tier memory hierarchy</strong> (Active/Hot/Warm/Cold) and the <strong>Contextual Knowledge Fabric (CKF)</strong>. These headers expose the memory layer that served the envelope, enabling cache-aware clients.</p>
+
+    <table class="header-table">
+      <tr><th>Header</th><th>Dir</th><th>Value / Example</th><th>CRP Source</th></tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--green)">CRP-Memory-Tier-Hit</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>2</code> — highest tier accessed (0–3)</td>
+        <td class="header-source">Four-tier memory hierarchy</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--green)">CRP-Memory-CKF-Hits</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>12</code> — facts retrieved from CKF (Tier 3)</td>
+        <td class="header-source">CKF FACT_RETRIEVED events</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--green)">CRP-Memory-CKF-Community</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>kubernetes-networking</code> — Leiden cluster</td>
+        <td class="header-source">CKF community detection</td>
+      </tr>
+      <tr>
+        <td><span class="header-name" style="color:var(--green)">CRP-Memory-Knowledge-Age</span></td>
+        <td><span class="header-type type-res">RES</span></td>
+        <td class="header-values"><code>P3D</code> — ISO 8601 duration since last ingest</td>
+        <td class="header-source">CKF fact staleness tracking</td>
+      </tr>
+    </table>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CRP-SESSION TOKEN (Cookie analog) -->
+  <section class="section section-anchor" id="crp-session">
+    <h2>CRP-Session Token <span class="chip new">NEW</span> — The Cookie Analogy</h2>
+    <p>HTTP cookies solved stateless session continuity for the web. CRP has the same problem: each call to the sidecar currently requires a server-side session lookup. A <strong>signed session token</strong> — issued by the gateway, sent back by clients — enables stateless session relay without losing context state.</p>
+
+    <p>Like a <code>Set-Cookie</code>, the gateway issues it. Like a <code>Cookie</code>, the client echoes it back. Unlike a cookie, it's <strong>HMAC-signed</strong> with the session chain — tampering breaks the provenance chain.</p>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">Response (gateway → client)</span><span class="code-block-lang">HTTP headers</span></div>
+      <div class="code-body"><pre><span class="hdr">CRP-Set-Session</span>: <span class="hdr-val">token=eyJzZXNzaW9uX2lkIjoiY3JwX3Nlc3NfN2YzYSJ9.sig:sha256:4fa8e921;</span>
+               <span class="directive">Path=/;</span>
+               <span class="directive">Max-Age=3600;</span>
+               <span class="directive">Signed;</span>
+               <span class="directive">SameSite=Strict;</span>
+               <span class="directive">Window=3;</span>
+               <span class="directive">QualityHistory=A,A,B</span></pre></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">Subsequent request (client → gateway)</span><span class="code-block-lang">HTTP headers</span></div>
+      <div class="code-body"><pre><span class="hdr">CRP-Session-Token</span>: <span class="hdr-val">eyJzZXNzaW9uX2lkIjoiY3JwX3Nlc3NfN2YzYSJ9.sig:sha256:4fa8e921</span>
+<span class="hdr">CRP-Context-Session-Id</span>: <span class="hdr-val">crp_sess_7f3a</span>  <span class="cmt"># still required as a hint</span></pre></div>
+    </div>
+
+    <div class="cookie-spec">
+      <div class="cookie-spec-title">Token payload (JWT-like, HMAC-signed)</div>
+      <div class="cookie-fields">
+        <div class="cookie-field"><span class="cf-key">session_id</span><span class="cf-val">crp_sess_7f3a9bc2...</span></div>
+        <div class="cookie-field"><span class="cf-key">window_number</span><span class="cf-val">3</span></div>
+        <div class="cookie-field"><span class="cf-key">quality_history</span><span class="cf-val">["A", "A", "B"]</span></div>
+        <div class="cookie-field"><span class="cf-key">ckf_path_ref</span><span class="cf-val">./kb/crp_sess_7f3a</span></div>
+        <div class="cookie-field"><span class="cf-key">safety_budget_remaining</span><span class="cf-val">0.78</span></div>
+        <div class="cookie-field"><span class="cf-key">hmac_chain_tip</span><span class="cf-val">sha256:9bce472f...</span><span class="cf-attr">  ← chain verification</span></div>
+        <div class="cookie-field"><span class="cf-key">issued_at</span><span class="cf-val">2026-05-23T12:00:00Z</span></div>
+        <div class="cookie-field"><span class="cf-key">expires_at</span><span class="cf-val">2026-05-23T13:00:00Z</span></div>
+        <div class="cookie-field"><span class="cf-key">signature</span><span class="cf-val">HMAC-SHA256(payload, session_key)</span><span class="cf-attr">  ← tamper-evident</span></div>
+      </div>
+    </div>
+
+    <div class="callout new">
+      <div class="callout-icon">✦</div>
+      <div class="callout-text"><strong>Protocol improvement:</strong> This enables CRP to work across any language, service, or process without server-side session lookup. A Go microservice that received a CRP-Session-Token can relay it to the Python sidecar and the context chain is fully intact. This is how HTTP enabled stateless web scale — CRP gets the same property.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: CONTEXT CACHE-CONTROL -->
+  <section class="section section-anchor" id="crp-cache">
+    <h2>Context Cache-Control <span class="chip new">NEW</span> — The CKF becomes a cache</h2>
+    <p>HTTP's <code>Cache-Control</code> header is arguably its most powerful innovation — it made the web's latency bearable by letting clients and intermediaries intelligently reuse responses. CRP's CKF (Tier 3 cold storage) is a <em>fact graph</em> that already persists across sessions. <code>CRP-Context-Cache</code> makes it behave like a proper cache layer.</p>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">Cache-Control-style directives for CRP</span><span class="code-block-lang">HTTP headers</span></div>
+      <div class="code-body"><pre><span class="cmt"># Reuse CKF facts for up to 1 hour (no re-ingestion needed)</span>
+<span class="hdr">CRP-Context-Cache</span>: <span class="hdr-val">reuse-ckf, max-age=3600</span>
+
+<span class="cmt"># Conditional dispatch — only rebuild envelope if fact graph changed</span>
+<span class="hdr">CRP-Context-If-Match</span>: <span class="hdr-val">sha256:4fa8e921abcd...</span>  <span class="cmt"># ETag from last response</span>
+
+<span class="cmt"># Don't persist this session's facts to CKF (sensitive data)</span>
+<span class="hdr">CRP-Context-Cache</span>: <span class="hdr-val">no-store</span>
+
+<span class="cmt"># Serve from CKF only — no new LLM dispatch (like HTTP only-if-cached)</span>
+<span class="hdr">CRP-Context-Cache</span>: <span class="hdr-val">only-if-ckf</span>
+
+<span class="cmt"># Force envelope rebuild even if ETag matches</span>
+<span class="hdr">CRP-Context-Cache</span>: <span class="hdr-val">no-cache</span>
+
+<span class="cmt"># Response: tell client what ETag the current fact graph has</span>
+<span class="hdr">CRP-Context-ETag</span>: <span class="hdr-val">sha256:4fa8e921abcd...</span>
+<span class="hdr">CRP-Context-Last-Ingested</span>: <span class="hdr-val">2026-05-23T09:31:00Z</span></pre></div>
+    </div>
+
+    <p>The practical impact: repeated calls on the same knowledge domain skip the envelope construction overhead entirely on cache hit. The CKF's HNSW index already supports this — the header is the missing signal to activate it.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: SAFETY POLICY (CSP analog) -->
+  <section class="section section-anchor" id="safety-policy">
+    <h2>CRP-Safety-Policy <span class="chip new">NEW</span> — The CSP Analogy</h2>
+    <p>Content Security Policy (CSP) transformed browser security by letting servers declare what content sources were trusted — and letting the browser enforce it automatically. <code>CRP-Safety-Policy</code> does the same for AI output: the client declares what grounding sources and risk levels are trusted, and the CRP gateway enforces it automatically on every response.</p>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ</div>
+      <div class="callout-text">CSP's genius was moving enforcement to the <em>transport layer</em>, not the application. Your app doesn't check — the browser does. CRP-Safety-Policy moves enforcement to the CRP gateway, so your application code never sees CRITICAL-risk output.</div>
+    </div>
+
+    <h3>Directive reference</h3>
+    <div class="analogy">
+      <div class="analogy-row analogy-header">
+        <div class="analogy-cell">Directive</div>
+        <div class="analogy-arrow"></div>
+        <div class="analogy-cell">Meaning</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">default-src context</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">All claims must be context-grounded (CONTEXT_GROUNDED attribution)</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">default-src context parametric</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Allow parametric claims alongside context claims</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">block-ungrounded</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Block response if any claim is PARAMETRIC with no envelope support</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">halt-on CRITICAL</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Halt dispatch if hallucination risk reaches CRITICAL; return 451</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">warn-on HIGH</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Pass but set CRP-Safety-Hallucination-Risk: HIGH on response</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">require-entailment 0.80</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Reject if entailment score falls below 0.80</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">require-grounding 0.75</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Reject if grounding percentage falls below 75%</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">report-uri https://...</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">POST violation reports to this URL (and CRP Comply)</div>
+      </div>
+      <div class="analogy-row">
+        <div class="analogy-cell http">upgrade-on-risk reflexive</div>
+        <div class="analogy-arrow"> </div>
+        <div class="analogy-cell crp" style="color:var(--text2)">Auto-upgrade to dispatch_reflexive() if HIGH risk detected</div>
+      </div>
+    </div>
+
+    <h3>Interactive policy builder</h3>
+    <div class="policy-builder">
+      <div class="pb-header">CRP-Safety-Policy builder — click to construct your policy directive</div>
+      <div class="pb-body">
+        <div class="pb-row">
+          <span class="pb-label">Source trust</span>
+          <div class="pb-options">
+            <span class="pb-opt sel" onclick="toggleOpt(this,'src','default-src context')">context only</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'src','default-src context parametric')">context + parametric</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'src','default-src parametric')">parametric only</span>
+          </div>
+        </div>
+        <div class="pb-row">
+          <span class="pb-label">On CRITICAL risk</span>
+          <div class="pb-options">
+            <span class="pb-opt sel" onclick="toggleOpt(this,'critical','halt-on CRITICAL')">halt</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'critical','warn-on CRITICAL')">warn only</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'critical','upgrade-on-risk reflexive')">auto-upgrade</span>
+          </div>
+        </div>
+        <div class="pb-row">
+          <span class="pb-label">On HIGH risk</span>
+          <div class="pb-options">
+            <span class="pb-opt" onclick="toggleOpt(this,'high','halt-on HIGH')">halt</span>
+            <span class="pb-opt sel" onclick="toggleOpt(this,'high','warn-on HIGH')">warn only</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'high','')">ignore</span>
+          </div>
+        </div>
+        <div class="pb-row">
+          <span class="pb-label">Grounding floor</span>
+          <div class="pb-options">
+            <span class="pb-opt" onclick="toggleOpt(this,'grnd','require-grounding 0.90')">90%</span>
+            <span class="pb-opt sel" onclick="toggleOpt(this,'grnd','require-grounding 0.75')">75%</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'grnd','require-grounding 0.50')">50%</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'grnd','')">none</span>
+          </div>
+        </div>
+        <div class="pb-row">
+          <span class="pb-label">Block ungrounded</span>
+          <div class="pb-options">
+            <span class="pb-opt sel" onclick="toggleOpt(this,'blk','block-ungrounded')">yes</span>
+            <span class="pb-opt" onclick="toggleOpt(this,'blk','')">no</span>
+          </div>
+        </div>
+        <div class="pb-output" id="policy-output">CRP-Safety-Policy: default-src context; halt-on CRITICAL; warn-on HIGH; require-grounding 0.75; block-ungrounded</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: OVERSIGHT -->
+  <section class="section section-anchor" id="oversight">
+    <h2>Oversight & Escalation Headers</h2>
+    <p>The EU AI Act Article 14 mandates human oversight capability for high-risk AI systems. These headers make oversight <em>programmable</em> — exactly like <code>X-Frame-Options</code> made clickjacking protection programmable in HTTP.</p>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">Oversight flow — high-risk output detected</span><span class="code-block-lang">HTTP exchange</span></div>
+      <div class="code-body"><pre><span class="cmt"># Request: client sets oversight requirements</span>
+<span class="hdr">CRP-Oversight-Mode</span>: <span class="hdr-val">human-review</span>
+<span class="hdr">CRP-Oversight-Threshold</span>: <span class="hdr-val">0.50</span>
+<span class="hdr">CRP-Oversight-Escalate-URI</span>: <span class="hdr-val">https://myapp.com/webhooks/ai-review</span>
+
+<span class="cmt"># Response: CRITICAL risk → gateway halts, returns 451</span>
+<span class="str">HTTP/1.1 451 Unavailable For Legal Reasons</span>
+<span class="hdr">CRP-Safety-Hallucination-Risk</span>: <span class="hdr-val">CRITICAL</span>
+<span class="hdr">CRP-Safety-Hallucination-Score</span>: <span class="hdr-val">0.81</span>
+<span class="hdr">CRP-Safety-Retry-After</span>: <span class="hdr-val">oversight-required</span>
+<span class="hdr">CRP-Compliance-Audit-Trail-URI</span>: <span class="hdr-val">https://comply.crprotocol.io/t/7fa3bc</span>
+<span class="hdr">CRP-Safety-Report-URI</span>: <span class="hdr-val">https://myapp.com/webhooks/ai-review</span>
+
+<span class="cmt"># After human review approves:</span>
+<span class="hdr">CRP-Oversight-Token</span>: <span class="hdr-val">approved:sha256:reviewer_sig...</span>
+<span class="cmt"># Retry with oversight token — gateway allows through</span></pre></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: WHAT HEADERS FIX -->
+  <section class="section section-anchor" id="improvements">
+    <h2>What Headers Fix in the Protocol</h2>
+    <p>Every improvement below is enabled by the header layer — not by changing CRP's core engine, but by making its internal state <em>externally observable and gatable</em>.</p>
+
+    <div class="improvement-grid">
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Strategy selection</strong> was hardcoded in Python. Now <code>CRP-Accept-Strategy: reflexive, push</code> lets any proxy, API gateway, or HTTP middleware select strategy without touching application code.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Session continuity</strong> required server-side lookup. Now the CRP-Session-Token carries signed session state. A Go service can relay context to a Python sidecar with no shared database.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>CKF was always rebuilt.</strong> <code>CRP-Context-ETag</code> + <code>If-Match</code> enables conditional envelope construction — skip the 3-phase fact selection if the knowledge graph hasn't changed.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Safety signals required CRP SDK.</strong> Now <code>CRP-Safety-Hallucination-Risk: CRITICAL</code> in the response header is readable by Nginx, Express, Envoy, or any HTTP middleware — zero SDK dependency.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Compliance evidence was manual.</strong> Now <code>CRP-Compliance-Audit-Trail-URI</code> deep-links every response directly into CRP Comply. One header value = one click to the EU AI Act evidence pack.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Agent safety had no budget signal.</strong> <code>CRP-Agent-Safety-Budget: 0.42</code> tells orchestrators how much risk tolerance remains in a multi-step agent session — enabling graceful degradation before hitting zero.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Safety gates lived in application code.</strong> <code>CRP-Safety-Policy: halt-on CRITICAL; block-ungrounded</code> moves enforcement to the transport layer. The CRP gateway blocks bad output before it reaches your application.</div>
+      </div>
+      <div class="imp-card">
+        <div class="before">✗ Before</div>
+        <div class="after">✓ After</div>
+        <div class="imp-desc"><strong>Oversight was a manual config flag.</strong> <code>CRP-Oversight-Escalate-URI</code> wires oversight escalation to any webhook automatically — SIEM, PagerDuty, Slack, Jira — without touching CRP internals.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: MULTI-HOP AGENTS -->
+  <section class="section section-anchor" id="multi-hop">
+    <h2>Multi-Hop Agentic Chains</h2>
+    <p>When Agent A calls Agent B calls Agent C, HTTP hop-by-hop headers accumulate provenance across the chain. CRP headers do the same — each agent in the chain can read upstream safety signals and propagate them downstream.</p>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">3-agent chain — header propagation</span><span class="code-block-lang">multi-hop</span></div>
+      <div class="code-body"><pre><span class="cmt"># Agent A (orchestrator) → Agent B (specialist)</span>
+<span class="hdr">CRP-Agent-Session-Parent</span>: <span class="hdr-val">crp_sess_orchestrator_4b2f</span>
+<span class="hdr">CRP-Agent-Loop-Depth</span>: <span class="hdr-val">1</span>
+<span class="hdr">CRP-Agent-Safety-Budget</span>: <span class="hdr-val">0.78</span>  <span class="cmt"># starts full</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hdr-val">default-src context; halt-on CRITICAL; warn-on HIGH</span>
+
+<span class="cmt"># Agent B (specialist) → Agent C (sub-task)</span>
+<span class="hdr">CRP-Agent-Session-Parent</span>: <span class="hdr-val">crp_sess_specialist_9c3a</span>
+<span class="hdr">CRP-Agent-Loop-Depth</span>: <span class="hdr-val">2</span>
+<span class="hdr">CRP-Agent-Safety-Budget</span>: <span class="hdr-val">0.54</span>  <span class="cmt"># decremented by Agent B's HIGH signals</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hdr-val">default-src context; halt-on HIGH</span>  <span class="cmt"># tightened</span>
+
+<span class="cmt"># Agent C response propagates back up the chain</span>
+<span class="hdr">CRP-Safety-Hallucination-Risk</span>: <span class="hdr-val">HIGH</span>
+<span class="hdr">CRP-Provenance-HMAC</span>: <span class="hdr-val">sha256:chain-tip-c...</span>
+<span class="cmt"># Agent B reads this → decrements safety budget → passes accumulated risk to A</span>
+<span class="hdr">CRP-Agent-Safety-Budget</span>: <span class="hdr-val">0.29</span>  <span class="cmt"># nearly depleted → orchestrator escalates</span></pre></div>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠</div>
+      <div class="callout-text"><strong>Safety Budget depletion:</strong> When <code>CRP-Agent-Safety-Budget</code> reaches below <code>0.10</code>, the gateway automatically triggers <code>CRP-Oversight-Mode: human-review</code> regardless of per-call risk levels. This catches slow-burn risk accumulation that individual call checks miss.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION: GITHUB ACTION -->
+  <section class="section section-anchor" id="github-action">
+    <h2>GitHub Action — What It Scans For</h2>
+    <p>The <code>crp-scan</code> GitHub Action walks a repository and generates a SARIF report of AI integration points missing CRP headers. Each finding maps to a specific missing header group.</p>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">crp-scan output — SARIF annotation (PR comment)</span><span class="code-block-lang">SARIF / markdown</span></div>
+      <div class="code-body"><pre><span class="kw">src/api/chat.py:47</span> — <span class="str">UNWRAPPED_AI_CALL</span> [HIGH]
+<span class="cmt">  Ungoverned OpenAI call. Missing header coverage:</span>
+
+  <span class="hdr">CRP-Safety-*</span>         <span class="val">✗ not emitted</span>   hallucination risk unmonitored
+  <span class="hdr">CRP-Provenance-HMAC</span>  <span class="val">✗ not emitted</span>   no tamper-evident audit trail
+  <span class="hdr">CRP-Compliance-*</span>    <span class="val">✗ not emitted</span>   EU AI Act unclassified
+  <span class="hdr">CRP-Context-ETag</span>     <span class="val">✗ not emitted</span>   no conditional dispatch
+
+  <span class="cmt">Remediation: wrap with crp.Client() → all headers emitted automatically</span>
+  <span class="cmt">Evidence: comply.crprotocol.io/scan/report/abc123</span>
+
+<span class="kw">src/agents/planner.py:112</span> — <span class="str">AGENTIC_NO_SAFETY_BUDGET</span> [CRITICAL]
+<span class="cmt">  Agentic loop detected with no safety budget signal.</span>
+
+  <span class="hdr">CRP-Agent-Safety-Budget</span>  <span class="val">✗ not emitted</span>  unbounded risk accumulation
+  <span class="hdr">CRP-Safety-Policy</span>        <span class="val">✗ not set</span>     no enforcement at transport layer
+
+  <span class="cmt">Remediation: dispatch_agentic() + CRP-Safety-Policy header</span></pre></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-block-title">.github/workflows/crp-scan.yml</span><span class="code-block-lang">YAML</span></div>
+      <div class="code-body"><pre><span class="kw">- name</span>: <span class="str">CRP AI Governance Scan</span>
+  <span class="kw">uses</span>: <span class="str">crprotocol/crp-scan@v1</span>
+  <span class="kw">with</span>:
+    <span class="kw">fail_on</span>: <span class="str">HIGH</span>              <span class="cmt"># block merge on high-risk ungoverned calls</span>
+    <span class="kw">report_format</span>: <span class="str">sarif</span>       <span class="cmt"># renders inline in GitHub Security tab</span>
+    <span class="kw">require_headers</span>: |          <span class="cmt"># minimum header coverage required</span>
+      <span class="str">CRP-Safety-Hallucination-Risk</span>
+      <span class="str">CRP-Provenance-HMAC</span>
+      <span class="str">CRP-Compliance-EU-AI-Act</span>
+    <span class="kw">safety_policy</span>: <span class="str">"default-src context; halt-on CRITICAL"</span>
+    <span class="kw">comply_link</span>: <span class="str">true</span>           <span class="cmt"># attach CRP Comply deep-link to each finding</span></pre></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <div style="padding:32px 0; color:var(--text3); font-size:12px; text-align:center; font-family:var(--mono)">
+    CRP Headers Specification v3.0 · © 2025–2026 Constantinos Vidiniotis / AutoCyber AI Pty Ltd<br>
+    Context Relay Protocol™ · crprotocol.io
+  </div>
+
+</main>
+</div>
+
+<script>
+const state = {
+  src: 'default-src context',
+  critical: 'halt-on CRITICAL',
+  high: 'warn-on HIGH',
+  grnd: 'require-grounding 0.75',
+  blk: 'block-ungrounded'
+};
+
+function toggleOpt(el, key, val) {
+  el.closest('.pb-options').querySelectorAll('.pb-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  state[key] = val;
+  renderPolicy();
+}
+
+function renderPolicy() {
+  const parts = Object.values(state).filter(Boolean);
+  document.getElementById('policy-output').textContent =
+    'CRP-Safety-Policy: ' + parts.join('; ');
+}
+
+// Active nav on scroll
+const sections = document.querySelectorAll('.section-anchor');
+const navItems = document.querySelectorAll('.nav-item');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      navItems.forEach(n => {
+        n.classList.toggle('active', n.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+// Smooth scroll
+document.querySelectorAll('.nav-item[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+
+</body>
+</html>

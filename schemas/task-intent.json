@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskIntent",
+  "description": "Declarative, all-optional description of what the caller wants. MUST be the input to dispatch() and dispatch_intent().",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "maxLength": 10000,
+      "description": "Free-text description of the task. SHOULD be concise."
+    },
+    "system_prompt": {
+      "type": ["string", "null"],
+      "description": "System prompt for the LLM window. MAY be omitted; CRP provides no default."
+    },
+    "task_input": {
+      "type": ["string", "null"],
+      "description": "The user-facing input to process. MUST pass structural validation (§22.3.1)."
+    },
+    "expected_output_type": {
+      "type": ["string", "null"],
+      "enum": [null, "text", "json", "markdown", "code"],
+      "description": "Hint for extraction pipeline. MAY be omitted."
+    },
+    "max_windows": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Maximum windows for this task (including continuations). MAY be omitted for unbounded."
+    },
+    "max_output_tokens": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Per-window generation reserve. MUST NOT exceed the model's maximum output length."
+    },
+    "metadata": {
+      "type": ["object", "null"],
+      "maxProperties": 50,
+      "description": "Arbitrary key-value metadata. MUST NOT exceed 50 keys."
+    }
+  },
+  "additionalProperties": false
+}

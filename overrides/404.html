@@ -1,0 +1,42 @@
+{% extends "main.html" %}
+
+{% block content %}
+  <a href="#main-content" class="skip-link" aria-label="Skip to main content">Skip to main content</a>
+  <main id="main-content" tabindex="-1">
+    <div class="hero-splash hero-404">
+      <div class="hero-headline">404</div>
+      <p class="hero-sub">We couldn't find that page. It may have moved, been renamed, or never existed.</p>
+      <div class="hero-buttons">
+        <a href="{{ nav.homepage.url | url }}" class="md-button md-button--primary">Back home</a>
+        <a href="{{ 'getting-started/quickstart/' | url }}" class="md-button">Quickstart</a>
+        <a href="{{ 'guides/sdk/' | url }}" class="md-button">SDK guide</a>
+      </div>
+    </div>
+
+    <hr />
+
+    <h2 id="common-destinations">Common destinations</h2>
+    <div class="product-grid">
+      <div class="product-card">
+        <h3>Getting started</h3>
+        <p>Install the SDK, run your first governed call, and deploy the Gateway.</p>
+        <a href="{{ 'getting-started/quickstart/' | url }}" class="md-button">Quickstart</a>
+      </div>
+      <div class="product-card">
+        <h3>Capabilities</h3>
+        <p>See everything CRP does: continuation, safety, provenance, compliance.</p>
+        <a href="{{ 'capabilities/' | url }}" class="md-button">Capabilities</a>
+      </div>
+      <div class="product-card">
+        <h3>Pricing</h3>
+        <p>Self-hosted tiers for Gateway, Comply, and Scan.</p>
+        <a href="{{ 'pricing/' | url }}" class="md-button">Pricing</a>
+      </div>
+      <div class="product-card">
+        <h3>Support</h3>
+        <p>Found a broken link? Open an issue and we'll fix it.</p>
+        <a href="https://github.com/AutoCyber-AI/context-relay-protocol/issues/new" target="_blank" class="md-button">Open issue</a>
+      </div>
+    </div>
+  </main>
+{% endblock %}

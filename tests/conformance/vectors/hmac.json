@@ -1,0 +1,58 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-030",
+      "category": "hmac",
+      "conformance_level": "basic",
+      "description": "HMAC chain is valid across 3 windows",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "windows": [
+          {"window_number": 1, "response_hash": "sha256:aaa", "dpe_report_hash": "sha256:bbb", "timestamp": "2026-05-25T10:00:00Z"},
+          {"window_number": 2, "response_hash": "sha256:ccc", "dpe_report_hash": "sha256:ddd", "timestamp": "2026-05-25T10:01:00Z"},
+          {"window_number": 3, "response_hash": "sha256:eee", "dpe_report_hash": "sha256:fff", "timestamp": "2026-05-25T10:02:00Z"}
+        ]
+      },
+      "assertions": [
+        {"type": "chain_integrity", "expected": "VALID"}
+      ]
+    },
+    {
+      "test_id": "TV-031",
+      "category": "hmac",
+      "conformance_level": "basic",
+      "description": "Chain integrity detects tampering when window 2 content hash is modified",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "windows": [
+          {"window_number": 1, "response_hash": "sha256:aaa", "dpe_report_hash": "sha256:bbb", "timestamp": "2026-05-25T10:00:00Z"},
+          {"window_number": 2, "response_hash": "sha256:ccc", "dpe_report_hash": "sha256:ddd", "timestamp": "2026-05-25T10:01:00Z"},
+          {"window_number": 3, "response_hash": "sha256:eee", "dpe_report_hash": "sha256:fff", "timestamp": "2026-05-25T10:02:00Z"}
+        ],
+        "tamper_window_index": 1,
+        "tamper_response_hash": "sha256:zzz"
+      },
+      "assertions": [
+        {"type": "chain_integrity", "expected": "BROKEN"},
+        {"type": "chain_broken_at", "expected": 2}
+      ]
+    },
+    {
+      "test_id": "TV-032",
+      "category": "hmac",
+      "conformance_level": "full",
+      "description": "Fan-in window HMAC merges sorted parent HMACs deterministically",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "window_number": 4,
+        "timestamp": "2026-05-25T10:03:00Z",
+        "response_hash": "sha256:syn",
+        "dpe_report_hash": "sha256:syndpe",
+        "parent_hmacs": ["sha256:b", "sha256:a", "sha256:c"]
+      },
+      "assertions": [
+        {"type": "fan_in_deterministic"}
+      ]
+    }
+  ]
+}

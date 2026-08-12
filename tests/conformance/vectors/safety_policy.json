@@ -1,0 +1,58 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-020",
+      "category": "safety_policy",
+      "conformance_level": "standard",
+      "description": "Gateway correctly parses a complex Safety Policy",
+      "input": {
+        "policy": "default-src context; halt-on CRITICAL; warn-on HIGH; require-grounding 0.75; block-ungrounded; upgrade-on-risk reflexive; report-uri https://comply.crprotocol.io/reports"
+      },
+      "assertions": [
+        {"type": "policy_parses", "expected": true},
+        {"type": "policy_directive", "field": "halt_on", "value": "CRITICAL"},
+        {"type": "policy_directive", "field": "require_grounding", "value": 0.75},
+        {"type": "policy_directive", "field": "block_ungrounded", "value": true}
+      ]
+    },
+    {
+      "test_id": "TV-021",
+      "category": "safety_policy",
+      "conformance_level": "standard",
+      "description": "Gateway rejects malformed Safety Policy with unknown directive",
+      "input": {
+        "policy": "default-src context; halt-on CRITICAL; allow-hallucination"
+      },
+      "assertions": [
+        {"type": "policy_parses", "expected": false}
+      ]
+    },
+    {
+      "test_id": "TV-022",
+      "category": "safety_policy",
+      "conformance_level": "full",
+      "description": "Child agent can tighten parent's Safety Policy",
+      "input": {
+        "parent_policy": "halt-on CRITICAL; require-grounding 0.75",
+        "child_policy": "halt-on HIGH; require-grounding 0.85; block-fabrication"
+      },
+      "assertions": [
+        {"type": "inheritance_valid", "expected": true}
+      ]
+    },
+    {
+      "test_id": "TV-023",
+      "category": "safety_policy",
+      "conformance_level": "full",
+      "description": "Child agent cannot relax parent's Safety Policy",
+      "input": {
+        "parent_policy": "halt-on CRITICAL; require-grounding 0.75",
+        "child_policy": "warn-on CRITICAL; require-grounding 0.50"
+      },
+      "assertions": [
+        {"type": "inheritance_valid", "expected": false},
+        {"type": "inheritance_http_status", "expected": 403}
+      ]
+    }
+  ]
+}

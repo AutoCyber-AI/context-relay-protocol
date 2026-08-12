@@ -1,0 +1,208 @@
+{
+  "sqb_version": "4.0.0b1",
+  "run_timestamp": "2026-06-30T10:37:35.319178+00:00",
+  "meta": {
+    "mode": "full",
+    "model": "kimi-k2.6"
+  },
+  "all_cases_pass": false,
+  "multihop_connector_recall_delta": 0.0,
+  "elapsed_total_s": 697.76,
+  "cases": [
+    {
+      "case_id": "sqb-001",
+      "domain": "technical",
+      "gates": {
+        "rep_wlast": false,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": false
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 398,
+          "repetition_rate": 0.0354,
+          "factual_recall": 0.9,
+          "factual_precision": 0.8275862068965517,
+          "factual_f1": 0.8622754491017964,
+          "topic_coverage": 0.6666666666666666,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 69.58
+        },
+        {
+          "window_number": 2,
+          "word_count": 798,
+          "repetition_rate": 0.0227,
+          "factual_recall": 0.9,
+          "factual_precision": 0.8461538461538461,
+          "factual_f1": 0.8722466960352422,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 64.88
+        },
+        {
+          "window_number": 3,
+          "word_count": 1123,
+          "repetition_rate": 0.3012,
+          "factual_recall": 0.9,
+          "factual_precision": 0.8125,
+          "factual_f1": 0.854014598540146,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 61.2
+        },
+        {
+          "window_number": 4,
+          "word_count": 1512,
+          "repetition_rate": 0.0466,
+          "factual_recall": 0.9,
+          "factual_precision": 0.88,
+          "factual_f1": 0.8898876404494382,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.6,
+          "elapsed_s": 59.18
+        },
+        {
+          "window_number": 5,
+          "word_count": 1838,
+          "repetition_rate": 0.1517,
+          "factual_recall": 0.9,
+          "factual_precision": 0.5625,
+          "factual_f1": 0.6923076923076923,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.75,
+          "elapsed_s": 58.36
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-002",
+      "domain": "regulatory",
+      "gates": {
+        "rep_wlast": false,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": false
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 440,
+          "repetition_rate": 0.0435,
+          "factual_recall": 0.625,
+          "factual_precision": 0.5454545454545454,
+          "factual_f1": 0.5825242718446602,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 53.65
+        },
+        {
+          "window_number": 2,
+          "word_count": 828,
+          "repetition_rate": 0.0468,
+          "factual_recall": 0.625,
+          "factual_precision": 0.2916666666666667,
+          "factual_f1": 0.39772727272727276,
+          "topic_coverage": 0.8,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 51.67
+        },
+        {
+          "window_number": 3,
+          "word_count": 1247,
+          "repetition_rate": 0.0288,
+          "factual_recall": 0.625,
+          "factual_precision": 0.3333333333333333,
+          "factual_f1": 0.43478260869565216,
+          "topic_coverage": 0.8,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 55.47
+        },
+        {
+          "window_number": 4,
+          "word_count": 1686,
+          "repetition_rate": 0.0321,
+          "factual_recall": 0.625,
+          "factual_precision": 0.25925925925925924,
+          "factual_f1": 0.36649214659685864,
+          "topic_coverage": 0.8,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.6,
+          "elapsed_s": 57.97
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-003",
+      "domain": "multihop",
+      "gates": {
+        "rep_wlast": false,
+        "f1_holds": true,
+        "coverage_wlast": false,
+        "no_forbidden": true,
+        "all_pass": false
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 459,
+          "repetition_rate": 0.011,
+          "factual_recall": 0.0,
+          "factual_precision": 0.14285714285714285,
+          "factual_f1": 0.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 52.96
+        },
+        {
+          "window_number": 2,
+          "word_count": 732,
+          "repetition_rate": 0.0778,
+          "factual_recall": 0.0,
+          "factual_precision": 0.5,
+          "factual_f1": 0.0,
+          "topic_coverage": 1.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 52.0
+        },
+        {
+          "window_number": 3,
+          "word_count": 1012,
+          "repetition_rate": 0.1733,
+          "factual_recall": 0.0,
+          "factual_precision": 0.26666666666666666,
+          "factual_f1": 0.0,
+          "topic_coverage": 1.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 60.46
+        }
+      ]
+    }
+  ]
+}

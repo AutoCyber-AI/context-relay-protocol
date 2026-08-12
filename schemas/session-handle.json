@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SessionHandle",
+  "description": "Returned by init(). Note: session_key is NEVER included in JSON serialization — it exists only in memory.",
+  "type": "object",
+  "required": ["session_id", "protocol_version", "capabilities", "created_at", "expires_at"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — unique per session."
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "SemVer protocol version (e.g., '2.0.0')."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Granted RBAC permissions (e.g., 'dispatch', 'configure', 'session_status')."
+    },
+    "created_at": {
+      "type": "number",
+      "description": "Monotonic timestamp (seconds since epoch) of session creation."
+    },
+    "expires_at": {
+      "type": "number",
+      "description": "Session expiry timestamp (seconds since epoch)."
+    }
+  }
+}

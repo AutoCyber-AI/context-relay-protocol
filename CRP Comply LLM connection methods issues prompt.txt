@@ -1,0 +1,208 @@
+There is a significant issue!
+
+When attempting to connect an LLM via the SDK worker:
+1. The SDK worker itself seems to be hugely outdated. 
+2. It fails and never actually connects -- I believe, not certain about this
+3. It seems the system itself is not using CRP as it should. CRP Comply llm agent needs to be entirely using CRPv4 in order to handle large contexts. I am certain that CRP Comply itself is not using the correct CRP infrastructure, tooling, and proper memory/context management required to return responses!!!! And because of the incapacity to return a response it seems there's a looping error!
+
+These are evident in the following logs:
+
+(.venv) C:\Users\User\Desktop\context-relay-protocol>pip install "crp-comply-sdk[worker]"
+Collecting crp-comply-sdk[worker]
+  Downloading crp_comply_sdk-0.2.3-py3-none-any.whl.metadata (6.7 kB)
+Requirement already satisfied: httpx>=0.25 in .\.venv\Lib\site-packages (from crp-comply-sdk[worker]) (0.28.1)
+Requirement already satisfied: websockets>=12.0 in .\.venv\Lib\site-packages (from crp-comply-sdk[worker]) (16.0)
+Requirement already satisfied: anyio in .\.venv\Lib\site-packages (from httpx>=0.25->crp-comply-sdk[worker]) (4.13.0)
+Requirement already satisfied: certifi in .\.venv\Lib\site-packages (from httpx>=0.25->crp-comply-sdk[worker]) (2026.4.22)
+Requirement already satisfied: httpcore==1.* in .\.venv\Lib\site-packages (from httpx>=0.25->crp-comply-sdk[worker]) (1.0.9)
+Requirement already satisfied: idna in .\.venv\Lib\site-packages (from httpx>=0.25->crp-comply-sdk[worker]) (3.13)
+Requirement already satisfied: h11>=0.16 in .\.venv\Lib\site-packages (from httpcore==1.*->httpx>=0.25->crp-comply-sdk[worker]) (0.16.0)
+Downloading crp_comply_sdk-0.2.3-py3-none-any.whl (16 kB)
+Installing collected packages: crp-comply-sdk
+Successfully installed crp-comply-sdk-0.2.3
+
+[notice] A new release of pip is available: 26.0.1 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+
+(.venv) C:\Users\User\Desktop\context-relay-protocol>crp_OtaQLdDeK_RfYAyUfzkeba9uW0J3kghzvL_NJQh1MD8OZRp2q5w4011oL1yQOEdj
+'crp_OtaQLdDeK_RfYAyUfzkeba9uW0J3kghzvL_NJQh1MD8OZRp2q5w4011oL1yQOEdj' is not recognized as an internal or external command,
+operable program or batch file.
+
+(.venv) C:\Users\User\Desktop\context-relay-protocol>crp-comply worker --lmstudio http://localhost:1234 --api-key crp_OtaQLdDeK_RfYAyUfzkeba9uW0J3kghzvL_NJQh1MD8OZRp2q5w4011oL1yQOEdj
+2026-06-18 14:11:53,861 INFO crp_comply.worker: Connecting to relay: wss://comply.crprotocol.io/api/v1/agent/worker
+2026-06-18 14:11:54,683 INFO crp_comply.worker: Worker ready. Forwarding to http://localhost:1234/v1 (lmstudio).
+2026-06-18 14:14:08,474 INFO httpx: HTTP Request: POST http://localhost:1234/v1/v1/chat/completions "HTTP/1.1 200 OK"
+
+
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/uvicorn/protocols/http/httptools_impl.py", line 421, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    return await self.app(scope, receive, send)
+    )
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ^
+  File "/usr/local/lib/python3.13/site-packages/uvicorn/middleware/proxy_headers.py", line 62, in __call__
+  File "/usr/local/lib/python3.13/site-packages/fastapi/applications.py", line 1159, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/crp_comply/api/app.py", line 441, in _security_headers
+  File "/usr/local/lib/python3.13/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/fastapi/routing.py", line 120, in app
+  File "/usr/local/lib/python3.13/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.13/site-packages/fastapi/routing.py", line 134, in app
+    response = await f(request)
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+               ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.13/site-packages/fastapi/routing.py", line 674, in app
+  File "/usr/local/lib/python3.13/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    raw_response = await run_endpoint_function(
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+    ...<3 lines>...
+  File "/usr/local/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", line 2518, in run_sync_in_worker_thread
+    )
+    return await future
+           ^^^^^^^^^^^^
+    ^
+  File "/usr/local/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", line 1002, in run
+  File "/usr/local/lib/python3.13/site-packages/fastapi/routing.py", line 330, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/starlette/concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/anyio/to_thread.py", line 63, in run_sync
+    result = context.run(func, *args)
+  File "/usr/local/lib/python3.13/site-packages/crp_comply/api/llm_strategy.py", line 228, in llm_strategy
+    from .provider import _is_self_hosted_deployment  # local import: avoid cycle
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: cannot import name '_is_self_hosted_deployment' from 'crp_comply.api.provider' (/usr/local/lib/python3.13/site-packages/crp_comply/api/provider.py)
+INFO:     100.64.0.15:39618 - "GET /api/v1/notifications/inbox?peek=true HTTP/1.1" 200 OK
+    raise exc
+INFO:     100.64.0.15:14340 - "GET /api/v1/notifications/inbox?peek=true HTTP/1.1" 200 OK
+INFO:     100.64.0.13:41476 - "GET /api/v1/llm/strategy HTTP/1.1" 500 Internal Server Error
+
+
+Then note, I restarted the LM studio server...got these:
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER] Success! HTTP server listening on port 1234
+2026-06-18 14:37:46  [WARN]
+ [LM STUDIO SERVER] Server accepting connections from the local network. Only use this if you know what you are doing!
+2026-06-18 14:37:46  [INFO]
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER] Supported endpoints:
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]   LM Studio API
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  GET  http://192.168.0.6:1234/api/v1/models
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/api/v1/chat
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/api/v1/models/load
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/api/v1/models/download
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  GET http://192.168.0.6:1234/api/v1/models/download/status:job_id
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]   OpenAI-compatible
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  GET  http://192.168.0.6:1234/v1/models
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/v1/responses
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/v1/chat/completions
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/v1/completions
+2026-06-18 14:37:46  [INFO]
+ [LM STUDIO SERVER]    ->  POST http://192.168.0.6:1234/v1/embeddings
+
+And tried connecting via this method:
+Most common
+BYOK — Commercial
+
+Self-hosted only
+BYOK — Local (direct)
+
+Hosted + your LLM
+Local via SDK relay
+
+No key to manage
+Hosted by CRP Comply
+Provider
+LM Studio
+Ollama
+Custom OpenAI-compatible
+Base URL
+ http://192.168.0.6:1234/v1
+OpenAI-compatible endpoint on your network. Nothing leaves your VPC.
+
+Model
+meta-llama-3.1-8b-instruct
+API key (optional for local)
+leave blank if no auth
+Show
+Encrypted with AES-256-GCM before storage. Never sent anywhere except the provider you chose.
+
+CRP agent dispatch mode
+CRP mandatory
+
+Default — iterative domain-tool loop (recommended)
+The default iterative loop runs all compliance domain tools (regulation query, AI Act risk classification, DPIA drafting, etc.). Switch to Agentic only for free-form Q&A where no structured compliance deliverable is needed. CRP audit trail is applied in all modes.
+
+Update configuration
+Test connection
+Remove
+Diagnose
+Failed: [Errno -2] Name or service not known
+Resolved provider: local_worker (source: user)
+Base URL: ws://relay/agent/worker
+Model: auto
+Env vars seen: CRP_COMPLY_LLM_BASE_URL, CRP_COMPLY_LLM_API_KEY, CRP_COMPLY_LLM_MODEL
+Per-user BYOK config takes precedence over env vars. Use DELETE /api/v1/llm/configure to clear it and fall back to env-based autodetect.
+
+
+And it failed....
+
+
+
+SO THE LLM CONNECTION METHODS, NEED TO ALL BE CLOSELY EXAMINED, AND FIXED UP VIA REITERATIVE TESTING AND INVESTIGATING!

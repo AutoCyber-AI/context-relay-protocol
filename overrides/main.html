@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block announce %}
+  <div class="crp-announce" role="region" aria-label="Announcements" aria-live="polite">
+    <a id="crp-ticker-link" href="/products/gateway/" class="crp-announce-link">
+      <span id="crp-ticker-icon" aria-hidden="true">🚀</span>
+      <span id="crp-ticker-text"><strong>Ship AI that stays compliant</strong> — try CRP Gateway</span>
+      <span class="crp-announce-cta">Learn more →</span>
+    </a>
+    <div class="crp-announce-controls" aria-label="Announcement controls">
+      <button type="button" id="crp-ticker-prev" aria-label="Previous announcement">‹</button>
+      <button type="button" id="crp-ticker-pause" aria-label="Pause announcements" aria-pressed="false">⏸</button>
+      <button type="button" id="crp-ticker-next" aria-label="Next announcement">›</button>
+    </div>
+    <span class="crp-announce-progress" aria-hidden="true"><span id="crp-ticker-progress"></span></span>
+  </div>
+
+  <noscript>
+    <div class="crp-announce">
+      <a href="/getting-started/quickstart/" class="crp-announce-link">
+        🚀 <strong>CRP v4.0 is live</strong> — get started in minutes
+        <span class="crp-announce-cta">Get started →</span>
+      </a>
+    </div>
+  </noscript>
+{% endblock %}
+
+{% block htmltitle %}
+  <title>{% if page.meta and page.meta.seo_title %}{{ page.meta.seo_title }} | {% elif page.meta and page.meta.title %}{{ page.meta.title }} | {% elif page.title %}{{ page.title }} | {% elif not page.url %}Page not found | {% endif %}{{ config.site_name }}</title>
+{% endblock %}
+
+{% block extrahead %}
+  {{ super() }}
+
+  {# ── Canonical URL ──────────────────────────────────────────────── #}
+  {% if page.url %}
+  <link rel="canonical" href="{{ page.canonical_url }}" />
+  {% endif %}
+
+  {# ── Favicon / PWA icons ────────────────────────────────────────── #}
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon/android-chrome-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon/android-chrome-512x512.png" />
+  <link rel="manifest" href="/assets/favicon/site.webmanifest" />
+  <meta name="theme-color" content="#7c4dff" />
+
+  {# ── Open Graph / Twitter Card ─────────────────────────────────── #}
+  <meta property="og:site_name" content="CRP™ - Context Relay Protocol" />
+  <meta property="og:type" content="website" />
+  {% if page.url %}<meta property="og:url" content="{{ page.canonical_url }}" />{% endif %}
+  <meta property="og:title" content="{% if page.meta and page.meta.og_title %}{{ page.meta.og_title }}{% elif page.meta and page.meta.seo_title %}{{ page.meta.seo_title }}{% elif page.title %}{{ page.title }}{% endif %} | CRP™" />
+  <meta property="og:description" content="{% if page.meta and page.meta.description %}{{ page.meta.description }}{% else %}{{ config.site_description }}{% endif %}" />
+  <meta property="og:image" content="https://crprotocol.io/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@autocyberai" />
+  <meta name="twitter:title" content="{% if page.meta and page.meta.og_title %}{{ page.meta.og_title }}{% elif page.meta and page.meta.seo_title %}{{ page.meta.seo_title }}{% elif page.title %}{{ page.title }}{% endif %} | CRP™" />
+  <meta name="twitter:description" content="{% if page.meta and page.meta.description %}{{ page.meta.description }}{% else %}{{ config.site_description }}{% endif %}" />
+  <meta name="twitter:image" content="https://crprotocol.io/assets/og-image.png" />
+
+  {# ── Security headers (meta fallback - primary at CDN/edge) ────── #}
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+
+  {# ── Schema.org - Organisation (homepage only) ────────────────── #}
+  {% if page.url == "." or page.url == "" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "AutoCyber AI Pty Ltd",
+    "alternateName": "CRP™ - Context Relay Protocol",
+    "url": "https://crprotocol.io",
+    "logo": "https://crprotocol.io/assets/logo-full.png",
+    "image": "https://crprotocol.io/assets/logo-full.png",
+    "description": "Authoring organisation of the Context Relay Protocol™ - the open HTTP-header standard for AI context governance, safety signalling, and compliance evidence.",
+    "foundingDate": "2024",
+    "areaServed": "Worldwide",
+    "knowsAbout": [
+      "AI safety",
+      "AI security",
+      "AI governance",
+      "AI compliance",
+      "AIUC-1",
+      "EU AI Act compliance",
+      "ISO/IEC 42001",
+      "NIST AI Risk Management Framework",
+      "GDPR AI compliance",
+      "HTTP protocol design",
+      "Context management for LLMs",
+      "LLM context protocol"
+    ],
+    "sameAs": [
+      "https://github.com/AutoCyber-AI/context-relay-protocol",
+      "https://twitter.com/autocyberai",
+      "https://www.linkedin.com/company/autocyberai",
+      "https://www.autocyberai.com"
+    ],
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "email": "info@crprotocol.io",
+        "contactType": "customer support"
+      },
+      {
+        "@type": "ContactPoint",
+        "email": "security@crprotocol.io",
+        "contactType": "security"
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "CRP™ - Context Relay Protocol",
+    "url": "https://crprotocol.io",
+    "description": "The open HTTP-header standard for AI context governance, safety signalling, and automated compliance evidence.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "AutoCyber AI Pty Ltd"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://crprotocol.io/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Context Relay Protocol™ (CRP)",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Open-source under Elastic License 2.0"
+    },
+    "url": "https://crprotocol.io",
+    "downloadUrl": "https://pypi.org/project/crprotocol/",
+    "author": {
+      "@type": "Organization",
+      "name": "AutoCyber AI Pty Ltd"
+    },
+    "description": "Open HTTP-header standard for AI context governance, safety signalling, and automated compliance evidence."
+  }
+  </script>
+  {% endif %}
+
+  {# ── Schema.org - BreadcrumbList ──────────────────────────────── #}
+  {% if page.toc %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://crprotocol.io/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "{{ page.title }}",
+        "item": "{{ page.canonical_url }}"
+      }
+    ]
+  }
+  </script>
+  {% endif %}
+
+{% endblock %}
+
+{% block content %}
+  <a href="#main-content" class="skip-link" aria-label="Skip to main content">Skip to main content</a>
+  <main id="main-content" tabindex="-1">
+    {{ super() }}
+  </main>
+{% endblock %}

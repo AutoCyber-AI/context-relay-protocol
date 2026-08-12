@@ -1,0 +1,61 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-010",
+      "category": "dpe",
+      "conformance_level": "standard",
+      "description": "DPE detects a fabricated entity in an LLM response",
+      "input": {
+        "envelope_facts": [
+          {"fact_id": "f1", "content": "The EU AI Act was adopted in 2024 by the European Parliament."},
+          {"fact_id": "f2", "content": "The Act classifies AI systems into four risk levels."}
+        ],
+        "llm_response": "The EU AI Act was adopted in 2024. According to Commissioner Hans Müller, the Act classifies AI systems into four risk levels."
+      },
+      "assertions": [
+        {"type": "dpe_field_gte", "field": "fabrication_count", "value": 1}
+      ]
+    },
+    {
+      "test_id": "TV-011",
+      "category": "dpe",
+      "conformance_level": "standard",
+      "description": "DPE detects a number changed from the source",
+      "input": {
+        "envelope_facts": [
+          {"fact_id": "f1", "content": "Revenue increased by 15% in Q3 2025."}
+        ],
+        "llm_response": "Revenue increased by 25% in Q3 2025."
+      },
+      "assertions": [
+        {"type": "dpe_field_gte", "field": "distortion_count", "value": 1}
+      ]
+    },
+    {
+      "test_id": "TV-012",
+      "category": "dpe",
+      "conformance_level": "standard",
+      "description": "Stage 6 detects contradiction between current response and prior window",
+      "input": {
+        "prior_window_response": "The company's revenue declined by 3% in the fiscal year.",
+        "current_response": "The company experienced strong revenue growth of 12% in the fiscal year."
+      },
+      "assertions": [
+        {"type": "coherence_contradictions_gte", "value": 1}
+      ]
+    },
+    {
+      "test_id": "TV-013",
+      "category": "dpe",
+      "conformance_level": "standard",
+      "description": "Stage 7 detects significant repetition between windows",
+      "input": {
+        "prior_window_response": "The EU AI Act classifies AI systems into four risk levels: unacceptable, high, limited, and minimal. Each level carries different regulatory obligations.",
+        "current_response": "The EU AI Act classifies AI systems into four risk levels: unacceptable, high, limited, and minimal. Each level carries different regulatory obligations."
+      },
+      "assertions": [
+        {"type": "repetition_level_at_least", "value": "MINOR"}
+      ]
+    }
+  ]
+}

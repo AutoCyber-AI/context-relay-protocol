@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CRP — Context Management Comparison</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── Comparison-specific styles ─────────────────────────────────────── */
+    :root {
+      --crp:          #3b82f6;
+      --rag:          #10b981;
+      --injection:    #f59e0b;
+      --hierarchical: #8b5cf6;
+    }
+
+    .comparison-header {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    /* CSS variable aliases for this page */
+    :root {
+      --surface: var(--bg-panel);
+      --muted:   var(--text-dim);
+    }
+    .comparison-header h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+    .comparison-header p  { color: var(--muted); max-width: 680px; margin: 0 auto; }
+
+    /* ── Config panel ───────────────────────────────────────────────────── */
+    .config-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.8rem;
+      margin: 1.5rem auto;
+      max-width: 900px;
+    }
+    .config-panel h2 { font-size: 1rem; margin: 0 0 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .config-field label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .3rem; }
+    .config-field input, .config-field select {
+      width: 100%; padding: .45rem .65rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: .9rem;
+    }
+    .strategy-checkboxes {
+      display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .6rem;
+    }
+    .strat-check {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .3rem .7rem; border-radius: 20px;
+      border: 2px solid; cursor: pointer; font-size: .85rem;
+      user-select: none; transition: opacity .15s;
+    }
+    .strat-check input { display: none; }
+    .strat-check.checked { opacity: 1; }
+    .strat-check:not(.checked) { opacity: .45; }
+    .strat-check[data-s="crp"]          { border-color: var(--crp);          color: var(--crp); }
+    .strat-check[data-s="rag"]          { border-color: var(--rag);          color: var(--rag); }
+    .strat-check[data-s="injection"]    { border-color: var(--injection);    color: var(--injection); }
+    .strat-check[data-s="hierarchical"] { border-color: var(--hierarchical); color: var(--hierarchical); }
+
+    .run-btn {
+      display: block; width: 100%; margin-top: 1.2rem; padding: .7rem;
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600; cursor: pointer; letter-spacing: .03em;
+      transition: opacity .15s;
+    }
+    .run-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Progress / status bar ──────────────────────────────────────────── */
+    .run-status {
+      max-width: 900px; margin: 0 auto 1rem;
+      padding: .7rem 1.2rem; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem; font-size: .9rem;
+    }
+    .run-status .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+    }
+    .run-status.running .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+    .run-status.done    .dot { background: #22c55e; }
+    .run-status.error   .dot { background: #ef4444; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Four-panel live output ─────────────────────────────────────────── */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      max-width: 1400px;
+      margin: 0 auto 1.5rem;
+    }
+    @media (max-width: 900px) { .panels-grid { grid-template-columns: 1fr; } }
+
+    .strategy-panel {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .65rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-weight: 700; font-size: .95rem; }
+    .panel-badge {
+      font-size: .7rem; padding: .2rem .55rem; border-radius: 12px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .panel-metrics {
+      display: flex; flex-wrap: wrap; gap: .5rem;
+      padding: .6rem 1rem; border-bottom: 1px solid var(--border);
+      font-size: .78rem;
+    }
+    .metric-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: .15rem .5rem;
+    }
+    .metric-chip .label { color: var(--muted); }
+    .metric-chip .value { font-weight: 700; margin-left: .3rem; }
+    .panel-output {
+      flex: 1; min-height: 300px; max-height: 420px;
+      overflow-y: auto; padding: .9rem 1rem;
+      font-size: .8rem; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
+      color: var(--text);
+    }
+    .panel-output .window-separator {
+      color: var(--muted); border-top: 1px dashed var(--border);
+      margin: .6rem 0; font-style: italic; font-size: .72rem;
+    }
+
+    /* ── Live metrics chart area ────────────────────────────────────────── */
+    .metrics-section {
+      max-width: 900px; margin: 0 auto 1.5rem;
+    }
+    .metrics-section h2 { font-size: 1rem; margin: 0 0 .8rem; color: var(--muted); text-transform: uppercase; }
+
+    .metric-timeline {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+      margin-bottom: .8rem;
+    }
+    .metric-timeline h3 { font-size: .85rem; margin: 0 0 .6rem; }
+    .bar-chart { display: flex; flex-direction: column; gap: .35rem; }
+    .bar-row { display: flex; align-items: center; gap: .7rem; font-size: .78rem; }
+    .bar-label { width: 180px; flex-shrink: 0; color: var(--muted); text-align: right; }
+    .bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 18px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; min-width: 2px; }
+    .bar-value { width: 70px; flex-shrink: 0; font-weight: 600; }
+
+    /* ── Summary table ──────────────────────────────────────────────────── */
+    .summary-section {
+      max-width: 1200px; margin: 0 auto 2rem;
+    }
+    .summary-section h2 { font-size: 1rem; margin: 0 0 .8rem; color: var(--muted); text-transform: uppercase; }
+    .summary-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .summary-table th, .summary-table td {
+      padding: .55rem .8rem; text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-table th { color: var(--muted); font-weight: 600; text-align: center; }
+    .summary-table th:first-child, .summary-table td:first-child { text-align: left; }
+    .rank-1 { color: #22c55e; font-weight: 700; }
+    .rank-2 { color: var(--accent); }
+    .rank-3 { color: var(--muted); }
+    .rank-4 { color: #ef4444; }
+
+    .insights-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.4rem; margin-top: 1.2rem;
+    }
+    .insights-box h3 { font-size: .9rem; margin: 0 0 .7rem; }
+    .insights-box li { margin-bottom: .4rem; font-size: .88rem; color: var(--muted); }
+    .insights-box li strong { color: var(--text); }
+
+    /* ── Per-strategy colour theming ────────────────────────────────────── */
+    [data-strategy="crp"]          .panel-header { border-left: 4px solid var(--crp); }
+    [data-strategy="rag"]          .panel-header { border-left: 4px solid var(--rag); }
+    [data-strategy="injection"]    .panel-header { border-left: 4px solid var(--injection); }
+    [data-strategy="hierarchical"] .panel-header { border-left: 4px solid var(--hierarchical); }
+
+    [data-strategy="crp"]          .panel-badge { background: #1e3a5f; color: var(--crp); }
+    [data-strategy="rag"]          .panel-badge { background: #064e3b; color: var(--rag); }
+    [data-strategy="injection"]    .panel-badge { background: #451a03; color: var(--injection); }
+    [data-strategy="hierarchical"] .panel-badge { background: #2e1065; color: var(--hierarchical); }
+
+    .winner-badge {
+      display: inline-block; background: #22c55e22; color: #22c55e;
+      border: 1px solid #22c55e55; border-radius: 12px;
+      font-size: .72rem; padding: .15rem .55rem; margin-left: .5rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">CRP <span>v3</span></div>
+  <nav>
+    <a href="/">Detection</a>
+    <a href="/safety.html">Safety</a>
+    <a href="/context.html">Context</a>
+    <a href="/comparison.html" class="active">Comparison</a>
+  </nav>
+</div>
+
+<main>
+  <div class="comparison-header">
+    <h1>Context Management Strategy Comparison</h1>
+    <p>
+      Run the same long-document generation task through <strong>4 different context
+      management strategies</strong> and compare quality, token efficiency, and
+      repetition in real-time. Live streaming output from your local LLM.
+    </p>
+  </div>
+
+  <!-- Config panel -->
+  <section class="config-panel">
+    <h2>Benchmark Configuration</h2>
+    <div class="config-grid">
+      <div class="config-field">
+        <label>LLM Endpoint</label>
+        <input id="cfg-endpoint" type="text" value="http://127.0.0.1:1234" placeholder="http://127.0.0.1:1234"/>
+      </div>
+      <div class="config-field">
+        <label>Model ID (blank = auto-detect)</label>
+        <input id="cfg-model" type="text" placeholder="e.g. meta-llama-3.1-8b-instruct"/>
+      </div>
+      <div class="config-field">
+        <label>Context Size (tokens)</label>
+        <input id="cfg-context" type="number" value="4096" min="1024" max="32768"/>
+      </div>
+      <div class="config-field">
+        <label>Tokens per Window</label>
+        <input id="cfg-window" type="number" value="800" min="200" max="2000"/>
+      </div>
+      <div class="config-field">
+        <label>Sections (1–10)</label>
+        <input id="cfg-sections" type="number" value="5" min="1" max="10"/>
+      </div>
+      <div class="config-field">
+        <label>Target Words (total)</label>
+        <input id="cfg-words" type="number" value="2500" min="500" max="15000"/>
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:.5rem">Strategies to run:</label>
+      <div class="strategy-checkboxes" id="strategy-checks">
+        <label class="strat-check checked" data-s="crp">
+          <input type="checkbox" value="crp" checked/>CRP Context Relay
+        </label>
+        <label class="strat-check checked" data-s="rag">
+          <input type="checkbox" value="rag" checked/>RAG (Retrieval)
+        </label>
+        <label class="strat-check checked" data-s="injection">
+          <input type="checkbox" value="injection" checked/>Context Injection
+        </label>
+        <label class="strat-check checked" data-s="hierarchical">
+          <input type="checkbox" value="hierarchical" checked/>Hierarchical Summary
+        </label>
+      </div>
+    </div>
+    <button class="run-btn" id="run-btn" onclick="startBenchmark()">
+      ▶ Run Comparison (local LLM — allow 10–20 min)
+    </button>
+  </section>
+
+  <!-- Run status bar -->
+  <div class="run-status" id="run-status" style="display:none">
+    <div class="dot"></div>
+    <span id="run-status-text">Starting…</span>
+    <span style="margin-left:auto;color:var(--muted)" id="run-elapsed"></span>
+    <button onclick="cancelBenchmark()" style="padding:.3rem .8rem;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.8rem">Cancel</button>
+  </div>
+
+  <!-- Four live output panels -->
+  <section class="panels-grid" id="panels-grid">
+    <!-- Panels injected by JS -->
+  </section>
+
+  <!-- Live metrics charts -->
+  <section class="metrics-section" id="metrics-section" style="display:none">
+    <h2>Live Metrics</h2>
+    <div id="charts-container">
+      <!-- Bar charts injected by JS -->
+    </div>
+  </section>
+
+  <!-- Final comparison table -->
+  <section class="summary-section" id="summary-section" style="display:none">
+    <h2>Final Comparison</h2>
+    <div style="overflow-x:auto">
+      <table class="summary-table" id="summary-table">
+        <!-- filled by JS -->
+      </table>
+    </div>
+    <div class="insights-box" id="insights-box" style="display:none">
+      <h3>Key Insights</h3>
+      <ul id="insights-list"></ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const STATE = {
+  runId: null,
+  polling: false,
+  startTime: 0,
+  results: {},
+  windowTexts: {},    // strategy → accumulated text
+  windowMetrics: {},  // strategy → array of metric snapshots
+  done: false,
+};
+
+const STRATEGY_META = {
+  crp:          { label: "CRP Context Relay",          color: "#3b82f6", short: "CRP" },
+  rag:          { label: "RAG (Retrieval-Augmented)",   color: "#10b981", short: "RAG" },
+  injection:    { label: "Context Injection (Naive)",   color: "#f59e0b", short: "Inject" },
+  hierarchical: { label: "Hierarchical Summary",        color: "#8b5cf6", short: "H-Sum" },
+};
+
+const METRICS_DISPLAY = [
+  { key: "total_words",             label: "Total Words",            higherBetter: true,  format: v => v.toLocaleString() },
+  { key: "context_efficiency",      label: "Context Efficiency",     higherBetter: true,  format: v => (v*100).toFixed(1)+"%" },
+  { key: "final_repetition_6gram",  label: "6-gram Repetition",      higherBetter: false, format: v => (v*100).toFixed(2)+"%" },
+  { key: "final_dup_sentence_ratio",label: "Dup. Sentence Ratio",    higherBetter: false, format: v => (v*100).toFixed(2)+"%" },
+  { key: "avg_unique_word_ratio",   label: "Unique Word Ratio",      higherBetter: true,  format: v => (v*100).toFixed(1)+"%" },
+  { key: "total_prompt_tokens",     label: "Total Prompt Tokens",    higherBetter: false, format: v => v.toLocaleString() },
+  { key: "sections_completed",      label: "Sections Completed",     higherBetter: true,  format: v => v.toString() },
+  { key: "total_latency_s",         label: "Latency (s)",            higherBetter: false, format: v => v.toFixed(1) },
+];
+
+// ── Checkbox handling ──────────────────────────────────────────────────────────
+document.querySelectorAll('.strat-check').forEach(el => {
+  el.addEventListener('click', () => {
+    const cb = el.querySelector('input');
+    cb.checked = !cb.checked;
+    el.classList.toggle('checked', cb.checked);
+  });
+});
+
+function selectedStrategies() {
+  return [...document.querySelectorAll('.strat-check input:checked')].map(c => c.value);
+}
+
+// ── Panel creation ─────────────────────────────────────────────────────────────
+function createPanels(strategies) {
+  const grid = document.getElementById('panels-grid');
+  grid.innerHTML = '';
+  STATE.windowTexts = {};
+  STATE.windowMetrics = {};
+
+  strategies.forEach(s => {
+    const meta = STRATEGY_META[s] || { label: s, color: '#888', short: s };
+    STATE.windowTexts[s] = '';
+    STATE.windowMetrics[s] = [];
+
+    const panel = document.createElement('div');
+    panel.className = 'strategy-panel';
+    panel.dataset.strategy = s;
+    panel.id = `panel-${s}`;
+
+    panel.innerHTML = `
+      <div class="panel-header">
+        <span class="panel-title" style="color:${meta.color}">${meta.label}</span>
+        <span class="panel-badge" id="badge-${s}">waiting</span>
+      </div>
+      <div class="panel-metrics" id="metrics-row-${s}">
+        ${makeMetricChip('words', '—')}
+        ${makeMetricChip('efficiency', '—')}
+        ${makeMetricChip('repetition', '—')}
+        ${makeMetricChip('unique', '—')}
+        ${makeMetricChip('window', '—')}
+      </div>
+      <div class="panel-output" id="output-${s}"><span style="color:var(--muted)">Waiting to start…</span></div>
+    `;
+    grid.appendChild(panel);
+  });
+}
+
+function makeMetricChip(label, value) {
+  return `<div class="metric-chip"><span class="label">${label}</span><span class="value" id="chip-${label}-PLACEHOLDER">${value}</span></div>`;
+}
+
+function updatePanelMetrics(s, metrics) {
+  const row = document.getElementById(`metrics-row-${s}`);
+  if (!row) return;
+  row.innerHTML = `
+    ${chip('words', (metrics.running_words||0).toLocaleString())}
+    ${chip('efficiency', metrics.tokens_output ? ((metrics.tokens_output/(Math.max(1,(metrics.tokens_prompt||0)+(metrics.tokens_output||0))))*100).toFixed(1)+'%' : '—')}
+    ${chip('repetition', ((metrics.repetition_6gram||0)*100).toFixed(2)+'%')}
+    ${chip('unique', ((metrics.unique_word_ratio||0)*100).toFixed(1)+'%')}
+    ${chip('window', '#'+(metrics.window||'?'))}
+  `;
+}
+
+function chip(label, value) {
+  return `<div class="metric-chip"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+}
+
+// ── Benchmark control ──────────────────────────────────────────────────────────
+async function startBenchmark() {
+  const strategies = selectedStrategies();
+  if (!strategies.length) { alert('Select at least one strategy.'); return; }
+
+  const config = {
+    endpoint:            document.getElementById('cfg-endpoint').value.trim(),
+    model:               document.getElementById('cfg-model').value.trim(),
+    context_size:        parseInt(document.getElementById('cfg-context').value) || 4096,
+    max_tokens_per_window: parseInt(document.getElementById('cfg-window').value) || 800,
+    sections:            parseInt(document.getElementById('cfg-sections').value) || 5,
+    target_words:        parseInt(document.getElementById('cfg-words').value) || 2500,
+    strategies,
+  };
+
+  // Auto-detect model if blank
+  if (!config.model) {
+    try {
+      const det = await fetch('/api/detect').then(r => r.json());
+      if (det.primary) config.model = det.primary.id;
+    } catch(_) {}
+  }
+
+  document.getElementById('run-btn').disabled = true;
+  createPanels(strategies);
+  document.getElementById('metrics-section').style.display = 'block';
+  document.getElementById('summary-section').style.display = 'none';
+  createCharts(strategies);
+
+  const resp = await fetch('/api/compare/start', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(config),
+  });
+  const data = await resp.json();
+  STATE.runId = data.run_id;
+  STATE.startTime = Date.now();
+  STATE.done = false;
+  STATE.results = {};
+
+  setStatus('running', `Benchmark started — run ${STATE.runId.slice(0,8)}`);
+  startPolling();
+  startElapsedTimer();
+}
+
+async function cancelBenchmark() {
+  if (!STATE.runId) return;
+  await fetch('/api/compare/cancel', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({run_id: STATE.runId}),
+  });
+  STATE.polling = false;
+  setStatus('error', 'Cancelled by user.');
+  document.getElementById('run-btn').disabled = false;
+}
+
+// ── Polling loop (avoids SSE complexity on stdlib server) ─────────────────────
+function startPolling() {
+  STATE.polling = true;
+  pollOnce();
+}
+
+async function pollOnce() {
+  if (!STATE.polling || !STATE.runId) return;
+  try {
+    const resp = await fetch('/api/compare/poll', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({run_id: STATE.runId, timeout: 3.0}),
+    });
+    const data = await resp.json();
+    (data.events || []).forEach(processEvent);
+    if (!STATE.done) setTimeout(pollOnce, 100);
+  } catch(e) {
+    console.error('poll error', e);
+    if (!STATE.done) setTimeout(pollOnce, 2000);
+  }
+}
+
+function processEvent(evt) {
+  const { type, data } = evt;
+  switch (type) {
+    case 'run_started':
+      break;
+    case 'strategy_started':
+      setBadge(data.strategy, 'running…', data.color);
+      clearOutput(data.strategy);
+      break;
+    case 'chunk':
+      appendChunk(data.strategy, data.text);
+      break;
+    case 'window_metrics':
+      onWindowMetrics(data.strategy, data.metrics);
+      break;
+    case 'window_done':
+      appendWindowSeparator(data.strategy, data.window, data.words_in_window);
+      break;
+    case 'strategy_done':
+      setBadge(data.strategy, '✓ done');
+      STATE.results[data.strategy] = data.result;
+      updateCharts(STATE.results);
+      break;
+    case 'strategy_error':
+      setBadge(data.strategy, '✗ error', '#ef4444');
+      appendError(data.strategy, data.error);
+      break;
+    case 'run_done':
+      STATE.done = true;
+      STATE.polling = false;
+      STATE.results = data.results || STATE.results;
+      setStatus('done', `Complete in ${(data.elapsed_s||0).toFixed(0)}s`);
+      document.getElementById('run-btn').disabled = false;
+      showSummary(data.results, data.summary);
+      break;
+    case 'run_error':
+      STATE.done = true;
+      STATE.polling = false;
+      setStatus('error', 'Run failed: ' + (data.error || ''));
+      document.getElementById('run-btn').disabled = false;
+      break;
+  }
+}
+
+// ── Output helpers ─────────────────────────────────────────────────────────────
+function clearOutput(s) {
+  const el = document.getElementById(`output-${s}`);
+  if (el) el.innerHTML = '';
+}
+
+function appendChunk(s, text) {
+  const el = document.getElementById(`output-${s}`);
+  if (!el) return;
+  STATE.windowTexts[s] = (STATE.windowTexts[s] || '') + text;
+  el.appendChild(document.createTextNode(text));
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendWindowSeparator(s, window, words) {
+  const el = document.getElementById(`output-${s}`);
+  if (!el) return;
+  const div = document.createElement('div');
+  div.className = 'window-separator';
+  div.textContent = `── window ${window} complete (${words} words) ──`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendError(s, msg) {
+  const el = document.getElementById(`output-${s}`);
+  if (!el) return;
+  const span = document.createElement('span');
+  span.style.color = '#ef4444';
+  span.textContent = `\n[ERROR: ${msg}]\n`;
+  el.appendChild(span);
+}
+
+function setBadge(s, text, color) {
+  const el = document.getElementById(`badge-${s}`);
+  if (!el) return;
+  el.textContent = text;
+  if (color) el.style.color = color;
+}
+
+function onWindowMetrics(s, metrics) {
+  STATE.windowMetrics[s] = STATE.windowMetrics[s] || [];
+  STATE.windowMetrics[s].push(metrics);
+  updatePanelMetrics(s, metrics);
+  updateCharts(STATE.results);
+}
+
+// ── Status bar ─────────────────────────────────────────────────────────────────
+function setStatus(cls, text) {
+  const el = document.getElementById('run-status');
+  el.style.display = 'flex';
+  el.className = `run-status ${cls}`;
+  document.getElementById('run-status-text').textContent = text;
+}
+
+function startElapsedTimer() {
+  const el = document.getElementById('run-elapsed');
+  const interval = setInterval(() => {
+    if (STATE.done) { clearInterval(interval); return; }
+    const s = Math.floor((Date.now() - STATE.startTime) / 1000);
+    el.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} elapsed`;
+  }, 1000);
+}
+
+// ── Bar charts ────────────────────────────────────────────────────────────────
+function createCharts(strategies) {
+  const container = document.getElementById('charts-container');
+  container.innerHTML = '';
+  const chartMetrics = [
+    { key: 'running_words',       label: 'Words written (live)',      higherBetter: true  },
+    { key: 'repetition_6gram',    label: '6-gram Repetition (lower is better)', higherBetter: false },
+    { key: 'unique_word_ratio',   label: 'Unique word ratio',         higherBetter: true  },
+    { key: 'coherence_with_prev', label: 'Window coherence',          higherBetter: true  },
+  ];
+  chartMetrics.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'metric-timeline';
+    div.id = `chart-${m.key}`;
+    div.innerHTML = `<h3>${m.label}</h3><div class="bar-chart" id="bars-${m.key}"></div>`;
+    container.appendChild(div);
+  });
+}
+
+function updateCharts(results) {
+  const chartMetrics = [
+    { key: 'running_words',       fromMetrics: true  },
+    { key: 'repetition_6gram',    fromMetrics: true  },
+    { key: 'unique_word_ratio',   fromMetrics: true  },
+    { key: 'coherence_with_prev', fromMetrics: true  },
+  ];
+
+  chartMetrics.forEach(cm => {
+    const container = document.getElementById(`bars-${cm.key}`);
+    if (!container) return;
+
+    // Gather current values
+    const vals = {};
+    Object.keys(STRATEGY_META).forEach(s => {
+      if (cm.fromMetrics) {
+        const metrics = STATE.windowMetrics[s] || [];
+        if (metrics.length) {
+          vals[s] = metrics[metrics.length-1][cm.key] || 0;
+        } else if (results[s]) {
+          vals[s] = results[s][cm.key.replace('running_', 'total_')] || 0;
+        }
+      }
+    });
+
+    const maxVal = Math.max(0.001, ...Object.values(vals));
+    container.innerHTML = '';
+    Object.entries(vals).forEach(([s, v]) => {
+      const meta = STRATEGY_META[s] || { label: s, color: '#888' };
+      const pct = (v / maxVal * 100).toFixed(1);
+      const display = cm.key === 'running_words' ? v.toLocaleString() :
+                      cm.key.includes('ratio') || cm.key.includes('repetition') ? (v*100).toFixed(2)+'%' :
+                      v.toFixed ? v.toFixed(3) : v;
+      container.innerHTML += `
+        <div class="bar-row">
+          <div class="bar-label" style="color:${meta.color}">${meta.label}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${meta.color}"></div>
+          </div>
+          <div class="bar-value" style="color:${meta.color}">${display}</div>
+        </div>`;
+    });
+  });
+}
+
+// ── Final summary table ────────────────────────────────────────────────────────
+function showSummary(results, summary) {
+  document.getElementById('summary-section').style.display = 'block';
+  const table = document.getElementById('summary-table');
+  const strategies = Object.keys(results || {});
+  if (!strategies.length) return;
+
+  let html = '<thead><tr><th>Metric</th>';
+  strategies.forEach(s => {
+    const meta = STRATEGY_META[s] || { label: s, color: '#888' };
+    const winner = summary && summary.winner === s;
+    html += `<th style="color:${meta.color}">${meta.label}${winner ? '<span class="winner-badge">★ winner</span>' : ''}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  const rankings = summary && summary.rankings || {};
+
+  METRICS_DISPLAY.forEach(m => {
+    html += `<tr><td>${m.label}</td>`;
+    strategies.forEach(s => {
+      const r = results[s] || {};
+      const v = r[m.key] !== undefined ? r[m.key] : '—';
+      const rank = (rankings[m.key] || {})[s] || 0;
+      const cls = rank ? `rank-${rank}` : '';
+      const display = v === '—' ? '—' : m.format(v);
+      html += `<td class="${cls}">${display}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  // Average rank row
+  if (summary && summary.avg_rank) {
+    html += '<tr style="border-top:2px solid var(--border)"><td><strong>Avg. Rank</strong></td>';
+    strategies.forEach(s => {
+      const r = summary.avg_rank[s];
+      const best = Math.min(...Object.values(summary.avg_rank));
+      html += `<td class="${r === best ? 'rank-1' : ''}">${r != null ? r.toFixed(2) : '—'}</td>`;
+    });
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Insights
+  if (summary && summary.insights && summary.insights.length) {
+    const box = document.getElementById('insights-box');
+    box.style.display = 'block';
+    const list = document.getElementById('insights-list');
+    list.innerHTML = summary.insights.map(i => `<li>${i}</li>`).join('');
+  }
+}
+</script>
+</body>
+</html>

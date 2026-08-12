@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRP v3 — Complete Protocol Specification & Standardisation Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08090d;--bg2:#0e1017;--bg3:#141720;--bg4:#1a1e28;--bg5:#1f2433;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--text:#e2e8f8;--text2:#8b92a8;--text3:#4a5068;--purple:#7c6ef5;--purple2:#a08fff;--purple-d:rgba(124,110,245,0.13);--teal:#2de0c0;--teal-d:rgba(45,224,192,0.11);--coral:#ff6b52;--coral-d:rgba(255,107,82,0.11);--amber:#f5a623;--amber-d:rgba(245,166,35,0.11);--blue:#4fa8ff;--blue-d:rgba(79,168,255,0.11);--green:#3dda84;--green-d:rgba(61,218,132,0.11);--red:#ff4757;--red-d:rgba(255,71,87,0.11);--gold:#ffd700;--gold-d:rgba(255,215,0,0.1);--mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6}
+a{color:var(--purple2);text-decoration:none}
+
+/* LAYOUT */
+.wrap{display:flex;min-height:100vh}
+.sidebar{width:268px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);padding:0;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.main{flex:1;max-width:860px;padding:52px 60px;overflow-x:hidden}
+
+/* SIDEBAR */
+.sb-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.sb-pill{display:inline-flex;align-items:center;gap:5px;background:var(--purple-d);border:1px solid rgba(124,110,245,.35);color:var(--purple2);font-family:var(--mono);font-size:9.5px;padding:3px 9px;border-radius:20px;letter-spacing:.07em;margin-bottom:8px}
+.sb-pill::before{content:'';width:5px;height:5px;background:var(--purple);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-title{font-size:14.5px;font-weight:700;color:var(--text);line-height:1.3}
+.sb-sub{font-size:10.5px;color:var(--text3);margin-top:3px}
+.sb-nav{padding:12px 10px;flex:1}
+.sb-group{margin-bottom:2px}
+.sb-group-label{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:8px 10px 4px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s;text-decoration:none;line-height:1.3}
+.sb-item:hover{background:var(--bg4);color:var(--text)}
+.sb-item.active{background:var(--purple-d);color:var(--purple2)}
+.sb-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:1px}
+.sb-num{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto;flex-shrink:0}
+
+/* TYPOGRAPHY */
+h1{font-size:34px;font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:14px}
+h2{font-size:21px;font-weight:700;margin:52px 0 14px;color:var(--text);letter-spacing:-.01em}
+h3{font-size:15px;font-weight:600;margin:28px 0 10px;color:var(--text)}
+h4{font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em}
+p{color:var(--text2);margin-bottom:14px;line-height:1.78;font-size:13.5px}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg4);padding:1px 5px;border-radius:3px;color:var(--amber)}
+strong{color:var(--text);font-weight:600}
+hr.div{border:none;border-top:1px solid var(--border);margin:44px 0}
+
+/* HERO */
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:var(--purple-d);border:1px solid rgba(124,110,245,.3);color:var(--purple2);font-size:12px;font-weight:500;padding:5px 14px;border-radius:20px;margin-bottom:18px}
+.subtitle{font-size:15.5px;color:var(--text2);max-width:640px;margin-bottom:30px;line-height:1.7}
+.stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:40px}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:120px}
+.stat .v{font-size:26px;font-weight:800;font-family:var(--mono);color:var(--text)}
+.stat .l{font-size:10.5px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+
+/* CALLOUTS */
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;font-size:13px;line-height:1.65;display:flex;gap:10px;align-items:flex-start}
+.callout .ci{font-size:15px;flex-shrink:0;margin-top:1px}
+.callout .ct{color:var(--text2)}
+.callout .ct strong{color:var(--text)}
+.c-info{background:var(--blue-d);border:1px solid rgba(79,168,255,.2)}
+.c-warn{background:var(--amber-d);border:1px solid rgba(245,166,35,.2)}
+.c-new{background:var(--green-d);border:1px solid rgba(61,218,132,.2)}
+.c-crit{background:var(--coral-d);border:1px solid rgba(255,107,82,.2)}
+.c-gold{background:var(--gold-d);border:1px solid rgba(255,215,0,.25)}
+
+/* CODE BLOCKS */
+.cb{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:14px 0}
+.cb-hdr{background:var(--bg4);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;justify-content:space-between;align-items:center}
+.cb-title{font-size:11px;font-family:var(--mono);color:var(--text3)}
+.cb-lang{font-size:10px;color:var(--text3)}
+.cb-body{padding:16px;overflow-x:auto}
+.cb-body pre{font-family:var(--mono);font-size:11.5px;line-height:1.75}
+.kw{color:var(--purple2)}.str{color:var(--green)}.val{color:var(--amber)}.cmt{color:var(--text3)}.hdr{color:var(--teal)}.hv{color:var(--coral)}.dir{color:var(--blue)}.ok{color:var(--green)}.err{color:var(--red)}
+
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px}
+.tbl th{background:var(--bg4);color:var(--text3);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.015)}
+.hn{font-family:var(--mono);font-size:11.5px}
+.badge{display:inline-block;font-size:9.5px;font-family:var(--mono);padding:1.5px 6px;border-radius:3px;margin-left:3px}
+.b-new{background:var(--green-d);color:var(--green);border:1px solid rgba(61,218,132,.3)}
+.b-ext{background:var(--purple-d);color:var(--purple2);border:1px solid rgba(124,110,245,.3)}
+.b-req{background:var(--blue-d);color:var(--blue)}
+.b-res{background:var(--green-d);color:var(--green)}
+.b-both{background:var(--purple-d);color:var(--purple2)}
+.tdesc{color:var(--text2);font-size:12px;line-height:1.5}
+.tsrc{color:var(--text3);font-size:11px;font-style:italic}
+
+/* OSI LAYER CARDS */
+.osi-grid{display:grid;gap:10px;margin:16px 0}
+.osi-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:140px 1fr;gap:16px;align-items:start}
+.osi-card:hover{border-color:var(--border2)}
+.osi-layer{display:flex;flex-direction:column;gap:4px}
+.osi-num{font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.osi-name{font-size:13px;font-weight:700}
+.osi-badge{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:4px;margin-top:4px;width:fit-content}
+.osi-content{font-size:12.5px;color:var(--text2);line-height:1.6}
+.osi-content strong{color:var(--text);font-weight:600}
+.osi-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tag{font-size:10.5px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:var(--bg5);color:var(--text3);border:1px solid var(--border)}
+.tag.hi{border-color:var(--border2);color:var(--text2)}
+
+/* SPEC DOC CARDS */
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.spec-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color .2s}
+.spec-card:hover{border-color:var(--border2)}
+.spec-id{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em}
+.spec-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4}
+.spec-desc{font-size:12px;color:var(--text2);line-height:1.55}
+.spec-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.spec-pri{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:4px;margin-top:8px}
+.p1{background:var(--red-d);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+.p2{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.p3{background:var(--blue-d);color:var(--blue);border:1px solid rgba(79,168,255,.3)}
+
+/* ACCREDITATION TRACK */
+.track-row{display:grid;grid-template-columns:160px 1fr;gap:16px;margin:10px 0;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px}
+.track-org{display:flex;flex-direction:column;gap:3px}
+.track-org-name{font-size:14px;font-weight:700;color:var(--text)}
+.track-org-type{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.track-timeline{font-size:11px;font-family:var(--mono);margin-top:5px}
+.track-body{font-size:12.5px;color:var(--text2);line-height:1.65}
+.track-body strong{color:var(--text)}
+.track-steps{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.track-step{display:flex;gap:8px;align-items:baseline;font-size:12px}
+.ts-n{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:22px}
+.ts-t{color:var(--text2)}
+
+/* MONETISATION */
+.money-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
+.money-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px}
+.money-card .mc-icon{font-size:22px;margin-bottom:8px}
+.money-card .mc-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px}
+.money-card .mc-desc{font-size:12px;color:var(--text2);line-height:1.55}
+.money-card .mc-value{font-family:var(--mono);font-size:11px;color:var(--green);margin-top:8px}
+
+/* CONTINUATION DIAGRAM */
+.cont-chain{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.cont-win{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;position:relative}
+.cont-win::before{content:'';position:absolute;left:24px;bottom:-9px;width:2px;height:9px;background:var(--border2)}
+.cont-win:last-child::before{display:none}
+.cw-row{display:flex;align-items:center;gap:10px}
+.cw-num{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:60px;text-transform:uppercase}
+.cw-headers{display:flex;flex-wrap:wrap;gap:5px}
+.ch{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:4px}
+
+/* RISK SCORING */
+.risk-matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.risk-row{background:var(--bg3);border-left:3px solid;border-radius:0 8px 8px 0;padding:12px 14px;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.rr-level{font-family:var(--mono);font-size:10.5px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.rr-score{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:4px}
+.rr-desc{font-size:11.5px;color:var(--text2);line-height:1.5}
+.rr-regs{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.reg{font-size:9.5px;font-family:var(--mono);padding:1.5px 6px;border-radius:3px;background:var(--bg5);color:var(--text3);border:1px solid var(--border)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* RESPONSIVE */
+@media(max-width:900px){.wrap{flex-direction:column}.sidebar{width:100%;height:auto;position:relative}.main{padding:28px 20px}.spec-grid,.money-grid{grid-template-columns:1fr}.osi-card{grid-template-columns:1fr}.risk-matrix{grid-template-columns:1fr}}
+
+.section-anchor{scroll-margin-top:28px}
+.toc-num{font-family:var(--mono);font-size:10px;color:var(--text3);margin-right:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+<div class="sb-logo">
+  <div class="sb-pill">CRP™ SPEC v3.0</div>
+  <div class="sb-title">Context Relay Protocol<br>Complete Specification</div>
+  <div class="sb-sub">Headers · Continuation · Risk · Accreditation</div>
+</div>
+<div class="sb-nav">
+  <div class="sb-group">
+    <div class="sb-group-label">Overview</div>
+    <a class="sb-item active" href="#overview"><span class="sb-dot" style="background:var(--purple)"></span>What This Is<span class="sb-num">§1</span></a>
+    <a class="sb-item" href="#llm-config"><span class="sb-dot" style="background:var(--blue)"></span>LLM Configuration Layer<span class="sb-num">§2</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">OSI Model</div>
+    <a class="sb-item" href="#osi"><span class="sb-dot" style="background:var(--teal)"></span>AI-Adapted OSI Layers<span class="sb-num">§3</span></a>
+    <a class="sb-item" href="#osi-detail"><span class="sb-dot" style="background:var(--teal)"></span>Layer-by-Layer Breakdown<span class="sb-num">§4</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Context & Continuation</div>
+    <a class="sb-item" href="#continuation"><span class="sb-dot" style="background:var(--purple)"></span>Context Enlargement<span class="sb-num">§5</span></a>
+    <a class="sb-item" href="#headers-map"><span class="sb-dot" style="background:var(--purple)"></span>Header ↔ Protocol Map<span class="sb-num">§6</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Safety & Risk</div>
+    <a class="sb-item" href="#risk-scoring"><span class="sb-dot" style="background:var(--coral)"></span>Risk Scoring Model<span class="sb-num">§7</span></a>
+    <a class="sb-item" href="#regulations"><span class="sb-dot" style="background:var(--amber)"></span>Regulatory Controls Map<span class="sb-num">§8</span></a>
+    <a class="sb-item" href="#safety-policy"><span class="sb-dot" style="background:var(--coral)"></span>Safety Policy Directives<span class="sb-num">§9</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Spec Documents</div>
+    <a class="sb-item" href="#spec-docs"><span class="sb-dot" style="background:var(--blue)"></span>Full Spec Doc List<span class="sb-num">§10</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Standardisation</div>
+    <a class="sb-item" href="#accreditation"><span class="sb-dot" style="background:var(--gold)"></span>Accreditation Paths<span class="sb-num">§11</span></a>
+    <a class="sb-item" href="#roadmap"><span class="sb-dot" style="background:var(--gold)"></span>Accreditation Roadmap<span class="sb-num">§12</span></a>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Value</div>
+    <a class="sb-item" href="#benefits"><span class="sb-dot" style="background:var(--green)"></span>What We Achieve<span class="sb-num">§13</span></a>
+    <a class="sb-item" href="#monetisation"><span class="sb-dot" style="background:var(--green)"></span>Monetisation Model<span class="sb-num">§14</span></a>
+  </div>
+</div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- §1 OVERVIEW -->
+<div class="section-anchor" id="overview">
+<div class="hero-tag">CRP™ Protocol v3.0 · Complete Specification</div>
+<h1>CRP™ — Full Protocol<br>Specification & Standardisation</h1>
+<p class="subtitle">From LLM configuration and OSI-layer AI architecture through to context continuation, risk scoring, the complete spec document list, accreditation paths, and the commercial model.</p>
+<div class="stat-row">
+  <div class="stat"><div class="v">7</div><div class="l">OSI AI Layers</div></div>
+  <div class="stat"><div class="v">14</div><div class="l">Spec Docs</div></div>
+  <div class="stat"><div class="v">4</div><div class="l">Accred. Bodies</div></div>
+  <div class="stat"><div class="v">58</div><div class="l">Headers Defined</div></div>
+  <div class="stat"><div class="v">6</div><div class="l">Revenue Streams</div></div>
+</div>
+
+<div class="callout c-info">
+  <div class="ci">ℹ</div>
+  <div class="ct"><strong>What we are building:</strong> HTTP made the web interoperable by defining a universal request/response protocol with headers. CRP v3 does the same for AI — a wire-level protocol with standardised headers for context, safety, provenance, and governance, operable at every layer of the AI stack from LLM configuration to multi-agent orchestration.</div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §2 LLM CONFIG LAYER -->
+<div class="section-anchor" id="llm-config">
+<h2><span class="toc-num">§2</span> LLM Configuration Layer</h2>
+<p>Before any protocol operates, the LLM itself must be configured correctly. CRP v3 introduces a set of <strong>LLM-level primitives</strong> that are established at session init and carried in headers for the lifetime of the session. These are the direct configurations CRP makes to the underlying model call.</p>
+
+<h3>CRP-controlled LLM parameters</h3>
+<table class="tbl">
+<tr><th>Parameter</th><th>CRP Header</th><th>What It Controls</th><th>Safety Relevance</th></tr>
+<tr>
+  <td><span class="hn">temperature</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-LLM-Temperature</span></td>
+  <td class="tdesc">Dynamically reduced on HIGH/CRITICAL risk. Default 0.7, drops to 0.2 on re-dispatch.</td>
+  <td class="tsrc">Fabrication reduction. NIST AI RMF MAP-1.6</td>
+</tr>
+<tr>
+  <td><span class="hn">max_tokens</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-Context-Token-Budget</span></td>
+  <td class="tdesc">Manages token window budget. Signals remaining capacity to client.</td>
+  <td class="tsrc">Context saturation control. Axiom 6.</td>
+</tr>
+<tr>
+  <td><span class="hn">system prompt</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-LLM-Grounding-Mode</span></td>
+  <td class="tdesc">Injects grounding instruction into system prompt: <code>context-strict</code>, <code>context-preferred</code>, <code>open</code>.</td>
+  <td class="tsrc">Attribution quality. EU AI Act Art. 13.</td>
+</tr>
+<tr>
+  <td><span class="hn">top_p / top_k</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-LLM-Sampling-Mode</span></td>
+  <td class="tdesc">On reflexive dispatch, tightens sampling to reduce variance in re-generation.</td>
+  <td class="tsrc">Consistency verification.</td>
+</tr>
+<tr>
+  <td><span class="hn">stream</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-Stream-Safety-Mode</span></td>
+  <td class="tdesc"><code>buffer</code>: DPE runs before streaming to client. <code>pass-through</code>: stream immediately with live risk annotation.</td>
+  <td class="tsrc">Human oversight timing. Axiom 5.</td>
+</tr>
+<tr>
+  <td><span class="hn">stop sequences</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-Safety-Stop-Inject</span><span class="badge b-new">NEW</span></td>
+  <td class="tdesc">Gateway injects stop sequences when hallucination pattern begins mid-generation. Requires streaming mode.</td>
+  <td class="tsrc">Real-time hallucination interrupt.</td>
+</tr>
+<tr>
+  <td><span class="hn">seed</span></td>
+  <td><span class="hn" style="color:var(--purple2)">CRP-LLM-Reproducibility-Seed</span><span class="badge b-new">NEW</span></td>
+  <td class="tdesc">Stored in HMAC chain. Allows exact regeneration of any output for audit replay.</td>
+  <td class="tsrc">Audit reproducibility. GDPR Art. 22.</td>
+</tr>
+</table>
+
+<div class="callout c-new">
+  <div class="ci">✦</div>
+  <div class="ct"><strong>CRP-Safety-Stop-Inject</strong> is the most novel addition: when the DPE detects a hallucination pattern in a streaming response (e.g., a fabricated number following a real one), the gateway can inject a stop sequence mid-stream to terminate the dangerous completion. This is a world-first in real-time hallucination interruption at the protocol layer, not the application layer.</div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §3 OSI MODEL -->
+<div class="section-anchor" id="osi">
+<h2><span class="toc-num">§3</span> AI-Adapted OSI Model</h2>
+<p>The classic OSI model defines 7 layers for network communication. AI systems operating at scale have an analogous layered structure — from raw LLM inference at the bottom to governance and compliance at the top. <strong>CRP operates across all 7 of these AI layers simultaneously</strong>, which is what makes it a protocol rather than just a library.</p>
+
+<div class="callout c-warn">
+  <div class="ci">⚠</div>
+  <div class="ct">This is not the OSI network model. This is an AI-specific layer model that maps the operational concerns of deployed AI systems, inspired by OSI's discipline of separating concerns by abstraction level. CRP headers provide the inter-layer communication at each boundary.</div>
+</div>
+
+<div class="osi-grid">
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 7 · Application</div>
+    <div class="osi-name" style="color:var(--amber)">Governance & Compliance</div>
+    <div class="osi-badge" style="background:var(--amber-d);color:var(--amber)">CRP-Compliance-*</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> Regulatory classification, audit trail generation, DPIA records, EU AI Act risk class assignment, GDPR PII detection, ISO 42001 control evidence.<br><br>
+    <strong>CRP's role:</strong> CRP-Compliance-* headers emit per-response regulatory metadata. CRP Comply consumes these headers to build the evidence pack. <code>CRP-Compliance-Audit-Trail-URI</code> is the application-layer link between every AI call and its regulatory record.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">EU AI Act</span><span class="tag hi">ISO 42001</span><span class="tag hi">GDPR Art.22</span><span class="tag hi">NIST AI RMF</span><span class="tag hi">SOC 2 Type II</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 6 · Presentation</div>
+    <div class="osi-name" style="color:var(--coral)">Safety & Provenance</div>
+    <div class="osi-badge" style="background:var(--coral-d);color:var(--coral)">CRP-Safety-* / CRP-Provenance-*</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> Hallucination detection, attribution scoring, fidelity verification, entailment checking, fabrication detection, contradiction analysis, HMAC chain integrity.<br><br>
+    <strong>CRP's role:</strong> The DPE (13-module pipeline) runs at this layer after every dispatch. Its output is emitted as CRP-Safety-* and CRP-Provenance-* headers. The Safety Policy directive (CSP-equivalent) is enforced here — before output reaches Layer 7.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">DPE 13-module</span><span class="tag hi">HMAC-SHA256</span><span class="tag hi">NLI entailment</span><span class="tag hi">Fabrication detect</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 5 · Session</div>
+    <div class="osi-name" style="color:var(--purple2)">Context & Memory</div>
+    <div class="osi-badge" style="background:var(--purple-d);color:var(--purple2)">CRP-Context-* / CRP-Memory-*</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> Session continuity, window DAG management, 4-tier memory hierarchy, CKF access, context saturation, quality tier tracking, ETag-based cache invalidation.<br><br>
+    <strong>CRP's role:</strong> The Context Envelope and CKF operate at this layer. CRP-Set-Session token (cookie equivalent) enables stateless session relay. CRP-Context-ETag + If-Match enables conditional dispatch — the cache layer for AI context.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">4-tier memory</span><span class="tag hi">Window DAG</span><span class="tag hi">CKF HNSW</span><span class="tag hi">ETag cache</span><span class="tag hi">Session token</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 4 · Transport</div>
+    <div class="osi-name" style="color:var(--blue)">Dispatch & Orchestration</div>
+    <div class="osi-badge" style="background:var(--blue-d);color:var(--blue)">CRP-Agent-* / CRP-Context-Strategy</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> The 9 dispatch strategies (push, pull, reflexive, agentic, hierarchical, batch, streaming, fan-out, fan-in), safety budget tracking, agent loop management, tool call routing.<br><br>
+    <strong>CRP's role:</strong> <code>CRP-Accept-Strategy</code> allows upstream services to request a dispatch strategy. <code>CRP-Agent-Safety-Budget</code> acts as a flow-control signal — when budget depletes, the transport layer throttles dispatch and escalates oversight. Analogous to TCP's congestion window.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">9 strategies</span><span class="tag hi">Safety budget</span><span class="tag hi">Fan-out/in</span><span class="tag hi">Tool routing</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 3 · Network</div>
+    <div class="osi-name" style="color:var(--teal)">Gateway & Routing</div>
+    <div class="osi-badge" style="background:var(--teal-d);color:var(--teal)">CRP Sidecar / Proxy</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> The CRP sidecar HTTP server. Provider routing (OpenAI, Anthropic, Ollama, Azure), load balancing across providers, failover, header injection/stripping, safety policy enforcement.<br><br>
+    <strong>CRP's role:</strong> The sidecar is the network layer. It strips CRP headers before forwarding to LLM providers (Axiom 4), injects them on responses, routes based on <code>CRP-Accept-Strategy</code>, and enforces <code>CRP-Safety-Policy</code> before responses reach Layer 4.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">HTTP sidecar</span><span class="tag hi">Provider routing</span><span class="tag hi">Header inject</span><span class="tag hi">Policy enforce</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 2 · Data Link</div>
+    <div class="osi-name" style="color:var(--green)">Envelope & Packing</div>
+    <div class="osi-badge" style="background:var(--green-d);color:var(--green)">Envelope Packing Engine</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> 3-phase fact selection (select, rank, pack), quality tier assignment, saturation calculation, envelope token budgeting, fact graph construction from CKF.<br><br>
+    <strong>CRP's role:</strong> The Envelope Preview headers (<code>CRP-Context-Saturation</code>, <code>CRP-Context-Facts-Used</code>, <code>CRP-Context-Quality-Tier</code>) emit the state of the data-link layer. ETag caching prevents unnecessary re-packing. This layer's output determines Layer 3's dispatch payload.<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">3-phase packing</span><span class="tag hi">Quality tiers S-D</span><span class="tag hi">Saturation 0-1</span>
+    </div>
+  </div>
+</div>
+
+<div class="osi-card">
+  <div class="osi-layer">
+    <div class="osi-num">Layer 1 · Physical</div>
+    <div class="osi-name" style="color:var(--text2)">LLM Inference</div>
+    <div class="osi-badge" style="background:var(--bg5);color:var(--text3)">CRP-LLM-*</div>
+  </div>
+  <div class="osi-content">
+    <strong>What operates here:</strong> Raw LLM inference — temperature, sampling, token generation, stop sequences, seed. The model itself. Provider-specific API calls.<br><br>
+    <strong>CRP's role:</strong> CRP-LLM-* headers configure inference parameters dynamically based on the session's safety state. Temperature reduction on re-dispatch, stop sequence injection on hallucination detection, seed preservation for audit replay. The model is ignorant of all higher layers (Axiom 4).<br><br>
+    <div class="osi-tags">
+      <span class="tag hi">Temperature</span><span class="tag hi">Sampling</span><span class="tag hi">Stop inject</span><span class="tag hi">Seed record</span>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §5 CONTINUATION -->
+<div class="section-anchor" id="continuation">
+<h2><span class="toc-num">§5</span> Context Enlargement & Continuation</h2>
+<p>The Window DAG is CRP's mechanism for extending effective context beyond a single model's token limit. Each window is a node in a directed acyclic graph — connected by continuation pointers, signed by HMAC, and accessible via headers at every hop.</p>
+
+<h3>How continuation stitching works</h3>
+
+<div class="cont-chain">
+  <div class="cont-win">
+    <div class="cw-row">
+      <span class="cw-num">Window 1</span>
+      <div class="cw-headers">
+        <span class="ch" style="background:var(--purple-d);color:var(--purple2)">CRP-Context-Window: 1/5</span>
+        <span class="ch" style="background:var(--teal-d);color:var(--teal)">CRP-Provenance-HMAC: sha256:win1...</span>
+        <span class="ch" style="background:var(--bg5);color:var(--text3)">CRP-Context-ETag: sha256:facts1...</span>
+      </div>
+    </div>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--text3)">Initial dispatch. Fact graph ingested. HMAC chain started. ETag set from fact-set hash.</p>
+  </div>
+  <div class="cont-win">
+    <div class="cw-row">
+      <span class="cw-num">Window 2</span>
+      <div class="cw-headers">
+        <span class="ch" style="background:var(--purple-d);color:var(--purple2)">CRP-Context-Window: 2/5</span>
+        <span class="ch" style="background:var(--purple-d);color:var(--purple2)">CRP-Context-Continuation-Id: crp_cont_9a2f</span>
+        <span class="ch" style="background:var(--teal-d);color:var(--teal)">CRP-Provenance-Window-HMAC: sha256:win2...</span>
+        <span class="ch" style="background:var(--amber-d);color:var(--amber)">CRP-Context-Cache: reuse-ckf</span>
+      </div>
+    </div>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--text3)">Client sends Continuation-Id from W1 response. Gateway reuses CKF — no re-ingestion. HMAC chain extended: HMAC(W2_content || W1_HMAC).</p>
+  </div>
+  <div class="cont-win">
+    <div class="cw-row">
+      <span class="cw-num">Window 3–N</span>
+      <div class="cw-headers">
+        <span class="ch" style="background:var(--purple-d);color:var(--purple2)">CRP-Context-Window: 3/5</span>
+        <span class="ch" style="background:var(--green-d);color:var(--green)">CRP-Memory-CKF-Hits: 34</span>
+        <span class="ch" style="background:var(--coral-d);color:var(--coral)">CRP-Safety-Hallucination-Risk: LOW</span>
+        <span class="ch" style="background:var(--teal-d);color:var(--teal)">CRP-Provenance-Chain-Integrity: VALID</span>
+      </div>
+    </div>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--text3)">Each window extends the chain. Risk is assessed cumulatively across the session, not just per-window. Chain-Integrity validates the full DAG on each response.</p>
+  </div>
+  <div class="cont-win" style="border-color:var(--amber)">
+    <div class="cw-row">
+      <span class="cw-num">Context Split</span>
+      <div class="cw-headers">
+        <span class="ch" style="background:var(--amber-d);color:var(--amber)">CRP-Context-Continuation-Id: crp_cont_SPLIT_b4c2</span>
+        <span class="ch" style="background:var(--blue-d);color:var(--blue)">CRP-Agent-Session-Parent: crp_sess_main</span>
+        <span class="ch" style="background:var(--blue-d);color:var(--blue)">CRP-Agent-Dispatch-Strategy: fan-out</span>
+      </div>
+    </div>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--text3)">Fan-out: one context window splits into N parallel sub-sessions. Each inherits the parent HMAC chain. Fan-in: sub-session results merged back with provenance from all branches preserved.</p>
+  </div>
+</div>
+
+<h3>The ETag mechanism for context caching</h3>
+<div class="cb">
+<div class="cb-hdr"><span class="cb-title">Conditional context dispatch — skip re-packing on unchanged facts</span><span class="cb-lang">HTTP exchange</span></div>
+<div class="cb-body"><pre><span class="cmt"># First request — gateway returns ETag of current fact-set</span>
+<span class="kw">GET</span> /dispatch HTTP/1.1
+<span class="hdr">CRP-Session-Token</span>: <span class="hv">eyJ...</span>
+<span class="hdr">CRP-Context-Cache</span>: <span class="hv">reuse-ckf, max-age=3600</span>
+
+<span class="str">HTTP/1.1 200 OK</span>
+<span class="hdr">CRP-Context-ETag</span>: <span class="hv">sha256:4fa8e921abcd1234</span>
+<span class="hdr">CRP-Context-Quality-Tier</span>: <span class="hv">A</span>
+<span class="hdr">CRP-Context-Last-Ingested</span>: <span class="hv">2026-05-24T09:31:00Z</span>
+
+<span class="cmt"># Second request on same knowledge domain — conditional dispatch</span>
+<span class="kw">GET</span> /dispatch HTTP/1.1
+<span class="hdr">CRP-Context-If-Match</span>: <span class="hv">sha256:4fa8e921abcd1234</span>  <span class="cmt"># same ETag</span>
+
+<span class="str">HTTP/1.1 304 Context Not Modified</span>
+<span class="hdr">CRP-Context-ETag</span>: <span class="hv">sha256:4fa8e921abcd1234</span>
+<span class="cmt"># Envelope NOT rebuilt — gateway skips 3-phase fact selection</span>
+<span class="cmt"># Significant latency reduction on stable knowledge domains</span>
+
+<span class="cmt"># If facts changed (new documents ingested):</span>
+<span class="str">HTTP/1.1 200 OK</span>
+<span class="hdr">CRP-Context-ETag</span>: <span class="hv">sha256:NEW_HASH_9bce472f</span>  <span class="cmt"># new ETag</span>
+<span class="hdr">CRP-Context-Cache-Status</span>: <span class="hv">MISS; reason=facts-updated</span></pre>
+</div></div>
+</div>
+
+<hr class="div">
+
+<!-- §7 RISK SCORING -->
+<div class="section-anchor" id="risk-scoring">
+<h2><span class="toc-num">§7</span> Risk Scoring Model</h2>
+<p>CRP's risk score is a composite of four DPE signals, each weighted by regulatory relevance. The output — a unified score from 0.0 to 1.0 mapped to CRITICAL/HIGH/MEDIUM/LOW — is directly calibrated against EU AI Act, NIST AI RMF, GDPR, and ISO 42001 risk categories.</p>
+
+<h3>The four-signal composite</h3>
+<div class="cb">
+<div class="cb-hdr"><span class="cb-title">Risk score computation</span><span class="cb-lang">formula</span></div>
+<div class="cb-body"><pre><span class="cmt"># Four DPE signals, empirically weighted</span>
+<span class="kw">attribution_score</span>   = 1 - grounding_percentage          <span class="cmt"># weight: 0.35</span>
+<span class="kw">fidelity_score</span>      = fabrications + distortions (norm.) <span class="cmt"># weight: 0.25</span>
+<span class="kw">entailment_score</span>    = 1 - NLI_cross_encoder_score        <span class="cmt"># weight: 0.25</span>
+<span class="kw">specificity_score</span>   = unverifiable_specific_claims       <span class="cmt"># weight: 0.15</span>
+
+<span class="kw">composite</span> = (attribution × 0.35) + (fidelity × 0.25)
+           + (entailment × 0.25) + (specificity × 0.15)
+
+<span class="cmt"># Regulatory amplifiers (NEW in v3) — multiply composite</span>
+<span class="kw">if</span> GDPR_PII_detected:          composite × <span class="val">1.30</span>
+<span class="kw">if</span> EU_AI_Act_HIGH_risk_domain:  composite × <span class="val">1.25</span>
+<span class="kw">if</span> financial_or_medical:       composite × <span class="val">1.20</span>
+<span class="kw">if</span> agentic_loop_depth > 2:     composite × <span class="val">1.15</span>
+
+<span class="cmt"># Classification thresholds</span>
+composite ≥ <span class="val">0.70</span> → <span class="err">CRITICAL</span>   (halt dispatch, require oversight)
+composite ≥ <span class="val">0.45</span> → <span class="str" style="color:var(--coral)">HIGH</span>       (warn, upgrade strategy, decrement budget)
+composite ≥ <span class="val">0.20</span> → <span class="val">MEDIUM</span>     (pass with warning headers)
+composite  < <span class="val">0.20</span> → <span class="ok">LOW</span>        (pass, no action)</pre>
+</div></div>
+
+<h3>Risk level consequences</h3>
+<div class="risk-matrix">
+<div class="risk-row" style="border-left-color:var(--red)">
+  <div class="rr-level" style="color:var(--red)">CRITICAL · ≥0.70</div>
+  <div class="rr-score">HTTP 451 · Halt dispatch</div>
+  <div class="rr-desc">Response blocked before reaching client. Oversight token required to retry. Full DPE report generated. Webhook fired to <code>CRP-Safety-Report-URI</code>.</div>
+  <div class="rr-regs"><span class="reg">EU AI Act Art.14</span><span class="reg">NIST GOVERN-1.2</span><span class="reg">ISO 42001 A.9.4</span></div>
+</div>
+<div class="risk-row" style="border-left-color:var(--coral)">
+  <div class="rr-level" style="color:var(--coral)">HIGH · ≥0.45</div>
+  <div class="rr-score">Pass with escalation</div>
+  <div class="rr-desc">Response passes but headers flag HIGH. Strategy auto-upgraded to reflexive if <code>upgrade-on-risk</code> directive set. Safety budget decremented by 0.15.</div>
+  <div class="rr-regs"><span class="reg">EU AI Act Art.13</span><span class="reg">NIST MAP-1.6</span><span class="reg">GDPR Art.22</span></div>
+</div>
+<div class="risk-row" style="border-left-color:var(--amber)">
+  <div class="rr-level" style="color:var(--amber)">MEDIUM · ≥0.20</div>
+  <div class="rr-score">Pass with warning</div>
+  <div class="rr-desc">Response passes. <code>CRP-Safety-Hallucination-Risk: MEDIUM</code> emitted. Client application decides whether to surface warning to end user. Logged to audit trail.</div>
+  <div class="rr-regs"><span class="reg">EU AI Act Art.52</span><span class="reg">NIST MEASURE-2.5</span></div>
+</div>
+<div class="risk-row" style="border-left-color:var(--green)">
+  <div class="rr-level" style="color:var(--green)">LOW · &lt;0.20</div>
+  <div class="rr-score">Pass · No action</div>
+  <div class="rr-desc">Response passes clean. Headers emitted with LOW designation. Contributes to session quality score. Safety budget not decremented.</div>
+  <div class="rr-regs"><span class="reg">All compliant</span></div>
+</div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §8 REGULATIONS MAP -->
+<div class="section-anchor" id="regulations">
+<h2><span class="toc-num">§8</span> Regulatory Controls Map</h2>
+<p>Every CRP-Safety-* and CRP-Compliance-* header maps directly to one or more regulatory controls. This is what makes CRP's risk scoring <em>legally grounded</em> — not just a technical metric, but evidence of regulatory compliance.</p>
+
+<table class="tbl">
+<tr><th>Regulation / Standard</th><th>Relevant Articles / Controls</th><th>CRP Headers</th><th>CRP Comply Output</th></tr>
+<tr>
+  <td><strong style="color:var(--amber)">EU AI Act</strong></td>
+  <td class="tdesc">Art. 6 (risk classification), Art. 9 (risk mgmt), Art. 13 (transparency), Art. 14 (human oversight), Art. 17 (quality mgmt), Art. 64 (logging)</td>
+  <td><span class="hn" style="color:var(--amber);font-size:11px">CRP-Compliance-EU-AI-Act<br>CRP-Safety-Oversight-Mode<br>CRP-Provenance-HMAC</span></td>
+  <td class="tsrc">DPIA, Conformity Assessment, Technical Documentation (Art. 11)</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--blue)">GDPR</strong></td>
+  <td class="tdesc">Art. 5 (accuracy), Art. 17 (erasure), Art. 22 (automated decisions), Art. 25 (privacy by design), Art. 44 (transfers)</td>
+  <td><span class="hn" style="color:var(--blue);font-size:11px">CRP-Compliance-GDPR-PII<br>CRP-Compliance-Data-Residency<br>CRP-LLM-Reproducibility-Seed</span></td>
+  <td class="tsrc">DPIA, Article 30 Record of Processing, Erasure log</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--purple2)">ISO 42001</strong></td>
+  <td class="tdesc">A.6.1.2 (impact assessment), A.9.4 (corrective action), Annex B (control objectives)</td>
+  <td><span class="hn" style="color:var(--purple2);font-size:11px">CRP-Compliance-ISO-42001<br>CRP-Compliance-Controls-Met<br>CRP-Compliance-Audit-Trail-URI</span></td>
+  <td class="tsrc">AIMS audit evidence, Control effectiveness report</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--teal)">NIST AI RMF</strong></td>
+  <td class="tdesc">GOVERN-1.2 (accountability), MAP-1.6 (risk tolerance), MEASURE-2.5 (trustworthiness), MANAGE-3.2 (oversight)</td>
+  <td><span class="hn" style="color:var(--teal);font-size:11px">CRP-Compliance-NIST-Tier<br>CRP-Safety-Mode<br>CRP-Agent-Safety-Budget</span></td>
+  <td class="tsrc">AI Risk Profile, Trustworthiness scorecard</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--coral)">SOC 2 Type II</strong></td>
+  <td class="tdesc">CC6 (logical access), CC7 (system ops), CC9 (risk mitigation), Availability criteria</td>
+  <td><span class="hn" style="color:var(--coral);font-size:11px">CRP-Provenance-Chain-Integrity<br>CRP-Compliance-Audit-Trail-Id<br>CRP-Safety-Nonce</span></td>
+  <td class="tsrc">Continuous control monitoring, Automated evidence collection</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--green)">IEEE 7000-series</strong></td>
+  <td class="tdesc">7001 (transparency), 7010 (wellbeing), 7014 (empathy ethics), 2841 (deep learning eval)</td>
+  <td><span class="hn" style="color:var(--green);font-size:11px">CRP-Safety-Attribution<br>CRP-Provenance-Report-URI<br>CRP-Safety-Hallucination-Score</span></td>
+  <td class="tsrc">IEEE conformance statement, Transparency report</td>
+</tr>
+<tr>
+  <td><strong style="color:var(--text2)">Australia AI Ethics</strong></td>
+  <td class="tdesc">Principles 1–8 (CSIRO), AI Safety Standard (DISR), Privacy Act 1988 s16A</td>
+  <td><span class="hn" style="color:var(--text2);font-size:11px">CRP-Compliance-Data-Residency: AU<br>CRP-Safety-Oversight-Mode<br>CRP-Compliance-Controls-Met</span></td>
+  <td class="tsrc">AUS AI Ethics self-assessment, Privacy Act record</td>
+</tr>
+</table>
+
+<div class="callout c-gold">
+  <div class="ci">★</div>
+  <div class="ct"><strong>Australia advantage:</strong> You're based in Australia (AutoCyber AI Pty Ltd). The Australian Government's AI Safety Standard and DISR framework are still taking shape — there is a genuine first-mover opportunity to have CRP referenced as the reference implementation for Australian AI governance infrastructure. This should be part of the accreditation strategy.</div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §9 SAFETY POLICY -->
+<div class="section-anchor" id="safety-policy">
+<h2><span class="toc-num">§9</span> Safety Policy Directive Specification</h2>
+<p>The full grammar for <code>CRP-Safety-Policy</code> — the CSP-equivalent for AI responses. This is a complete declarative language for expressing AI safety requirements at the transport layer.</p>
+
+<div class="cb">
+<div class="cb-hdr"><span class="cb-title">CRP-Safety-Policy BNF grammar</span><span class="cb-lang">grammar</span></div>
+<div class="cb-body"><pre><span class="kw">policy</span>      ::= directive (';' directive)*
+<span class="kw">directive</span>   ::= source-dir | halt-dir | warn-dir | require-dir
+              | upgrade-dir | block-dir | oversight-dir | report-dir
+
+<span class="kw">source-dir</span>  ::= 'default-src' source+
+<span class="kw">source</span>      ::= 'context' | 'parametric' | 'ckf' | 'cross-session'
+
+<span class="kw">halt-dir</span>    ::= 'halt-on' risk-level
+<span class="kw">warn-dir</span>    ::= 'warn-on' risk-level
+<span class="kw">risk-level</span>  ::= 'CRITICAL' | 'HIGH' | 'MEDIUM'
+
+<span class="kw">require-dir</span> ::= 'require-grounding' float      <span class="cmt"># 0.0-1.0</span>
+              | 'require-entailment' float       <span class="cmt"># 0.0-1.0</span>
+              | 'require-quality' quality-tier+  <span class="cmt"># S,A,B,C,D</span>
+              | 'require-oversight' oversight-mode
+
+<span class="kw">upgrade-dir</span> ::= 'upgrade-on-risk' strategy
+<span class="kw">strategy</span>    ::= 'reflexive' | 'hierarchical' | 'batch'
+
+<span class="kw">block-dir</span>   ::= 'block-ungrounded' | 'block-parametric' | 'block-pii'
+
+<span class="kw">oversight-dir</span>::= 'oversight' oversight-mode
+<span class="kw">oversight-mode</span>::= 'auto' | 'human-review' | 'halt' | 'log-only'
+
+<span class="kw">report-dir</span>  ::= 'report-uri' URI
+              | 'report-to' group-name</pre>
+</div></div>
+
+<h3>Policy examples by use case</h3>
+<div class="cb">
+<div class="cb-hdr"><span class="cb-title">Common safety policy configurations</span><span class="cb-lang">examples</span></div>
+<div class="cb-body"><pre><span class="cmt"># Medical / Clinical — strictest</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hv">default-src context;
+  halt-on HIGH; require-grounding 0.90; require-entailment 0.85;
+  block-ungrounded; block-pii; oversight human-review;
+  report-uri https://comply.crprotocol.io/reports</span>
+
+<span class="cmt"># Financial services — high confidence required</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hv">default-src context parametric;
+  halt-on CRITICAL; warn-on HIGH; require-grounding 0.80;
+  upgrade-on-risk reflexive; block-ungrounded;
+  report-uri https://comply.crprotocol.io/reports</span>
+
+<span class="cmt"># Developer tooling — permissive but tracked</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hv">default-src context parametric;
+  warn-on CRITICAL; warn-on HIGH;
+  require-quality S A B; oversight auto</span>
+
+<span class="cmt"># Agentic / autonomous — budget-aware</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hv">default-src context;
+  halt-on CRITICAL; warn-on HIGH;
+  upgrade-on-risk reflexive; oversight human-review;
+  require-grounding 0.75; report-uri https://comply.crprotocol.io/reports</span>
+
+<span class="cmt"># Public-facing product — balanced</span>
+<span class="hdr">CRP-Safety-Policy</span>: <span class="hv">default-src context parametric;
+  halt-on CRITICAL; warn-on HIGH; block-pii;
+  require-quality S A; oversight log-only</span></pre>
+</div></div>
+</div>
+
+<hr class="div">
+
+<!-- §10 SPEC DOCS -->
+<div class="section-anchor" id="spec-docs">
+<h2><span class="toc-num">§10</span> Complete Specification Document List</h2>
+<p>The 14 documents needed to fully specify CRP v3 as a standardisable protocol — ordered by priority and dependency. Documents marked <strong>P1</strong> are required for any accreditation submission.</p>
+
+<div class="spec-grid">
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-001</div>
+  <div class="spec-title">Core Protocol Specification</div>
+  <div class="spec-desc">The foundational document. Defines the 10 axioms, request/response model, sidecar architecture, protocol versioning, and the relationship between CRP, CKF, and the DPE. The RFC-equivalent.</div>
+  <span class="spec-pri p1">P1 · IETF Internet-Draft candidate</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-002</div>
+  <div class="spec-title">Header Specification</div>
+  <div class="spec-desc">Complete definition of all 58 headers across 6 namespaces. BNF grammar for each header value. Direction (REQ/RES/BOTH). Mandatory vs optional. Interaction rules between headers.</div>
+  <span class="spec-pri p1">P1 · Register with IANA header registry</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-003</div>
+  <div class="spec-title">Context Envelope & Packing</div>
+  <div class="spec-desc">3-phase fact selection algorithm. Quality tier (S–D) assignment criteria. Saturation computation. ETag generation from fact-set hash. Cache-Control semantics for CKF. Window DAG structure.</div>
+  <span class="spec-pri p1">P1 · Technical core</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-004</div>
+  <div class="spec-title">Window Continuation & DAG</div>
+  <div class="spec-desc">Window DAG specification. Continuation pointer schema. Fan-out/fan-in merge rules. Cross-window provenance stitching. HMAC chain extension across windows. Session token structure.</div>
+  <span class="spec-pri p1">P1 · Enables context enlargement</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-005</div>
+  <div class="spec-title">Decision Provenance Engine (DPE)</div>
+  <div class="spec-desc">Complete specification of the 13-module DPE pipeline. Stage definitions, signal weights, composite score computation, regulatory amplifiers, risk classification thresholds, report schema.</div>
+  <span class="spec-pri p1">P1 · Core safety mechanism</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-006</div>
+  <div class="spec-title">Safety Policy Directive Language</div>
+  <div class="spec-desc">Complete BNF grammar for CRP-Safety-Policy. All directives, values, and interaction rules. Gateway enforcement semantics. Violation reporting schema. Policy inheritance in multi-hop chains.</div>
+  <span class="spec-pri p1">P1 · Enables safety-as-config</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-007</div>
+  <div class="spec-title">Session Token & State Relay</div>
+  <div class="spec-desc">CRP-Set-Session / CRP-Session-Token specification. Payload schema (JWT-like). HMAC signing algorithm. Stateless session relay across language boundaries. Expiry, rotation, revocation.</div>
+  <span class="spec-pri p2">P2 · Stateless scaling</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-008</div>
+  <div class="spec-title">Dispatch Strategy Specification</div>
+  <div class="spec-desc">All 9 dispatch strategies formally defined. State machine for each. Header-driven strategy selection. Safety budget depletion model. Reflexive loop specification. Fan-out coordination.</div>
+  <span class="spec-pri p2">P2 · Agentic foundation</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-009</div>
+  <div class="spec-title">Contextual Knowledge Fabric (CKF)</div>
+  <div class="spec-desc">CKF graph schema. HNSW index parameters. Community detection algorithm (Leiden). Fact ingestion pipeline. Cache-Control semantics. Cross-session reference specification. Staleness model.</div>
+  <span class="spec-pri p2">P2 · Memory layer</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-010</div>
+  <div class="spec-title">Regulatory Controls Mapping</div>
+  <div class="spec-desc">Complete mapping from every CRP header and feature to the regulatory controls it satisfies. EU AI Act, GDPR, ISO 42001, NIST AI RMF, SOC 2, IEEE 7000-series, Australian AI Ethics Framework.</div>
+  <span class="spec-pri p1">P1 · Accreditation prerequisite</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-011</div>
+  <div class="spec-title">Audit Trail & HMAC Chain</div>
+  <div class="spec-desc">30+ event type definitions. HMAC-SHA256 chain algorithm. Chain verification procedure. Tamper detection. Export formats (NDJSON, OCSF). Integration spec for SIEM systems. CRP Comply import.</div>
+  <span class="spec-pri p1">P1 · Compliance evidence</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-012</div>
+  <div class="spec-title">Multi-Agent Safety Protocol</div>
+  <div class="spec-desc">Safety Budget depletion model across agent chains. Header propagation rules in multi-hop scenarios. Loop depth limits. Parent session inheritance. Circuit breaker specification. Oversight escalation in hierarchical agents.</div>
+  <span class="spec-pri p2">P2 · Agentic safety</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-013</div>
+  <div class="spec-title">GitHub Action & Scanner Specification</div>
+  <div class="spec-desc">crp-scan detection rules. AI integration point patterns (all major frameworks). SARIF output schema. Header gap classification. Remediation suggestion templates. CRP Comply deep-link generation.</div>
+  <span class="spec-pri p3">P3 · Developer tooling</span>
+</div>
+
+<div class="spec-card">
+  <div class="spec-id">CRP-SPEC-014</div>
+  <div class="spec-title">Conformance & Test Suite</div>
+  <div class="spec-desc">Mandatory conformance levels (Basic / Standard / Full). Test vectors for every header. DPE pipeline test cases with known-good outputs. Interoperability test suite. Certification criteria for CRP-compliant implementations.</div>
+  <span class="spec-pri p1">P1 · Standardisation requirement</span>
+</div>
+
+</div>
+
+<div class="callout c-info">
+  <div class="ci">ℹ</div>
+  <div class="ct"><strong>Document dependency order:</strong> 001 → 002 → 003 → 004 → 005 → 006 → 010 → 011 → 014 form the critical path for accreditation. Documents 007–009, 012–013 can be developed in parallel.</div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §11 ACCREDITATION -->
+<div class="section-anchor" id="accreditation">
+<h2><span class="toc-num">§11</span> Accreditation Paths</h2>
+<p>Four parallel tracks, each serving a different audience and providing different types of legitimacy. The strategy is to pursue all four simultaneously — they reinforce each other. IETF gives developer credibility. IEEE gives academic/regulatory credibility. ISO gives enterprise procurement credibility. Australia/NIST gives government credibility.</p>
+
+<div class="callout c-gold">
+  <div class="ci">★</div>
+  <div class="ct"><strong>Timing is critical:</strong> The IETF chartered its AI Preferences working group in January 2025. There is an active Internet-Draft for AI agent protocol frameworks (draft-rosenberg-aiproto-framework) that explicitly notes MCP and A2A but identifies gaps. CRP fills those gaps. <strong>The window to submit an Internet-Draft and be part of the first wave of IETF AI protocol standardisation is open right now.</strong></div>
+</div>
+
+<div class="track-row">
+  <div class="track-org">
+    <div class="track-org-name" style="color:var(--blue)">IETF</div>
+    <div class="track-org-type">Internet Standards</div>
+    <div class="track-timeline" style="color:var(--text3)">18–36 months to RFC</div>
+  </div>
+  <div class="track-body">
+    <strong>Why:</strong> IETF standardises internet protocols. HTTP, TLS, OAuth, WebSocket are all IETF RFCs. An IETF RFC for CRP's header specification would be the highest form of protocol legitimacy — the same body that standardised HTTP headers would be standardising CRP headers.<br><br>
+    <strong>What to submit:</strong> An Internet-Draft for CRP-SPEC-002 (Header Specification) and CRP-SPEC-006 (Safety Policy Directive Language). Target the existing Applications and Real-Time Area (ART) or propose a new BoF (Birds of a Feather) session specifically for AI context protocols.<br><br>
+    <div class="track-steps">
+      <div class="track-step"><span class="ts-n">01</span><span class="ts-t">Write Internet-Draft in RFC XML format (xml2rfc) — CRP-SPEC-001 and 002 together</span></div>
+      <div class="track-step"><span class="ts-n">02</span><span class="ts-t">Submit to IETF Datatracker at datatracker.ietf.org — anyone can submit an I-D, no membership required</span></div>
+      <div class="track-step"><span class="ts-n">03</span><span class="ts-t">Present at IETF meeting (3× per year, next is IETF 124) — propose a BoF session for "AI Context Protocols"</span></div>
+      <div class="track-step"><span class="ts-n">04</span><span class="ts-t">Build two independent interoperable implementations — required for Proposed Standard status</span></div>
+      <div class="track-step"><span class="ts-n">05</span><span class="ts-t">IANA header registration: register CRP-* header names in the HTTP Field Name Registry</span></div>
+      <div class="track-step"><span class="ts-n">06</span><span class="ts-t">Working Group adoption → Last Call → IESG review → RFC publication</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="track-row">
+  <div class="track-org">
+    <div class="track-org-name" style="color:var(--amber)">IEEE SA</div>
+    <div class="track-org-type">Technology Standards</div>
+    <div class="track-timeline" style="color:var(--text3)">24–48 months</div>
+  </div>
+  <div class="track-body">
+    <strong>Why:</strong> IEEE's 7000-series AI standards are the primary reference for AI ethics, safety, and governance in enterprise and government procurement. IEEE 2874-2025 (Spatial Web Protocol) was just ratified in May 2025 — there is active momentum for AI protocol standards. CRP maps directly to gaps in the existing AI safety standard landscape.<br><br>
+    <strong>What to submit:</strong> A Project Authorisation Request (PAR) for a new standard in the Autonomous and Intelligent Systems (AIS) committee. Target: "IEEE Standard for AI Context Relay and Safety Governance Protocol" — covering CRP-SPEC-005 (DPE), CRP-SPEC-010 (regulatory mapping), and CRP-SPEC-011 (audit chain).<br><br>
+    <div class="track-steps">
+      <div class="track-step"><span class="ts-n">01</span><span class="ts-t">Join IEEE Standards Association as a Corporate Member (required to sponsor a PAR)</span></div>
+      <div class="track-step"><span class="ts-n">02</span><span class="ts-t">Submit PAR to IEEE SA — describe scope, purpose, and how it fills gaps in existing AI safety standards</span></div>
+      <div class="track-step"><span class="ts-n">03</span><span class="ts-t">Form Working Group — recruit industry partners, academics, government bodies (CSIRO, DISR, NIST)</span></div>
+      <div class="track-step"><span class="ts-n">04</span><span class="ts-t">Draft standard → sponsor ballot → recirculation → IEEE Standards Board approval</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="track-row">
+  <div class="track-org">
+    <div class="track-org-name" style="color:var(--purple2)">ISO/IEC JTC 1</div>
+    <div class="track-org-type">International Standards</div>
+    <div class="track-timeline" style="color:var(--text3)">36–60 months</div>
+  </div>
+  <div class="track-body">
+    <strong>Why:</strong> ISO 42001 (AI Management Systems) is already the enterprise standard for AI governance. CRP Comply is built on ISO 42001 controls. An ISO standard for the CRP protocol would make CRP a normative reference in ISO 42001 audits — meaning any ISO 42001 certified organisation would be incentivised to adopt CRP.<br><br>
+    <strong>What to submit:</strong> A New Work Item Proposal (NWIP) to ISO/IEC JTC 1/SC 42 (Artificial Intelligence subcommittee) — the same committee that produced ISO 42001. Target: an ISO/IEC standard for "AI Context Governance Protocol" as a companion to ISO 42001.<br><br>
+    <div class="track-steps">
+      <div class="track-step"><span class="ts-n">01</span><span class="ts-t">Engage Standards Australia (SAI Global) — they are the Australian member body of ISO and can sponsor the NWIP</span></div>
+      <div class="track-step"><span class="ts-n">02</span><span class="ts-t">Submit NWIP to JTC 1/SC 42 — requires support from 5 participating member bodies</span></div>
+      <div class="track-step"><span class="ts-n">03</span><span class="ts-t">Working Draft → Committee Draft → Draft International Standard → International Standard</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="track-row">
+  <div class="track-org">
+    <div class="track-org-name" style="color:var(--green)">NIST / DISR</div>
+    <div class="track-org-type">Government Reference</div>
+    <div class="track-timeline" style="color:var(--text3)">12–18 months</div>
+  </div>
+  <div class="track-body">
+    <strong>Why:</strong> NIST AI RMF is the de facto AI risk framework for US government procurement. Australia's DISR AI Safety Standard references NIST. A formal mapping document published as a NIST NCCoE (National Cybersecurity Center of Excellence) practice guide would make CRP the reference implementation for AI RMF compliance — the fastest path to government adoption.<br><br>
+    <strong>What to submit:</strong> Submit CRP-SPEC-010 (Regulatory Controls Mapping) as a public comment to NIST's AI RMF 1.1 update process. Engage DISR's AI Safety Standard consultation (currently open). Apply for NIST NCCoE Technology Partner status.<br><br>
+    <div class="track-steps">
+      <div class="track-step"><span class="ts-n">01</span><span class="ts-t">Publish CRP-SPEC-010 as an open document — formal NIST AI RMF mapping</span></div>
+      <div class="track-step"><span class="ts-n">02</span><span class="ts-t">Apply to NIST NCCoE Technology Partner (similar to GitHub Technology Partner application)</span></div>
+      <div class="track-step"><span class="ts-n">03</span><span class="ts-t">Engage DISR AI Safety Standard consultation — submit CRP as a reference implementation</span></div>
+      <div class="track-step"><span class="ts-n">04</span><span class="ts-t">Get CRP cited in AI RMF Playbook as an implementation resource — this is achievable in 12 months</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<hr class="div">
+
+<!-- §12 ROADMAP -->
+<div class="section-anchor" id="roadmap">
+<h2><span class="toc-num">§12</span> Accreditation Roadmap</h2>
+
+<div class="cb">
+<div class="cb-hdr"><span class="cb-title">3-year standardisation roadmap</span><span class="cb-lang">timeline</span></div>
+<div class="cb-body"><pre><span class="val">2026 Q3</span>  <span class="ok">▶</span> Publish CRP-SPEC-001 through 006 as open documents (crprotocol.io/spec)
+         <span class="ok">▶</span> Submit Internet-Draft to IETF Datatracker
+         <span class="ok">▶</span> Register CRP-* header prefix with IANA
+         <span class="ok">▶</span> Launch crp-scan GitHub Action — builds developer adoption
+         <span class="ok">▶</span> Engage Standards Australia re: ISO/IEC JTC 1 path
+
+<span class="val">2026 Q4</span>  <span class="ok">▶</span> Present at IETF 125 or 126 — BoF session "AI Context Safety Protocol"
+         <span class="ok">▶</span> Submit NIST NCCoE Technology Partner application
+         <span class="ok">▶</span> Submit DISR AI Safety Standard consultation response
+         <span class="ok">▶</span> Publish CRP-SPEC-010 regulatory mapping publicly
+
+<span class="val">2027 Q1</span>  <span class="ok">▶</span> IETF Working Group adoption (if BoF successful)
+         <span class="ok">▶</span> IEEE SA PAR submission — AIS committee
+         <span class="ok">▶</span> 2 independent CRP implementations (required for IETF Proposed Standard)
+         <span class="ok">▶</span> CRP cited in NIST AI RMF Playbook v1.1
+
+<span class="val">2027 Q2</span>  <span class="ok">▶</span> ISO/IEC JTC 1/SC 42 NWIP submission (via Standards Australia)
+         <span class="ok">▶</span> IETF Last Call for CRP header specification RFC
+         <span class="ok">▶</span> IEEE Working Group draft circulated for ballot
+
+<span class="val">2028 Q1</span>  <span class="ok">▶</span> IETF Proposed Standard RFC published (CRP Headers)
+         <span class="ok">▶</span> IEEE standard ballot complete
+         <span class="ok">▶</span> ISO/IEC Committee Draft published
+
+<span class="val">2028 Q4</span>  <span class="ok">▶</span> IEEE standard published
+         <span class="ok">▶</span> ISO/IEC Draft International Standard
+         <span class="ok">▶</span> CRP is a referenced standard in EU AI Act implementing regulations</pre>
+</div></div>
+</div>
+
+<hr class="div">
+
+<!-- §13 BENEFITS -->
+<div class="section-anchor" id="benefits">
+<h2><span class="toc-num">§13</span> What We Achieve</h2>
+
+<h3>For the AI ecosystem</h3>
+<p>CRP v3 with headers solves the three biggest unsolved problems in deployed AI infrastructure today:</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0">
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-size:22px;margin-bottom:8px">🔍</div>
+    <strong style="font-size:13px;color:var(--text)">Observability</strong>
+    <p style="font-size:12px;margin-top:6px;margin-bottom:0">Every AI call produces structured safety and provenance metadata — readable by any tool in the stack without SDK dependency. AI systems become as observable as web servers.</p>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-size:22px;margin-bottom:8px">🛡️</div>
+    <strong style="font-size:13px;color:var(--text)">Safety-at-the-wire</strong>
+    <p style="font-size:12px;margin-top:6px;margin-bottom:0">Safety enforcement moves to the transport layer. Application code never sees CRITICAL-risk output. Safety policy is declared once, enforced everywhere — the same model that made web security headers transformative.</p>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-size:22px;margin-bottom:8px">📋</div>
+    <strong style="font-size:13px;color:var(--text)">Compliance-by-default</strong>
+    <p style="font-size:12px;margin-top:6px;margin-bottom:0">Every AI response automatically generates the evidence needed for EU AI Act, GDPR, ISO 42001, and NIST AI RMF compliance. Compliance stops being a project and becomes a header.</p>
+  </div>
+</div>
+
+<h3>For developers</h3>
+<p>One GitHub Action finds every ungoverned AI call in their repo. One CRP wrapper fixes all of them. One CRP Comply link gives them their full regulatory evidence pack. The entire AI governance lifecycle — from code review to regulatory audit — flows through CRP.</p>
+
+<h3>For enterprises</h3>
+<p>CRP becomes the answer to the board-level question: "How do we know our AI is safe?" The Audit Trail URI on every response is a direct link to the evidence. The Safety Budget header is a real-time dashboard of accumulated AI risk across a session. The EU AI Act risk classification is a header value — not a consultant's report.</p>
+</div>
+
+<hr class="div">
+
+<!-- §14 MONETISATION -->
+<div class="section-anchor" id="monetisation">
+<h2><span class="toc-num">§14</span> Monetisation Model</h2>
+<p>Six distinct revenue streams, each addressing a different buyer. The protocol is open and free — revenue comes from the platform layer above it, exactly the model that made HTTP the foundation of trillion-dollar businesses.</p>
+
+<div class="money-grid">
+  <div class="money-card">
+    <div class="mc-icon">🏢</div>
+    <div class="mc-title">CRP Comply SaaS</div>
+    <div class="mc-desc">Per-seat or per-organisation subscription for the compliance platform. Every CRP-header-emitting application is a potential Comply customer. EU AI Act enforcement creates mandatory demand.</div>
+    <div class="mc-value">$500–$5,000/mo per org · Recurring</div>
+  </div>
+  <div class="money-card">
+    <div class="mc-icon">⚡</div>
+    <div class="mc-title">CRP Managed Gateway</div>
+    <div class="mc-desc">Hosted CRP sidecar as a service — the AI equivalent of Cloudflare. Organisations pay per-call to have CRP sit in front of their LLM calls, emitting headers and generating compliance evidence.</div>
+    <div class="mc-value">$0.001–0.01 per LLM call · Usage</div>
+  </div>
+  <div class="money-card">
+    <div class="mc-icon">📦</div>
+    <div class="mc-title">GitHub Marketplace</div>
+    <div class="mc-desc">crp-scan free tier (basic detection) with paid tiers (full header gap analysis, auto-remediation PRs, CRP Comply integration). GitHub's 100M+ developer base is the top of the funnel.</div>
+    <div class="mc-value">$0 / $29 / $99 per repo/mo</div>
+  </div>
+  <div class="money-card">
+    <div class="mc-icon">🏛️</div>
+    <div class="mc-title">Government & Enterprise</div>
+    <div class="mc-desc">Consulting and implementation contracts for EU AI Act compliance, NIST AI RMF adoption, and ISO 42001 certification using CRP as the technical backbone. Australian Government is the first target.</div>
+    <div class="mc-value">$50K–$500K project · High margin</div>
+  </div>
+  <div class="money-card">
+    <div class="mc-icon">📜</div>
+    <div class="mc-title">Certification Program</div>
+    <div class="mc-desc">"CRP-Compliant" certification for AI products and platforms — analogous to SOC 2 Type II. Organisations pay to have their AI systems tested against CRP-SPEC-014 (Conformance Suite). Annual renewal.</div>
+    <div class="mc-value">$5K–$25K per certification</div>
+  </div>
+  <div class="money-card">
+    <div class="mc-icon">🔌</div>
+    <div class="mc-title">SDK & Integration Licensing</div>
+    <div class="mc-desc">Commercial SDKs for enterprises requiring SLA-backed support, private CKF deployments, on-premises sidecar, and custom regulatory mapping. Open-source core, enterprise features licensed.</div>
+    <div class="mc-value">$2K–$20K/yr enterprise license</div>
+  </div>
+</div>
+
+<div class="callout c-gold">
+  <div class="ci">★</div>
+  <div class="ct"><strong>The standard-as-moat strategy:</strong> Once CRP headers are registered with IANA and referenced in NIST/ISO/IEEE standards, the protocol becomes infrastructure. Competitors can implement the spec but cannot replicate the CRP Comply evidence platform, the CKF knowledge graph, the GitHub Action ecosystem, or the certification program. The open protocol drives adoption; the platform layer captures the value — exactly how HTTP drove adoption of Apache/Nginx/Cloudflare.</div>
+</div>
+
+<div style="height:40px"></div>
+<div style="text-align:center;color:var(--text3);font-size:11px;font-family:var(--mono);padding:20px 0;border-top:1px solid var(--border)">
+  CRP™ Protocol v3.0 Complete Specification · © 2025–2026 AutoCyber AI Pty Ltd<br>
+  Context Relay Protocol™ · crprotocol.io · comply.crprotocol.io
+</div>
+</main>
+</div>
+
+<script>
+const items = document.querySelectorAll('.sb-item');
+const anchors = document.querySelectorAll('.section-anchor');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      items.forEach(i => i.classList.toggle('active', i.getAttribute('href') === '#' + id));
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px' });
+anchors.forEach(a => obs.observe(a));
+items.forEach(i => i.addEventListener('click', e => {
+  e.preventDefault();
+  document.querySelector(i.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+}));
+</script>
+</body>
+</html>

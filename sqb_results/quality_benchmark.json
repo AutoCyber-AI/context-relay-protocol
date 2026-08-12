@@ -1,0 +1,64 @@
+{
+  "backends": [
+    {
+      "backend": "LOCAL\u00b7meta-llama-3.1-8b-instruct",
+      "mean_quality": 5.81,
+      "rows": [
+        {
+          "task": "single-op",
+          "quality": 8.25,
+          "words": 174,
+          "notes": "Usefulness: The response directly answers the task by identifying HTTPS on port 443 and explaining its purpose for secur"
+        },
+        {
+          "task": "multi-op",
+          "quality": 6.25,
+          "words": 360,
+          "notes": "Usefulness (7): Answers the core request\u2014identifies port 3306 as MySQL, analyses risks, and provides two mitigations. Ho"
+        },
+        {
+          "task": "multi-turn",
+          "quality": 3.75,
+          "words": 61,
+          "notes": "Usefulness (4): Answers the request superficially but provides dangerously incomplete security advice. Port 443 alone do"
+        },
+        {
+          "task": "long-continuation",
+          "quality": 5.0,
+          "words": 3602,
+          "notes": "Usefulness (5): The response attempts to answer the request with a multi-section guide structure, but the content is ext"
+        }
+      ]
+    },
+    {
+      "backend": "KIMI\u00b7kimi-k2.6",
+      "mean_quality": 8.5,
+      "rows": [
+        {
+          "task": "single-op",
+          "quality": 9.75,
+          "words": 129,
+          "notes": "Usefulness: Perfectly answers the request\u2014identifies HTTPS and clearly summarises its purpose. Coherence: Excellent stru"
+        },
+        {
+          "task": "multi-op",
+          "quality": 7.75,
+          "words": 294,
+          "notes": "Usefulness: Excellent analysis of MySQL security posture with concrete, actionable observations. Coherence: Very well-st"
+        },
+        {
+          "task": "multi-turn",
+          "quality": 7.75,
+          "words": 96,
+          "notes": "Usefulness: Directly answers whether port 443 is safe for login pages with clear recommendation. Coherence: Well-structu"
+        },
+        {
+          "task": "long-continuation",
+          "quality": 8.75,
+          "words": 3033,
+          "notes": "Strong response that directly addresses the task with excellent structure. The TOC and hierarchical organization make it"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EnvelopePreview",
+  "description": "Returned by preview_envelope(). Inspect what the envelope would contain without dispatching.",
+  "type": "object",
+  "required": ["total_tokens", "envelope_tokens", "facts_included", "saturation"],
+  "properties": {
+    "total_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total tokens (system_prompt + envelope + task_input + generation_reserve)."
+    },
+    "envelope_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Tokens consumed by the envelope content."
+    },
+    "generation_reserve": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Tokens reserved for LLM generation output."
+    },
+    "facts_included": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of facts included in the envelope."
+    },
+    "facts_available": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total facts available in warm + cold state."
+    },
+    "saturation": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Fraction of available envelope space used (0.0–1.0)."
+    }
+  }
+}

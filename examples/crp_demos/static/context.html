@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!-- Copyright © 2025 Constantinos Vidiniotis. All rights reserved. -->
+<!-- Licensed under Elastic License 2.0 — see LICENSE.md for details. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRP · Context Management &amp; Provenance Explorer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">CR<span>P</span> · Demos</div>
+    <nav>
+      <a href="/">Detection</a>
+      <a href="/safety.html">Safety Console</a>
+      <a href="/context.html" class="active">Context Explorer</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="hero" style="padding-bottom:0.5rem">
+      <div class="badge">APP 2 · Context Management &amp; Provenance</div>
+      <h1>Context Management &amp; Provenance Explorer</h1>
+      <p>Have a conversation. CRP extracts facts into a Contextual Knowledge
+        Fabric, recalls them on later turns, and chains every window with a
+        tamper-evident HMAC. Press <strong>Tamper</strong> on any window to watch
+        the integrity chain turn <span class="pill red">BROKEN</span>.</p>
+    </div>
+
+    <div id="pressure" class="card guidance" style="margin-bottom:1.2rem">Starting session…</div>
+
+    <div class="grid cols-2">
+      <!-- CHAT -->
+      <div class="card">
+        <h2>Conversation</h2>
+        <p class="sub">Model: <span id="model-tag" class="tag">scanning…</span></p>
+        <div id="chat" class="chat"></div>
+        <label>Your message</label>
+        <textarea id="message" placeholder="e.g. My name is Alex and I work on the payments team.">My name is Alex and I am building a protocol called CRP for AI governance.</textarea>
+        <div class="btn-row">
+          <button id="send">Send turn</button>
+          <button id="reset" class="secondary">New session</button>
+        </div>
+      </div>
+
+      <!-- MEMORY -->
+      <div class="card">
+        <h2>Contextual Knowledge Fabric</h2>
+        <p class="sub">Persistent memory — facts CRP extracted and can recall.</p>
+        <div class="grid cols-3">
+          <div class="kpi"><div class="v" id="ckf-total">0</div><div class="k">Total facts</div></div>
+          <div class="kpi"><div class="v" id="ckf-window">0</div><div class="k">This window</div></div>
+          <div class="kpi"><div class="v" id="ckf-retrieved">0</div><div class="k">Recalled</div></div>
+        </div>
+        <h3>Facts recalled for the last turn</h3>
+        <div id="recalled"><p class="muted">—</p></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.2rem">
+      <div class="flex-between">
+        <h2>HMAC provenance chain</h2>
+        <span id="chain-status"></span>
+      </div>
+      <p class="sub">Each window's HMAC links to the previous one. Tamper with any
+        window's response and the chain breaks at exactly that point.</p>
+      <div id="chain" class="chain"><p class="muted">No windows yet.</p></div>
+      <div id="tamper-row" class="btn-row"></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:1.2rem">
+      <div class="card">
+        <h2>Session token</h2>
+        <p class="sub">Stateless, signed — carries the chain tip + safety budget.</p>
+        <div id="token"><p class="muted">—</p></div>
+      </div>
+      <div class="card">
+        <h2>CRP-* headers (last window)</h2>
+        <div id="headers"><p class="muted">—</p></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="context.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+--8<-- "docs/CRPv6_Model_Training_Recipe.md"

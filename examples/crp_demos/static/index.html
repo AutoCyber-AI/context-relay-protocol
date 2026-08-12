@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- Copyright © 2025 Constantinos Vidiniotis. All rights reserved. -->
+<!-- Licensed under Elastic License 2.0 — see LICENSE.md for details. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRP Demos — Context Relay Protocol</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">CR<span>P</span> · Demos</div>
+    <nav>
+      <a href="/" class="active">Detection</a>
+      <a href="/safety.html">Safety Console</a>
+      <a href="/context.html">Context Explorer</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="hero">
+      <div class="badge">Context Relay Protocol v3 · governing a real local LLM</div>
+      <h1>Watch CRP govern the model on your machine</h1>
+      <p>These demos drive a <strong>local</strong> LLM (LM Studio, Ollama or llama.cpp)
+        through the Context Relay Protocol and surface every governance signal it
+        produces — grounding, hallucination risk, prompt-injection shields,
+        tamper-evident audit trails, HMAC provenance chains and the full
+        <span class="tag">CRP-*</span> header set.</p>
+    </div>
+
+    <div class="card">
+      <div class="flex-between">
+        <div>
+          <h2>Live LLM detection</h2>
+          <p class="sub">CRP introspects the inference layer before it sends a single token.</p>
+        </div>
+        <button id="refresh" class="secondary">Re-scan runtimes</button>
+      </div>
+      <div id="guidance" class="guidance">Scanning local runtimes…</div>
+      <div id="primary" style="margin-top:1rem"></div>
+      <h3>All discovered models</h3>
+      <div id="models" class="grid cols-2"></div>
+      <h3>Runtimes probed</h3>
+      <div id="runtimes" class="flex"></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:1.4rem">
+      <a class="card app-card" href="/safety.html">
+        <div class="num">APP 1</div>
+        <h2>AI Safety &amp; Governance Console</h2>
+        <p class="sub">Enter a prompt + grounding context + a CRP safety policy.
+          Watch CRP decide whether the answer is safe to release.</p>
+        <ul>
+          <li>Prompt-injection shield (input-side)</li>
+          <li>Decision Provenance Engine: grounding, fabrication, risk</li>
+          <li>Policy enforcement → HTTP 451 halt</li>
+          <li>Tamper-evident audit trail (OCSF / SARIF export)</li>
+        </ul>
+      </a>
+      <a class="card app-card" href="/context.html">
+        <div class="num">APP 2</div>
+        <h2>Context Management &amp; Provenance Explorer</h2>
+        <p class="sub">Have a multi-turn conversation. Watch CRP remember facts
+          and chain every window with tamper-evident HMACs.</p>
+        <ul>
+          <li>Contextual Knowledge Fabric (persistent memory)</li>
+          <li>Per-window HMAC provenance chain</li>
+          <li>"Tamper" a window → chain turns <span class="pill red">BROKEN</span></li>
+          <li>Session tokens + ETag + CRP headers</li>
+        </ul>
+      </a>
+    </div>
+
+    <div class="card" style="margin-top:1.4rem">
+      <h2>What makes this significant</h2>
+      <div class="grid cols-3" style="margin-top:0.6rem">
+        <div class="step"><div class="n">1</div><div class="d"><b>It detects the model.</b>
+          CRP reads each runtime's real context ceiling, quantization,
+          tool-calling and reasoning capabilities.</div></div>
+        <div class="step"><div class="n">2</div><div class="d"><b>It governs the output.</b>
+          Every answer is scored for grounding and hallucination risk, then
+          enforced against a declarative safety policy.</div></div>
+        <div class="step"><div class="n">3</div><div class="d"><b>It proves what happened.</b>
+          Hash-chained audit trails and HMAC window chains make tampering
+          detectable after the fact.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    async function loadDetection() {
+      el("guidance").innerHTML = `<span class="spinner"></span> Scanning local runtimes…`;
+      let d;
+      try { d = await apiGet("/api/detect"); }
+      catch (e) { el("guidance").innerHTML = "Detection failed: " + esc(e); return; }
+
+      el("guidance").innerHTML = (d.guidance || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      el("primary").innerHTML = d.primary
+        ? `<div class="card" style="background:var(--bg-elev)"><h3 style="margin-top:0">Primary model (will be governed)</h3>${renderModel(d.primary)}</div>`
+        : "";
+
+      const models = d.models || [];
+      el("models").innerHTML = models.length
+        ? models.map(m => `<div class="card" style="background:var(--bg-elev)">${renderModel(m)}</div>`).join("")
+        : `<p class="muted">No models found. Start LM Studio or Ollama and load a model.</p>`;
+
+      el("runtimes").innerHTML = (d.runtimes || []).map(r =>
+        pill(`${r.runtime} ${r.reachable ? "✓" : "✕"}`, r.reachable ? "green" : "grey")
+      ).join(" ");
+    }
+    el("refresh").addEventListener("click", loadDetection);
+    loadDetection();
+  </script>
+</body>
+</html>

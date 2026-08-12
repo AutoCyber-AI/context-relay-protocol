@@ -1,0 +1,31 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-050",
+      "category": "agent",
+      "conformance_level": "full",
+      "description": "Safety budget decrements across calls with different risk levels",
+      "input": {
+        "initial_budget": 1.00,
+        "calls": ["LOW", "MEDIUM", "HIGH", "HIGH"]
+      },
+      "assertions": [
+        {"type": "budget_after_lte", "value": 0.66},
+        {"type": "budget_not_halted"}
+      ]
+    },
+    {
+      "test_id": "TV-051",
+      "category": "agent",
+      "conformance_level": "full",
+      "description": "Session halts when safety budget depletes to <= 0.10",
+      "input": {
+        "initial_budget": 0.12,
+        "calls": ["HIGH"]
+      },
+      "assertions": [
+        {"type": "budget_http_status", "expected": 451}
+      ]
+    }
+  ]
+}

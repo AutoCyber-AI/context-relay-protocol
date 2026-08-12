@@ -1,0 +1,54 @@
+# Copyright © 2025 Constantinos Vidiniotis. All rights reserved.
+# Licensed under Elastic License 2.0 — see LICENSE.md for details.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[full,mcp,dev]"
+
+      - name: Lint with ruff
+        run: ruff check crp/ tests/
+
+      - name: Type check with mypy
+        run: mypy crp/ --ignore-missing-imports
+
+      - name: Run tests with coverage
+        env:
+          CRP_GLINER_DISABLED: 1
+        run: >
+          pytest tests/ -v --tb=short --cov=crp --cov-report=term-missing --cov-fail-under=80
+          --ignore=tests/test_gap_fixes_live.py
+          --ignore=tests/test_live_comprehensive.py
+          --ignore=tests/test_live_full_capture.py
+          --ignore=tests/test_live_long_generation.py
+          --ignore=tests/test_live_verification.py
+
+      - name: Dependency audit
+        run: pip-audit --strict --desc on
+        continue-on-error: true  # advisory until all deps are pinned

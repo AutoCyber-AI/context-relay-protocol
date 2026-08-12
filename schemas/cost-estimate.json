@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CostEstimate",
+  "description": "Returned by estimate_session(). Provides pre-flight cost estimation without performing any LLM calls.",
+  "type": "object",
+  "required": ["estimated_windows", "estimated_input_tokens", "estimated_output_tokens"],
+  "properties": {
+    "estimated_windows": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Estimated total windows (dispatches + continuations)."
+    },
+    "estimated_input_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Estimated cumulative input tokens across all windows."
+    },
+    "estimated_output_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Estimated cumulative output tokens across all windows."
+    },
+    "estimated_cost_usd": {
+      "type": ["number", "null"],
+      "description": "Estimated cost in USD. NULL if provider pricing not supplied."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Estimation confidence. 'high' = known task pattern, 'low' = novel task."
+    }
+  }
+}

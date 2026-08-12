@@ -1,0 +1,64 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-001",
+      "category": "headers",
+      "conformance_level": "basic",
+      "description": "CRP-Basic implementation emits all 7 mandatory headers",
+      "input": {"emitted_headers": "BASIC"},
+      "assertions": [
+        {"type": "mandatory_headers_present", "level": "basic"}
+      ]
+    },
+    {
+      "test_id": "TV-002",
+      "category": "headers",
+      "conformance_level": "basic",
+      "description": "Axiom 4 — no CRP-* headers are forwarded to the LLM provider",
+      "input": {
+        "inbound_headers": {
+          "CRP-Safety-Hallucination-Risk": "LOW",
+          "CRP-Provenance-HMAC": "sha256:spoofed",
+          "CRP-Safety-Policy": "halt-on CRITICAL",
+          "X-Trace-Id": "abc"
+        }
+      },
+      "assertions": [
+        {"type": "crp_headers_stripped", "kept": ["X-Trace-Id", "CRP-Safety-Policy"], "stripped": ["CRP-Safety-Hallucination-Risk", "CRP-Provenance-HMAC"]}
+      ]
+    },
+    {
+      "test_id": "TV-003",
+      "category": "headers",
+      "conformance_level": "basic",
+      "description": "HTTP 451 returned on CRITICAL risk with halt-on CRITICAL",
+      "input": {"halt_reason": "CRITICAL_HALLUCINATION_RISK", "hallucination_risk": "CRITICAL"},
+      "assertions": [
+        {"type": "halt_status", "expected": 451},
+        {"type": "halt_body_field", "field": "crp_halt_reason"},
+        {"type": "halt_header_present", "header": "CRP-Compliance-Audit-Trail-URI"}
+      ]
+    },
+    {
+      "test_id": "TV-004",
+      "category": "headers",
+      "conformance_level": "standard",
+      "description": "HTTP 304 returned when If-Match matches ETag and no facts changed",
+      "input": {"if_match_equals_current": true, "ckf_has_relevant_facts": true},
+      "assertions": [
+        {"type": "conditional_status", "expected": 304},
+        {"type": "conditional_cache_status", "expected": "HIT"}
+      ]
+    },
+    {
+      "test_id": "TV-005",
+      "category": "headers",
+      "conformance_level": "standard",
+      "description": "HTTP 424 returned when only-if-ckf and CKF has no relevant facts",
+      "input": {"if_match_equals_current": false, "only_if_ckf": true, "ckf_has_relevant_facts": false},
+      "assertions": [
+        {"type": "conditional_status", "expected": 424}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "vectors": [
+    {
+      "test_id": "TV-040",
+      "category": "session",
+      "conformance_level": "basic",
+      "description": "Gateway accepts a correctly signed session token",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "window_number": 1,
+        "safety_budget": 0.85,
+        "expired": false
+      },
+      "assertions": [
+        {"type": "token_status", "expected": "VALID"}
+      ]
+    },
+    {
+      "test_id": "TV-041",
+      "category": "session",
+      "conformance_level": "basic",
+      "description": "Gateway rejects an expired session token",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "window_number": 1,
+        "safety_budget": 0.85,
+        "expired": true
+      },
+      "assertions": [
+        {"type": "token_status", "expected": "EXPIRED"},
+        {"type": "token_http_status", "expected": 401}
+      ]
+    },
+    {
+      "test_id": "TV-042",
+      "category": "session",
+      "conformance_level": "basic",
+      "description": "Gateway rejects a token with a tampered signature",
+      "input": {
+        "session_id": "crp_sess_7f3a9bc2d4e1f083",
+        "window_number": 1,
+        "safety_budget": 0.85,
+        "tamper_signature": true
+      },
+      "assertions": [
+        {"type": "token_status", "expected": "BAD_SIGNATURE"},
+        {"type": "token_http_status", "expected": 401}
+      ]
+    }
+  ]
+}

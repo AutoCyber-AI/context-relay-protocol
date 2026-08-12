@@ -1,0 +1,448 @@
+
+============================================================
+  CRP Context Management Benchmark
+============================================================
+  endpoint   : http://127.0.0.1:1234
+  model      : meta-llama-3.1-8b-instruct
+  context    : 4096 tokens (loaded)
+  sections   : 5
+  target     : 2500 words total
+  strategies : crp
+============================================================
+
+
+────────────────────────────────────────────────────────────
+  STRATEGY: CRP
+────────────────────────────────────────────────────────────
+# Technical Reference Guide
+
+## 1. Foundations of Distributed Systems
+
+Distributed systems are complex networks of interconnected nodes that collaborate to achieve a common goal, often through decentralized decision-making and resource management. At their core, distributed systems rely on fundamental concepts such as process communication, state synchronization, and failure tolerance.
+
+### 1.1 Process Communication Models
+
+Process communication is the backbone of any distributed system, enabling disparate nodes to exchange information and coordinate actions. There are two primary models for inter-process communication (IPC): message passing and shared memory. In a **message-passing model**, processes communicate by sending and receiving messages through a well-defined interface, often implemented using sockets or remote procedure calls (RPCs). This approach provides loose coupling between nodes, making it easier to scale and maintain the system.
+
+Example: The Actor Model in Akka, a popular Java concurrency framework, uses message passing to enable processes to send and receive messages asynchronously. [1] In this implementation:
+```java
+actorRef.tell(message, Address.noSender());
+```
+On the other hand, the **shared memory model** relies on a common, addressable memory space where nodes can read and write data concurrently. This approach is often used in multi-threaded environments but can be challenging to scale due to synchronization overhead.
+
+Trade-off: Message-passing models provide better fault tolerance and scalability but incur higher latency due to network overhead. Shared memory models offer faster communication but are more prone to deadlocks and livelocks.
+
+Real-world pattern: In a cloud-based distributed system, message passing is often used for inter-service communication, while shared memory might be employed within a single node or service.
+
+### 1.2 State Synchronization Challenges
+
+State synchronization refers to the problem of maintaining consistent state across nodes in a distributed system. This challenge arises due to asynchrony, where nodes may process events out of order or at different speeds. To address this issue, distributed systems employ various techniques such as replication, partitioning, and eventual consistency.
+
+Example: A popular approach to state synchronization is **event sourcing**, which involves storing the history of an application's state as a sequence of events. [2] In this implementation:
+```python
+# Event Sourced Aggregator
+class AggregateRoot:
+    def __init__(self):
+        self.events = []
+
+    def apply_event(self, event):
+        self.events.append(event)
+```
+Common pitfalls: Insufficient synchronization can lead to data inconsistencies and conflicts between nodes. Over-synchronization, on the other hand, may result in high latency and reduced system throughput.
+
+### 1.3 Failure Tolerance Mechanisms
+
+Distributed systems must be designed to tolerate failures, either due to hardware or software issues. To achieve this, distributed systems employ mechanisms such as redundancy, failover strategies, and circuit breakers.
+
+Example: **Circuit Breaker** is a design pattern that detects when a service is unavailable and prevents further requests from being sent to it. [3] In this implementation:
+```java
+class CircuitBreaker {
+    public boolean isOpen() {
+        return state == State.OPEN;
+    }
+
+    public void fail(Attempt attempt) {
+        if (attempt.isSuccess()) {
+            // reset circuit breaker
+        } else {
+            // open circuit breaker
+        }
+    }
+}
+```
+Trade-off: Increasing redundancy can lead to higher costs and increased complexity but provides better fault tolerance. On the other hand, under-provisioning may result in system failures due to lack of resources.
+
+### 1.4 Key Takeaways
+
+Distributed systems rely on fundamental concepts such as process communication, state synchronization, and failure tolerance. By understanding these concepts and their trade-offs, developers can design more robust and scalable distributed systems. In the next section, we will explore service architecture patterns that enable effective decomposition of complex systems into independent services.
+
+[1] Akka Documentation - Message Passing Model
+[2] Event Sourcing in .NET Core
+[3] Circuit Breaker Design Pattern in Java
+
+  [window 1 done | 593 words | rep=1.70% | unique=70.3%]
+## 2. Service Architecture Patterns
+
+### 2.1 Microservices Architecture and Monolithic Design Patterns
+
+Microservices architecture is an architectural design pattern that structures an application as a collection of small, independent services. Each service is responsible for a specific business capability and communicates with other services using lightweight protocols. This approach provides several benefits, including improved scalability, fault tolerance, and faster deployment cycles.
+
+A monolithic design pattern, on the other hand, involves integrating multiple components into a single, self-contained unit. While this approach can simplify development and testing, it often hinders scalability and maintainability.
+
+To illustrate the trade-offs between microservices and monolithic designs, consider a simple e-commerce application that requires payment processing, order management, and product catalog features. A microservices-based implementation would involve separate services for each feature, such as `payment-service`, `order-service`, and `product-catalog-service`. In contrast, a monolithic design might integrate all these components into a single, self-contained unit.
+
+```java
+// Microservices example (Java)
+public class PaymentService {
+    // Simulate payment processing logic
+    public void processPayment(PaymentRequest request) {
+        // ...
+    }
+}
+
+// Monolithic example (Java)
+public class ECommerceApplication {
+    private PaymentProcessor paymentProcessor;
+    private OrderManager orderManager;
+    private ProductCatalog productCatalog;
+
+    // Simulate monolithic integration of components
+    public void processOrder(OrderRequest request) {
+        paymentProcessor.processPayment(request);
+        orderManager.manageOrder(request);
+        productCatalog.retrieveProduct(request);
+    }
+}
+```
+
+### 2.2 Service-Oriented Architecture (SOA) and Event-Driven Architecture (EDA)
+
+Service-oriented architecture (SOA) is a design pattern that structures an application as a collection of services that communicate with each other using standardized interfaces. This approach enables loose coupling between services, allowing for greater flexibility and scalability.
+
+Event-driven architecture (EDA), on the other hand, involves designing an application around events that occur within the system. Services listen to these events and react accordingly, enabling real-time processing and improved responsiveness.
+
+To illustrate the benefits of SOA and EDA, consider a logistics company that requires tracking shipments, managing inventory, and updating customer information. An SOA-based implementation would involve separate services for each business capability, such as `shipment-tracking-service`, `inventory-management-service`, and `customer-update-service`. In contrast, an EDA-based design might use events to notify services of changes in shipment status or inventory levels.
+
+```python
+# SOA example (Python)
+class ShipmentTrackingService:
+    def track_shipment(self, shipment_id):
+        # Simulate shipment tracking logic
+        pass
+
+class InventoryManagementService:
+    def manage_inventory(self, product_id):
+        # Simulate inventory management logic
+        pass
+
+# EDA example (Python)
+class EventPublisher:
+    def publish_event(self, event_type, data):
+        # Simulate publishing events to services
+        pass
+
+class ShipmentTrackingServiceSubscriber:
+    def handle_shipment_status_change(self, event_data):
+        # Simulate reacting to shipment status changes
+        pass
+
+class InventoryManagementServiceSubscriber:
+    def handle_inventory_level_update(self, event_data):
+        # Simulate reacting to inventory level updates
+        pass
+```
+
+### 2.3 Common Pitfalls and Best Practices
+
+While service architecture patterns provide numerous benefits, they also introduce several common pitfalls that can impact system reliability and performance.
+
+One key challenge is ensuring proper communication between services, which requires careful consideration of data formats, protocols, and error handling strategies. Another critical aspect is implementing robust monitoring and logging mechanisms to detect issues and diagnose problems quickly.
+
+Best practices for service architecture include:
+
+*   Designing services with clear interfaces and contracts
+*   Implementing fault-tolerant designs using techniques like circuit breakers and retries
+*   Using standardized data formats and protocols for communication between services
+
+By following these best practices, developers can create robust and scalable service architectures that support growing business needs while minimizing technical debt.
+
+### 2.4 Real-World Patterns and Examples
+
+Many real-world applications demonstrate the effectiveness of service architecture patterns in achieving scalability, flexibility, and maintainability.
+
+One notable example is Netflix's use of a microservices-based architecture to support its global streaming service. By breaking down the application into smaller services responsible for specific business capabilities, Netflix was able to improve scalability, reduce downtime, and enhance customer experience.
+
+Another example is Amazon Web Services (AWS), which employs a SOA-based design to deliver cloud computing services like S3 storage and EC2 instances. By structuring its services around standardized interfaces and protocols, AWS enables seamless communication between services and supports rapid innovation in the cloud.
+
+By studying these real-world examples and applying best practices for service architecture, developers can create scalable and maintainable systems that meet growing business demands while minimizing technical debt.
+
+Key Takeaways: Service architecture patterns like microservices, SOA, and EDA provide numerous benefits for scalability, flexibility, and maintainability. However, they also introduce common pitfalls like communication issues and require careful consideration of monitoring and logging strategies. By following best practices and studying real-world examples, developers can create robust service architectures that support growing business needs while minimizing technical debt. As we move forward to the next section on API design and versioning, consider how these patterns will be applied to ensure seamless interactions between services.
+
+  [window 2 done | 1,365 words | rep=1.91% | unique=60.1%]
+### 3. API Design and Versioning
+
+API design and versioning are crucial aspects of building robust, maintainable, and scalable applications. Effective API design enables seamless integration between disparate components, while proper versioning ensures that changes do not break existing integrations.
+
+#### 3.1 Versioning Strategies: Implementation Details and Trade-Offs
+
+There are primarily two approaches to versioning APIs: **major-minor** and **semantic versioning**.
+
+*   Major-Minor Versioning:
+    *   Example: `v2.0`, `v3.5`
+    *   Advantages:
+        -   Simple to implement
+        -   Easy to communicate changes
+    *   Disadvantages:
+        -   Breaks existing integrations with each major version update
+        -   Can lead to rapid proliferation of API versions
+
+```python
+# Major-Minor Versioning Example (Python)
+from enum import Enum
+
+class ApiVersion(Enum):
+    V2_0 = 'v2.0'
+    V3_5 = 'v3.5'
+
+api_version = ApiVersion.V2_0.value  # v2.0
+```
+
+*   Semantic Versioning:
+    *   Example: `1.2.3`, `4.5.6`
+    *   Advantages:
+        -   Preserves backwards compatibility
+        -   Easier to track changes
+
+```python
+# Semantic Versioning Example (Python)
+from packaging import version
+
+api_version = '1.2.3'  # Initial API version
+new_api_version = '4.5.6'  # New API version with breaking change
+
+if version.parse(new_api_version) > version.parse(api_version):
+    print('Breaking change detected, update your codebase!')
+```
+
+#### 3.2 Real-World Patterns: Dealing with Legacy APIs and Breaking Changes
+
+When dealing with legacy APIs or introducing breaking changes, consider the following strategies:
+
+*   **API wrappers**: Implement API wrappers to encapsulate complex logic and provide a simpler interface for consumers.
+*   **Polyglot persistence**: Store data in multiple formats (e.g., JSON and XML) to support different versions of your API.
+
+```python
+# Polyglot Persistence Example (Python)
+import json
+
+def persist_data(data):
+    with open('data.json', 'w') as file:
+        json.dump(data, file)
+
+    # Simulate legacy XML persistence
+    xml_data = json.dumps(data).encode('utf-8')
+    with open('data.xml', 'wb') as file:
+        file.write(xml_data)
+```
+
+#### 3.3 Common Pitfalls: Over-Engineering and API Churn
+
+Avoid the following pitfalls when designing your APIs:
+
+*   **Over-engineering**: Do not overcomplicate your API design with unnecessary features or complexities.
+*   **API churn**: Minimize changes to your API to prevent disrupting existing integrations.
+
+```python
+# API Churn Example (Python)
+import logging
+
+def log_api_changes(api_version):
+    if api_version == '1.0':
+        print(f'Breaking change detected in API version {api_version}!')
+        logging.warning('API change detected, update your codebase!')
+
+log_api_changes('1.0')  # Log warning for breaking change
+```
+
+### Key Takeaways
+
+Effective API design and versioning require careful consideration of trade-offs between simplicity, backwards compatibility, and maintainability. By understanding the strengths and weaknesses of different versioning strategies and employing real-world patterns to mitigate common pitfalls, you can build robust APIs that support your application's evolving needs.
+
+This section has provided a comprehensive overview of API design and versioning concepts, including implementation details, trade-offs, and best practices for dealing with legacy APIs and breaking changes. In the next section, we will explore data modeling and storage strategies for building scalable and performant applications.
+
+  [window 3 done | 1,821 words | rep=1.65% | unique=61.1%]
+## 4. Data Modeling and Storage
+
+### 4.1 Entity-Attribute-Value (EAV) Modeling: A Flexible yet Challenging Approach
+
+Entity-attribute-value (EAV) modeling is an approach to data storage that decouples entities from attributes and values, allowing for flexible schema design. This model stores each attribute as a separate entity, enabling the addition or removal of attributes without modifying the underlying schema. EAV modeling is particularly useful in domains with complex, dynamic, or evolving data structures.
+
+```sql
+CREATE TABLE customers (
+  id INT PRIMARY KEY,
+  name VARCHAR(255),
+  email VARCHAR(255)
+);
+
+CREATE TABLE customer_attributes (
+  id INT PRIMARY KEY,
+  customer_id INT,
+  attribute_name VARCHAR(255),
+  value VARCHAR(255),
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+```
+
+However, EAV modeling can lead to performance issues and complexity in query management. As the number of attributes grows, so does the size of the database, making it challenging to optimize queries.
+
+### 4.2 Object-Relational Mapping (ORM): Balancing Flexibility and Performance
+
+Object-relational mapping (ORM) tools provide a layer of abstraction between application code and the underlying relational database management system (RDBMS). ORM solutions, such as Hibernate or Entity Framework, map objects to tables and manage relationships between them.
+
+```java
+@Entity
+public class Customer {
+  @Id
+  private Long id;
+  private String name;
+  private String email;
+
+  // Getters and setters
+}
+
+// Using a repository to interact with the database
+public interface CustomerRepository {
+  List<Customer> findAll();
+}
+```
+
+While ORM solutions offer flexibility in data modeling, they can introduce performance overhead due to additional layers of abstraction. Additionally, overuse of ORM tools can lead to "object-relational impedance mismatch" issues.
+
+### 4.3 Graph-Based Storage: A Solution for Complex Relationships
+
+Graph-based storage systems, such as Neo4j or Amazon Neptune, are designed to handle complex relationships between entities. These databases store nodes and edges separately, allowing for efficient querying of relationships.
+
+```cypher
+// Creating a graph with two nodes and an edge
+CREATE (a:Person {name: "Alice"})
+CREATE (b:Person {name: "Bob"})
+CREATE (a)-[:FRIEND_OF]->(b);
+```
+
+Graph-based storage systems are particularly useful in domains with complex, interconnected data structures. However, they can be challenging to learn and may require significant expertise.
+
+### 4.4 Common Pitfalls and Best Practices
+
+When working with data modeling and storage, it's essential to avoid common pitfalls such as:
+
+* Over-normalization: Avoid creating an overly normalized schema that leads to performance issues.
+* Under-indexing: Failing to create adequate indexes can result in slow query performance.
+
+Best practices include:
+
+* Keeping the schema simple and flexible
+* Using ORM solutions judiciously
+* Choosing the right storage system for the task at hand
+
+**Key Takeaways**
+
+Data modeling and storage are critical components of any application. By understanding the strengths and weaknesses of various approaches, developers can make informed decisions about how to store their data effectively. In the next section, we will explore caching strategies to improve application performance.
+
+  [window 4 done | 2,284 words | rep=1.54% | unique=72.2%]
+## 5. Caching Strategies
+
+### 5.1 Cache Implementation Patterns
+
+Caching is an essential optimization technique that enhances system performance by minimizing redundant computations and data retrieval operations. Two primary cache implementation patterns exist: in-memory caching and external caching. In-memory caching, such as Redis or Memcached, stores cached data within the application's memory space. This approach provides high-performance caching but requires careful management to prevent memory exhaustion.
+
+```python
+import redis
+
+# Establish a connection with Redis
+cache = redis.Redis(host='localhost', port=6379, db=0)
+```
+
+In contrast, external caching involves storing cached data in a separate storage mechanism, such as Amazon ElastiCache or Google Cloud Memorystore. While this approach offers greater scalability and fault tolerance, it may introduce additional latency.
+
+```python
+from google.cloud import memcache
+
+# Create a client instance for Memcached
+client = memcache.Client(['memcache-host:11211'])
+```
+
+### 5.2 Cache Invalidation Strategies
+
+Effective cache invalidation is crucial to maintaining data consistency across the system. Two primary strategies exist: time-to-live (TTL)-based caching and event-driven caching.
+
+TTL-based caching involves setting a predefined expiration time for cached entries. When the TTL expires, the cache automatically removes the entry, ensuring that stale data does not propagate throughout the system.
+
+```python
+import redis
+
+# Set a TTL of 60 seconds for a given key
+cache.set('key', 'value', 60)
+```
+
+Event-driven caching, on the other hand, relies on explicit invalidation mechanisms triggered by changes to underlying data. This approach provides greater control over cache updates but requires careful synchronization between cache and data sources.
+
+```python
+import threading
+
+# Trigger an event to invalidate the cache when underlying data changes
+def update_cache(data):
+    # Invalidate the cache using a custom mechanism (e.g., publish an event)
+    pass
+```
+
+### 5.3 Real-World Caching Patterns
+
+Several real-world caching patterns have emerged in response to the challenges of implementing effective caching strategies.
+
+1.  **Cache aside**: In this pattern, cached data is stored alongside the original data source, ensuring that the cache remains up-to-date with changes to the underlying data.
+2.  **Read through and write through**: This pattern involves using a separate cache for reads and writes, allowing for optimized performance in both scenarios.
+
+```python
+from functools import wraps
+
+# Implement a read-through caching mechanism using a decorator
+def cached_read(func):
+    @wraps(func)
+    def wrapper(*args):
+        # Retrieve the cached result or compute it on demand
+        pass
+    return wrapper
+```
+
+### 5.4 Common Pitfalls and Best Practices
+
+Several common pitfalls can arise when implementing caching strategies, including:
+
+1.  **Cache bloat**: Inefficient cache management can lead to memory exhaustion due to excessive caching.
+2.  **Stale data**: Failure to implement effective invalidation mechanisms can result in propagation of stale data throughout the system.
+
+To mitigate these risks, follow best practices such as:
+
+1.  **Monitor cache performance and adjust TTLs accordingly**
+2.  **Implement event-driven caching for explicit invalidation**
+3.  **Use caching mechanisms that support atomic operations**
+
+By understanding the nuances of caching strategies and implementing effective optimization techniques, developers can significantly enhance system performance while maintaining data consistency.
+
+**Key Takeaways:** Caching is a critical optimization technique that requires careful implementation to achieve desired performance gains. By employing in-memory or external caching, implementing cache invalidation strategies, and leveraging real-world caching patterns, developers can effectively optimize their systems for improved responsiveness and scalability.
+
+  [window 5 done | 2,830 words | rep=1.27% | unique=64.0%]
+Traceback (most recent call last):
+  File "c:\Users\User\Desktop\context-relay-protocol\examples\crp_demos\run_benchmark.py", line 186, in <module>
+    main()
+    ~~~~^^
+  File "c:\Users\User\Desktop\context-relay-protocol\examples\crp_demos\run_benchmark.py", line 124, in main
+    doc_path.write_text(result.full_text, encoding="utf-8")
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 809, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'examples\\crp_demos\\_benchmark_results\\20260601_135409_crp_document.md'

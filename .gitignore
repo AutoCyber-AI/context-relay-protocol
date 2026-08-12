@@ -1,0 +1,93 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-*
+
+# Node modules (for schema validation)
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+site/
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg
+pip-wheel-metadata/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Runtime session data
+crp_sessions/
+.hypothesis/
+
+# Local-only research corpus (kept local; not part of the public repo)
+AutoCyber AI Agentic AI research with CRP/
+
+# Local-only training artifacts and model caches
+model_artifacts/
+checkpoints/
+.kimi/
+.venv*/
+.venv-train/
+
+# Private keys / secrets — NEVER commit
+*.pem
+*.key
+*.p8
+encrypted-*.pem
+*.env
+*_railway.env
+.env.local
+.env.production
+.env.staging
+.env.development
+secrets/
+kimi_moonshot_api_key.txt
+*_api_key.txt
+
+# Dev scratch files (root-level only)
+/_*.py
+/_*.txt
+/_*.json
+/_*.jsonl
+/_full_*
+/_long_gen*
+/_live_*
+/_check_*
+/_dep_*
+/_pytest_count*
+/_test_*
+/_tr.*
+/_batch*
+/0.80)
+/_long_gen_results/
+/type_confidence
+/[0-9][0-9][0-9]*
+
+# Numeric test output directories
+/[0-9]*/
+
+# Logs
+*.log
+
+.coverage
+.env.hosted

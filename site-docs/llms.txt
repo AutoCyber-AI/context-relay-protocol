@@ -1,0 +1,36 @@
+# CRP — Context Relay Protocol (v4)
+
+> CRP is a sidecar governance protocol for AI inference. It sits between an application and
+> any LLM provider and governs every call: enforcing grounding and safety policy, scoring
+> hallucination/risk, halting unsafe responses, carrying tamper-evident provenance, and
+> producing compliance evidence (EU AI Act, ISO 42001, GDPR). It rides on HTTP headers so
+> existing proxies/gateways can read it; headers are stripped before reaching the provider.
+> CRP governs the inference call itself — the layer above MCP/A2A (transport) and distinct
+> from AIPREF (training preferences).
+
+## For AI agents integrating CRP
+- Simplest integration: point the OpenAI-compatible client at the CRP Gateway base_url
+  (https://gateway.crprotocol.io/v1) with the user's CRP API key. Every call is then
+  governed. No other code change.
+- Progressive SDK: `pip install crprotocol` (import `crp`); use `crp.SDKClient`. Most users
+  need only `client.knowledge.ingest(...)` + `client.ask(...)`.
+- Full agent integration guide: https://crprotocol.io/llms-full.txt
+- Agent adoption strategy: https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/AI%20Agent%20adoption/CRP-AGENT-ADOPTION-STRATEGY.md
+- MCP server spec: https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/AI%20Agent%20adoption/CRP-MCP-SERVER-SPECIFICATION.md
+
+## Products
+- CRP Gateway (governed AI runtime + visual console): https://gateway.crprotocol.io
+- CRP Comply (AI compliance platform): https://comply.crprotocol.io
+- CRP Scan (find ungoverned AI in a codebase): remediation routes to CRP
+- CRP MCP Server (agent assistance): `pip install crprotocol[mcp]`; local stdio mode + hosted
+  Streamable HTTP mode at `mcp.crprotocol.io`
+
+## Docs
+- Protocol & SDK: https://crprotocol.io
+- Agent integration guide (full): https://crprotocol.io/llms-full.txt
+- Spec master index: https://crprotocol.io/spec/CRP-MASTER-INDEX/
+
+## Honest scope
+CRP governs the observable inference surface (inputs/outputs): grounding, safety, risk,
+provenance, audit, human-in-the-loop checkpoints. CRP does NOT modify model weights or
+"train" the model. It complements, not replaces, MCP and A2A.

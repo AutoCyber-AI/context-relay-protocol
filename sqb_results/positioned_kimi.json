@@ -1,0 +1,56 @@
+{
+  "backends": [
+    {
+      "backend": "KIMI \u00b7 kimi-k2.6",
+      "model": "kimi-k2.6",
+      "rows": [
+        {
+          "task": 1,
+          "operations": [
+            "retrieve",
+            "synthesise"
+          ],
+          "tools_used": [
+            "lookup_port_service"
+          ],
+          "frame_tokens": 191,
+          "observations": 1,
+          "completion": 1.0,
+          "halted": false,
+          "correct": true
+        },
+        {
+          "task": 2,
+          "operations": [
+            "retrieve"
+          ],
+          "tools_used": [
+            "lookup_cve_severity"
+          ],
+          "frame_tokens": 97,
+          "observations": 1,
+          "completion": 1.0,
+          "halted": false,
+          "correct": true
+        },
+        {
+          "task": 3,
+          "operations": [
+            "retrieve",
+            "generate"
+          ],
+          "tools_used": [
+            "lookup_port_service"
+          ],
+          "frame_tokens": 206,
+          "observations": 1,
+          "completion": 1.0,
+          "halted": false,
+          "correct": true
+        }
+      ],
+      "correct": 3,
+      "max_frame": 206
+    }
+  ]
+}

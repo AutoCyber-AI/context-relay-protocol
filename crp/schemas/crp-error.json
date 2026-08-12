@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CRPError",
+  "description": "Standard error format for all CRP operations. Error codes are inspired by JSON-RPC 2.0 and gRPC status codes.",
+  "type": "object",
+  "required": ["code", "message", "details"],
+  "properties": {
+    "code": {
+      "type": "integer",
+      "minimum": 1001,
+      "maximum": 1031,
+      "description": "Error code from the CRP error taxonomy (§6.10.4). Range: 1001-1031."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable error description."
+    },
+    "details": {
+      "type": "object",
+      "description": "Error-specific structured diagnostic data."
+    }
+  },
+  "$defs": {
+    "ErrorCodes": {
+      "description": "CRP error code reference",
+      "enum": [
+        { "const": 1001, "title": "BudgetExhaustedError", "description": "Any cost cap (windows, tokens, rate) exceeded" },
+        { "const": 1002, "title": "RateLimitExceeded", "description": "Per-session rate limit hit" },
+        { "const": 1003, "title": "SessionExpired", "description": "Session timeout reached" },
+        { "const": 1004, "title": "SessionLimitExceeded", "description": "Max concurrent sessions reached" },
+        { "const": 1005, "title": "SessionClosed", "description": "Operation on closed session" },
+        { "const": 1010, "title": "ValidationError", "description": "Structural validation failure (§22.3.1)" },
+        { "const": 1011, "title": "SecurityInvariantError", "description": "Attempted violation of security invariant" },
+        { "const": 1012, "title": "SignatureInvalid", "description": "Request HMAC signature verification failed" },
+        { "const": 1013, "title": "RBACDenied", "description": "Operation not permitted for current role" },
+        { "const": 1020, "title": "ProviderError", "description": "LLM provider returned an error" },
+        { "const": 1021, "title": "ProviderTimeout", "description": "LLM provider did not respond within timeout" },
+        { "const": 1030, "title": "StateCorrupted", "description": "Cold state integrity verification failed" },
+        { "const": 1031, "title": "ChainVerificationFailed", "description": "Fact chain signature verification failed" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Block build artefacts and private paths
+Disallow: /search/
+Disallow: /.git/
+Disallow: /.github/
+
+# Main sitemap
+Sitemap: https://crprotocol.io/sitemap.xml

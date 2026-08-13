@@ -99,7 +99,7 @@ class TestToolPositioner:
 # ── Positioned loop ─────────────────────────────────────────────────────────
 
 
-def _tool_model(tool_json: str, text: str = "direct output"):
+def _tool_model(tool_json: str, text: str = "direct output") -> Any:
     def _call(prompt: str, schema: dict[str, Any] | None) -> str:
         return tool_json if schema is not None else text
     return _call
@@ -131,6 +131,7 @@ class TestPositionedLoop:
             "find alpha records",
             _tool_model('{"capability_id": "lookup", "arguments": {"q": "alpha"}}'),
             fabric=tcf, executor=ex, profile=CapabilityProfile.SMALL_LOCAL,
+            final_synthesis=False,
         )
         assert res.observation_count == 1
         assert any("lookup" in f.statement for f in res.cso.established_facts)

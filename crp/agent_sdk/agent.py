@@ -196,9 +196,13 @@ class Agent:
                 fabric.register(compiled.descriptor)
                 if compiled.impl is not None:
                     fn = compiled.impl
+
+                    def _wrapped(args: dict[str, Any], _fn: Any = fn) -> Any:
+                        return _fn(**args)
+
                     executor.register_impl(
                         compiled.descriptor.capability_id,
-                        lambda args, _fn=fn: _fn(**args),
+                        _wrapped,
                     )
             self._fabric = fabric
             self._executor = executor
@@ -416,6 +420,7 @@ class Agent:
             prior_cso=prior_cso,
             max_continuation_windows=self.max_continuation_windows,
             event_callback=_op_event_callback,
+            final_synthesis=True,
         )
 
         self._last_cso = result.cso

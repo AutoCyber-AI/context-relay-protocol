@@ -170,6 +170,16 @@ warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
 
+[[tool.mypy.overrides]]
+module = [
+    "tests.test_live_comprehensive",
+    "tests.test_live_full_capture",
+    "tests.test_live_long_generation",
+]
+# Live verification scripts are standalone CLIs, not unit tests; their types
+# are intentionally loose to support interactive debugging across providers.
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

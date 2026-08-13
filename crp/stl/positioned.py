@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -254,6 +255,68 @@ def _assemble(request: str, operations: list[STLOperation], outputs: list[str]) 
     )
 
 
+def _looks_like_structured_data(text: str) -> bool:
+    """Heuristic: is the assembled text mostly raw JSON/tool payloads?"""
+    t = text.strip()
+    if not t:
+        return False
+    # Detect a single JSON object or list, including when wrapped in markdown fences.
+    stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", t, flags=re.IGNORECASE).strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        return True
+    if stripped.startswith("[") and stripped.endswith("]"):
+        return True
+    # Detect JSON lines inside operation sections (e.g. "## RETRIEVE\n{...}").
+    json_like_lines = sum(
+        1 for line in t.splitlines()
+        if line.strip().startswith("{") or line.strip().startswith("[")
+    )
+    return json_like_lines >= 1
+
+
+def _synthesise_answer(
+    request: str,
+    model_call: ModelCall,
+    cso: CognitiveStateObject,
+    depth: Any,
+    prior_ops: list[str],
+) -> str:
+    """Produce a final natural-language answer from collected tool observations.
+
+    This is the integration step that turns raw tool payloads into coherent prose
+    for the user. It runs only when the assembled operation outputs look like
+    structured data and tool observations exist.
+    """
+    facts: list[str] = []
+    for obs in cso.tool_observations:
+        payload = getattr(obs, "payload", obs)
+        if isinstance(payload, dict):
+            # Keep concise but informative: full text fields can be long, so summarize.
+            summary_items: list[str] = []
+            for key, value in payload.items():
+                if isinstance(value, str):
+                    summary_items.append(f"{key}: {value[:400]}")
+                else:
+                    summary_items.append(f"{key}: {value}")
+            facts.append("; ".join(summary_items))
+        else:
+            facts.append(str(payload))
+
+    if not facts:
+        return ""
+
+    facts_text = "\n".join(f"- {f}" for f in facts[-6:])
+    prompt = (
+        "You have just gathered the following facts from real tools. "
+        "Answer the user's original question in clear, natural-language prose. "
+        "Do not output JSON. Do not list the tools. Cite the data sources if they are mentioned in the facts.\n\n"
+        f"User question: {request}\n\n"
+        f"Facts gathered:\n{facts_text}\n\n"
+        "Answer:"
+    )
+    return model_call(prompt, None).strip()
+
+
 # Operations whose output is long-form generation and may span the token wall.
 _GENERATIVE_OPS = {
     STLOperation.GENERATE,
@@ -372,6 +435,7 @@ def run_positioned(
     prior_cso: CognitiveStateObject | None = None,
     max_continuation_windows: int = 1,
     event_callback: Callable[[dict[str, Any]], None] | None = None,
+    final_synthesis: bool = True,
 ) -> PositionedResult:
     """Run the positioned-tool-loop for a request (CRP-SPEC-049/050).
 
@@ -386,6 +450,8 @@ def run_positioned(
         max_operations: Hard cap on operations (loop guard).
         hmac_key: If provided, seals the CSO with an HMAC chain link.
         prior_cso: Optional prior-turn CSO to relay forward (multi-turn workflows).
+        final_synthesis: If True and tool observations were made, run a final SYNTHESISE
+            step so raw payloads become natural-language prose.
     """
     operations = classify_operations(user_request)
     depth, _ = negotiate_depth(user_request, operations)
@@ -461,7 +527,7 @@ def run_positioned(
             call = parse_tool_call(raw, tpf)
 
             if call is not None and call.is_tool_call:
-                descriptor = fabric.get(call.capability_id) if fabric else None
+                descriptor = fabric.get(call.capability_id or "") if fabric else None
                 halt = _preventive_check(descriptor, call, policy, op, oversight_required)
                 if halt is not None and _seek_oversight_approval(halt, call, op, clarify_handler):
                     halt = None  # user approved the gated capability
@@ -525,6 +591,15 @@ def run_positioned(
         sm.complete()
 
     text = _assemble(user_request, operations[: len(outputs)], outputs)
+
+    if (
+        final_synthesis
+        and cso.tool_observations
+        and _looks_like_structured_data(text)
+        and not sm.is_halted
+    ):
+        text = _synthesise_answer(user_request, model_call, cso, depth, prior_ops)
+
     if hmac_key:
         cso.extend_hmac_chain("", hmac_key)
 

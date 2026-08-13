@@ -10,16 +10,49 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
+import socket
 import sys
 import time
 import traceback
+from urllib.parse import urlparse
+
+import pytest
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-LM_STUDIO_URL = "http://192.168.0.6:1234/v1"
-MODEL_NAME = "gemma-3-270m-it-qat"
+LM_STUDIO_URL = os.environ.get(
+    "CRP_LIVE_LLM_URL", "http://192.168.1.17:1234/v1"
+)
+MODEL_NAME = os.environ.get(
+    "CRP_LIVE_MODEL", "meta-llama-3.1-8b-instruct"
+)
 CONTEXT_SIZE = 32_768
+
+
+def _lm_studio_reachable() -> bool:
+    """Check whether the configured live LLM endpoint is reachable."""
+    if os.environ.get("CRP_RUN_LIVE_TESTS") != "1":
+        return False
+    parsed = urlparse(LM_STUDIO_URL)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _lm_studio_reachable(),
+    reason=(
+        "Live LLM verification skipped. Set CRP_RUN_LIVE_TESTS=1 and ensure "
+        f"the endpoint at {LM_STUDIO_URL} is reachable (default is "
+        "192.168.1.17:1234; override with CRP_LIVE_LLM_URL)."
+    ),
+)
 
 # ---------------------------------------------------------------------------
 # Results tracking
@@ -808,7 +841,7 @@ def main():
     start = time.time()
 
     print(f"\n{'#'*70}")
-    print(f"#  CRP 2.0 COMPREHENSIVE LIVE VERIFICATION")
+    print("#  CRP 2.0 COMPREHENSIVE LIVE VERIFICATION")
     print(f"#  LM Studio: {LM_STUDIO_URL}")
     print(f"#  Model: {MODEL_NAME} (32K context)")
     print(f"#  Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -831,7 +864,7 @@ def main():
 
     # ── Summary ────────────────────────────────────────────────────────────
     print(f"\n{'#'*70}")
-    print(f"#  FINAL RESULTS")
+    print("#  FINAL RESULTS")
     print(f"{'#'*70}\n")
 
     total = len(_results)
@@ -850,7 +883,7 @@ def main():
     print(f"  {'='*50}")
 
     if failed > 0:
-        print(f"\n  FAILURES:")
+        print("\n  FAILURES:")
         for tid, ok, detail in _results:
             if not ok:
                 print(f"    [\033[91mFAIL\033[0m] {tid}: {detail}")
@@ -858,7 +891,7 @@ def main():
     pct = (passed / total * 100) if total else 0
     print(f"\n  PROTOCOL VERIFICATION: {pct:.0f}% capability coverage confirmed")
     if pct >= 90:
-        print(f"  \033[92m*** CRP 2.0 PROTOCOL VERIFIED ***\033[0m")
+        print("  \033[92m*** CRP 2.0 PROTOCOL VERIFIED ***\033[0m")
     print()
 
     return failed == 0

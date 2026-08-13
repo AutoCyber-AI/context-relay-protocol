@@ -11,16 +11,48 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 import time
 import traceback
+from urllib.parse import urlparse
+
+import pytest
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-LM_STUDIO_URL = "http://192.168.0.6:1234/v1"
-MODEL_NAME = "gemma-3-270m-it-qat"
+LM_STUDIO_URL = os.environ.get(
+    "CRP_LIVE_LLM_URL", "http://192.168.1.17:1234/v1"
+)
+MODEL_NAME = os.environ.get(
+    "CRP_LIVE_MODEL", "meta-llama-3.1-8b-instruct"
+)
 CONTEXT_SIZE = 32_768
+
+
+def _lm_studio_reachable() -> bool:
+    """Check whether the configured live LLM endpoint is reachable."""
+    if os.environ.get("CRP_RUN_LIVE_TESTS") != "1":
+        return False
+    parsed = urlparse(LM_STUDIO_URL)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _lm_studio_reachable(),
+    reason=(
+        "Live LLM verification skipped. Set CRP_RUN_LIVE_TESTS=1 and ensure "
+        f"the endpoint at {LM_STUDIO_URL} is reachable (default is "
+        "192.168.1.17:1234; override with CRP_LIVE_LLM_URL)."
+    ),
+)
 
 OUTPUT_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
@@ -465,7 +497,7 @@ def test_security():
         orch = make_orchestrator()
         output, _ = orch.dispatch("You are helpful.", "What is 1+1?\x00\x01\x02\x03")
         record("4.6 Input validation", len(output) > 0,
-               f"control chars stripped, dispatch succeeded",
+               "control chars stripped, dispatch succeeded",
                llm_response=output,
                metrics={"control_chars_in_input": "\\x00\\x01\\x02\\x03",
                         "output_length": len(output)})
@@ -855,7 +887,7 @@ def main():
     start = time.time()
 
     print(f"\n{'#'*70}")
-    print(f"#  CRP 2.0 COMPREHENSIVE LIVE VERIFICATION (FULL CAPTURE)")
+    print("#  CRP 2.0 COMPREHENSIVE LIVE VERIFICATION (FULL CAPTURE)")
     print(f"#  LM Studio: {LM_STUDIO_URL}")
     print(f"#  Model: {MODEL_NAME} (32K context)")
     print(f"#  Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -890,7 +922,7 @@ def main():
         sections[s].append(r)
 
     print(f"\n{'#'*70}")
-    print(f"#  FINAL RESULTS")
+    print("#  FINAL RESULTS")
     print(f"{'#'*70}\n")
 
     for sect_name, sect_results in sections.items():
@@ -906,7 +938,7 @@ def main():
     # ── LLM Response Stats ────────────────────────────────────────────────
     total_llm_chars = sum(r["llm_response_length"] for r in _results)
     tests_with_llm = sum(1 for r in _results if r["llm_response"])
-    print(f"\n  LLM Response Capture:")
+    print("\n  LLM Response Capture:")
     print(f"    Tests with LLM response: {tests_with_llm}/{total}")
     print(f"    Total response chars:    {total_llm_chars:,}")
     print(f"    Avg response length:     {total_llm_chars // max(tests_with_llm, 1):,} chars")
@@ -932,7 +964,7 @@ def main():
     print(f"\n  Full results saved to: {OUTPUT_FILE}")
 
     if failed == 0:
-        print(f"\n  *** CRP 2.0 PROTOCOL VERIFIED — ALL RESPONSES CAPTURED ***")
+        print("\n  *** CRP 2.0 PROTOCOL VERIFIED — ALL RESPONSES CAPTURED ***")
 
     print()
     return failed == 0

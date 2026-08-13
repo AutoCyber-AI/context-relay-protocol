@@ -346,6 +346,7 @@ nav:
     - Submission Guide: spec/CRP-SUBMISSION-GUIDE.md
   - Demos:
     - demos/index.md
+    - Wave 2 Launch Readiness: crpv6/CRPv6_WAVE2_LAUNCH.md
     - Video Demo Guide: crpv6/CRPv6_VIDEO_DEMO_GUIDE.md
     - Public Demo & Test Guide: crpv6/CRPv6_PUBLIC_DEMO_AND_TEST_GUIDE.md
   - Guides:

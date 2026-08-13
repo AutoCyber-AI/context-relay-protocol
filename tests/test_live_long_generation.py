@@ -17,17 +17,49 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 import time
 import traceback
+from urllib.parse import urlparse
+
+import pytest
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-LM_STUDIO_URL = "http://192.168.0.6:1234/v1"
-MODEL_NAME = "gemma-3-270m-it-qat"
+LM_STUDIO_URL = os.environ.get(
+    "CRP_LIVE_LLM_URL", "http://192.168.1.17:1234/v1"
+)
+MODEL_NAME = os.environ.get(
+    "CRP_LIVE_MODEL", "meta-llama-3.1-8b-instruct"
+)
 CONTEXT_SIZE = 32_768
 MAX_TOKENS_PER_CHAPTER = 1024  # Same as working comprehensive test
+
+
+def _lm_studio_reachable() -> bool:
+    """Check whether the configured live LLM endpoint is reachable."""
+    if os.environ.get("CRP_RUN_LIVE_TESTS") != "1":
+        return False
+    parsed = urlparse(LM_STUDIO_URL)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _lm_studio_reachable(),
+    reason=(
+        "Live LLM verification skipped. Set CRP_RUN_LIVE_TESTS=1 and ensure "
+        f"the endpoint at {LM_STUDIO_URL} is reachable (default is "
+        "192.168.1.17:1234; override with CRP_LIVE_LLM_URL)."
+    ),
+)
 
 ESSAY_TOPIC = "The Complete History and Future of Artificial Intelligence"
 
@@ -322,8 +354,8 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     print(f"\n{'#'*70}")
-    print(f"#  CRP 2.0 — LONG-FORM GENERATION STRESS TEST")
-    print(f"#  Target: ~50K+ tokens across 20 chapters")
+    print("#  CRP 2.0 — LONG-FORM GENERATION STRESS TEST")
+    print("#  Target: ~50K+ tokens across 20 chapters")
     print(f"#  Model: {MODEL_NAME} @ {LM_STUDIO_URL}")
     print(f"#  Max tokens/chapter: {MAX_TOKENS_PER_CHAPTER}")
     print(f"#  Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -429,7 +461,7 @@ def main():
                 f.write(f"{'='*60}\n\n")
                 f.write(output)
                 f.write(f"\n\n{'='*60}\n")
-                f.write(f"METRICS:\n")
+                f.write("METRICS:\n")
                 for k, v in metrics.items():
                     f.write(f"  {k}: {v}\n")
 
@@ -460,7 +492,7 @@ def main():
     final_status = orch.session_status()
 
     print(f"\n{'#'*70}")
-    print(f"#  LONG-FORM GENERATION — FINAL RESULTS")
+    print("#  LONG-FORM GENERATION — FINAL RESULTS")
     print(f"{'#'*70}\n")
 
     # Aggregate text
@@ -485,7 +517,7 @@ def main():
 
     # ── Envelope Growth Report ────────────────────────────────────────────
     print(f"  {'='*50}")
-    print(f"  ENVELOPE GROWTH (Cross-Window Context Proof)")
+    print("  ENVELOPE GROWTH (Cross-Window Context Proof)")
     print(f"  {'='*50}")
     for m in chapter_metrics:
         if "error" not in m:
@@ -496,7 +528,7 @@ def main():
 
     # ── Fact Accumulation Curve ───────────────────────────────────────────
     print(f"  {'='*50}")
-    print(f"  FACT ACCUMULATION CURVE")
+    print("  FACT ACCUMULATION CURVE")
     print(f"  {'='*50}")
     for m in chapter_metrics:
         if "error" not in m:
@@ -560,7 +592,7 @@ def main():
     target_met = total_words >= 5000  # Minimum viable output
     print()
     if chapters_ok == 20 and target_met:
-        print(f"  *** LONG-FORM GENERATION TEST PASSED ***")
+        print("  *** LONG-FORM GENERATION TEST PASSED ***")
         print(f"  {total_words:,} words across {chapters_ok} chapters")
         print(f"  {total_facts:,} facts accumulated via CRP cross-window relay")
     elif chapters_ok == 20:

@@ -19,6 +19,8 @@ The contrast makes four selling points visible in one take:
 - **RAG** without the model claiming it has no data.
 - **Long-form output** that stays structured and on-topic.
 
+For a version that uses live public APIs (Open-Meteo, CoinGecko, Wikipedia) instead of offline fixtures, see the [Real-World API Proof](../crpv6/CRPv6_PUBLIC_DEMO_AND_TEST_GUIDE.md#42-demo-real-world-public-api-proof).
+
 ---
 
 ## Setup before you hit record

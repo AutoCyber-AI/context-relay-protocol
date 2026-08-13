@@ -35,6 +35,8 @@ For a step-by-step video guide, see the [Video Demo Guide](../crpv6/CRPv6_VIDEO_
 | Live SLM proof | `examples/crp_demos/live_crp_slm_proof.py` | Raw LLM vs. CRPv6 on 4 tasks with full governance output. |
 | LLM vs. CRP | `examples/crp_demos/live_llm_vs_crp.py` | One-question side-by-side comparison. |
 | Agent test harness | `examples/crp_demos/live_agent_test_harness.py` | 4-case pass/fail harness against a live SLM. |
+| Real-world API research agent | `examples/agents/real_world_research_agent.py` | SLM agent calling live weather, crypto, and Wikipedia APIs (no API keys). |
+| Real-world API proof | `examples/crp_demos/live_real_world_api_proof.py` | Side-by-side raw LLM vs. CRPv6 on live public APIs. |
 | Weather agent | `examples/agents/slm_weather_agent.py` | SLM-ready agent with weather tools. |
 | RAG agent | `examples/agents/slm_rag_agent.py` | SLM-ready RAG over an in-memory corpus. |
 | Mock weather agent | `examples/agents/weather_agent.py` | Same agent, mock provider, works without a model. |

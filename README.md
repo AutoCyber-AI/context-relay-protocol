@@ -310,9 +310,24 @@ await client.async_close()
 Live browser-based applications that demonstrate CRP governing a **real local LLM**
 end-to-end. They live in [`examples/crp_demos/`](examples/crp_demos).
 
-### 🚀 CRP v4 Protocol Demo (recommended)
+### 🚀 Real-World API Demo (recommended for launch)
 
-A single-page, comprehensive CRP v4 showcase:
+A terminal demo that runs a local 8B model against live public APIs — no API keys, no cloud provider, no hardcoded data:
+
+- **Open-Meteo** — live weather
+- **CoinGecko** — live cryptocurrency prices
+- **Wikipedia REST** — article summaries
+
+```bash
+# Requires LM Studio or any OpenAI-compatible endpoint
+export CRP_LMSTUDIO_URL=http://localhost:1234/v1
+export CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
+python examples/crp_demos/live_real_world_api_proof.py
+```
+
+The script shows the same model twice: once prompting it directly (it returns JSON), and once through `crp.Agent` (it executes the API, synthesises a natural-language answer, and emits governance metadata).
+
+### 🛰️ CRP v4 Protocol Demo
 
 - OpenAI-compatible provider discovery
 - Full `X-CRP-*` header namespace

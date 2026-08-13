@@ -117,7 +117,50 @@ python examples/crp_demos/live_crp_slm_proof.py
 
 - The weather tool itself returns a fixed string (`22°C and sunny`). This is intentional so the demo works offline. The protocol's decision to call the tool is not hardcoded.
 
-### 4.2 Demo: four-case agent harness
+### 4.2 Demo: real-world public API proof
+
+**Files:**
+- `examples/crp_demos/live_real_world_api_proof.py` — side-by-side raw LLM vs. CRPv6 using live public APIs.
+- `examples/agents/real_world_research_agent.py` — Agent SDK version of the same agent.
+
+**What it proves:**  
+CRPv6 executes tools against real, free public APIs and turns the structured responses into natural-language answers with governance metadata. The raw LLM only emits a JSON tool request.
+
+**APIs used (no API key required):**
+- Open-Meteo — live weather
+- CoinGecko — live cryptocurrency prices
+- Nominatim — geocoding (used by weather)
+- Wikipedia REST — article summaries
+
+**Run (PowerShell / CMD):**
+
+```powershell
+set CRP_LMSTUDIO_URL=http://localhost:1234/v1
+set CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
+python examples/crp_demos/live_real_world_api_proof.py
+```
+
+**Run (Git Bash / Linux / macOS):**
+
+```bash
+CRP_LMSTUDIO_URL=http://localhost:1234/v1 \
+CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct \
+python examples/crp_demos/live_real_world_api_proof.py
+```
+
+**What is real:**
+
+- Live API calls to Open-Meteo, CoinGecko, and Wikipedia.
+- The model's raw JSON tool request (it does not execute the tool).
+- CRP's execution of the tool, natural-language synthesis, and governance metadata.
+
+**What is hardcoded:**
+
+- Nothing in the data path. The only static values are the tool implementations and the public API URLs.
+
+---
+
+### 4.3 Demo: four-case agent harness
 
 **File:** `examples/crp_demos/live_agent_test_harness.py`
 
@@ -154,7 +197,21 @@ python examples/crp_demos/live_agent_test_harness.py
 
 These examples run against a mock or live provider and show the CRP Agent SDK surface.
 
-### 5.1 Weather agent
+### 5.1 Real-world API research agent
+
+**File:** `examples/agents/real_world_research_agent.py`
+
+**What it proves:**  
+`crp.Agent` with real public APIs: weather, crypto prices, and Wikipedia summaries. Works against a live SLM or the built-in mock provider.
+
+```bash
+# Live SLM
+export CRP_LMSTUDIO_URL=http://localhost:1234/v1
+export CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
+python examples/agents/real_world_research_agent.py
+```
+
+### 5.2 Weather agent
 
 **File:** `examples/agents/weather_agent.py`
 
@@ -165,7 +222,7 @@ These examples run against a mock or live provider and show the CRP Agent SDK su
 python examples/agents/weather_agent.py
 ```
 
-### 5.2 RAG agent
+### 5.3 RAG agent
 
 **File:** `examples/agents/rag_agent.py`
 
@@ -176,7 +233,7 @@ Ingest a directory, ask a question, get a sourced answer with CSO carry-forward.
 python examples/agents/rag_agent.py --docs_dir ./sample_docs --query "What is CRP?"
 ```
 
-### 5.3 GDPR DSR agent
+### 5.4 GDPR DSR agent
 
 **File:** `examples/agents/gdpr_dsr_agent.py`
 
@@ -187,7 +244,7 @@ A sensitive workflow (data subject request) is gated by a checkpoint and audit t
 python examples/agents/gdpr_dsr_agent.py --action delete --subject_id user-123
 ```
 
-### 5.4 Report agent
+### 5.5 Report agent
 
 **File:** `examples/agents/report_agent.py`
 

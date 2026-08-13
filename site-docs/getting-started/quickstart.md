@@ -72,12 +72,44 @@ print(s.status())
 client.close()
 ```
 
+## Build an Agent in 5 Lines
+
+CRPv6 also ships a declarative `crp.Agent` surface for tool-using agents. The same code
+runs on OpenAI, Anthropic, or a local SLM via LM Studio:
+
+```python
+import crp
+from crp.providers.openai import OpenAIAdapter
+
+def get_weather(city: str) -> str:
+    return f"The weather in {city} is 22°C and sunny."
+
+agent = crp.Agent(
+    provider=OpenAIAdapter(
+        model="meta-llama-3.1-8b-instruct",
+        base_url="http://localhost:1234/v1",
+        api_key="lm-studio",
+    ),
+    tools=[get_weather],
+    profile="small-local",
+)
+
+result = agent.run("What's the weather in Sydney?")
+print(result.answer)
+print(result.operations)
+print(result.crp.risk, result.crp.grounded, result.crp.chain_valid)
+```
+
+See the [Agent SDK reference](../sdk/agent-sdk.md) for profiles, multi-turn state,
+templates, and the live SLM proof.
+
 ## Next Steps
 
 - [SDK Guide](../guides/sdk.md) - progressive-disclosure SDK reference
+- [Agent SDK](../sdk/agent-sdk.md) - declarative `crp.Agent` documentation
 - [All 9 Dispatch Strategies](../protocol/dispatch-strategies.md) - choose the right
   strategy for your use case
 - [Providers](providers.md) - configure different LLM backends
 - [Compliance](../compliance/index.md) - EU AI Act and GDPR features
-- [Demo App](https://github.com/AutoCyber-AI/context-relay-protocol/tree/main/examples/demo_app) -
-  comprehensive interactive demo
+- [Live Demos](https://github.com/AutoCyber-AI/context-relay-protocol/tree/main/examples/crp_demos) -
+  run the proof against a local SLM

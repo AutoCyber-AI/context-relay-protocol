@@ -344,6 +344,10 @@ nav:
     - CRP-SPEC-048 No-Code Governance via Scan, GitHub Connection & Result-Preserving Signup: spec/CRP-SPEC-048-comply-lowcode-github.md
     - CRP™ Hosting, Control & Data Architecture: spec/CRP-SPEC-HOSTING-CONTROL.md
     - Submission Guide: spec/CRP-SUBMISSION-GUIDE.md
+  - Demos:
+    - demos/index.md
+    - Video Demo Guide: crpv6/CRPv6_VIDEO_DEMO_GUIDE.md
+    - Public Demo & Test Guide: crpv6/CRPv6_PUBLIC_DEMO_AND_TEST_GUIDE.md
   - Guides:
     - guides/index.md
     - SDK Guide: guides/sdk.md

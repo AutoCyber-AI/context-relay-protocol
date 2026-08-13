@@ -1,3 +1,4 @@
-# All changes require approval from a CRP maintainer.
-# See CONTRIBUTING.md for the contribution policy.
-* @AutoCyber-AI/crp-maintainers
+# Everything in the repo must be reviewed by the core maintainer.
+# External contributors are not permitted to merge without explicit approval.
+
+* @Constantinos-uni

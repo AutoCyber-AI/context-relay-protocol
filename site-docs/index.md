@@ -128,8 +128,33 @@ print(answer.crp.risk)                 # LOW | MEDIUM | HIGH | CRITICAL
 
 That is the full pipeline: **ingestion → CDR/CDGR retrieval → envelope packing → safety scan → LLM dispatch → continuation → extraction → provenance → source attribution**. No hidden heuristics. Every score is coupled to an enforceable action.
 
+## Or build an agent in 5 lines
+
+<div class="code-hero" markdown>
+
+```python title="5 lines to a governed agent"
+import crp
+from crp.providers.openai import OpenAIAdapter
+
+agent = crp.Agent(
+    provider=OpenAIAdapter(model="meta-llama-3.1-8b-instruct", base_url="http://localhost:1234/v1", api_key="lm-studio"),
+    tools=[get_weather, search_docs],
+    profile="small-local",
+)
+result = agent.run("What's the weather in Sydney and what do our docs say about it?")
+print(result.answer)
+print(result.how_it_was_built)
+print(result.crp.risk, result.crp.grounded, result.crp.chain_valid)
+```
+
+</div>
+
+The same `crp.Agent` code runs on OpenAI, Anthropic, or a local 8B model. The protocol
+positions the task, selects the right tools, runs the loop, and emits governance.
+
 <div class="demo-cta">
-  <a href="https://github.com/AutoCyber-AI/context-relay-protocol/tree/main/examples/crp_demos/v4" target="_blank" rel="noopener noreferrer" class="md-button">Run the interactive demo locally →</a>
+  <a href="https://github.com/AutoCyber-AI/context-relay-protocol/tree/main/examples/crp_demos/live_crp_slm_proof.py" target="_blank" rel="noopener noreferrer" class="md-button">Run the live SLM proof →</a>
+  <a href="sdk/agent-sdk.md" class="md-button md-button--primary">Read the Agent SDK reference</a>
 </div>
 
 ---

@@ -116,7 +116,7 @@ The CRPv6 Agent SDK has been proven live with LM Studio on:
 
 Example side-by-side demo:
 
-```python
+```bash
 python examples/crp_demos/live_llm_vs_crp.py
 ```
 
@@ -126,24 +126,58 @@ The script runs the same task with the same model and tools:
 - **CRPv6 Agent** executes the tool, returns a natural-language answer, and emits
   governance metadata.
 
-Live test harness:
+### Full live proof (`live_crp_slm_proof.py`)
 
-```python
+A comprehensive, readable demo that compares raw LLM and CRPv6 on four tasks:
+
+1. Single tool
+2. Tool chain
+3. RAG retrieval
+4. Long-form structured report
+
+```bash
+export CRP_LMSTUDIO_URL=http://localhost:1234/v1
+export CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
+python examples/crp_demos/live_crp_slm_proof.py
+```
+
+The script prints the full CRP governance block for every task, so you can see exactly
+what the protocol emits: `risk`, `grounded`, `chain_valid`, `operations`, and `sources`.
+
+For a step-by-step video guide, see the [Video Demo Guide](../crpv6/CRPv6_VIDEO_DEMO_GUIDE.md).
+
+### Live test harness
+
+```bash
 python examples/crp_demos/live_agent_test_harness.py
 ```
 
+Runs four agentic cases and reports pass/fail based on runtime governance metadata.
+
 ## Agent templates
 
-Ready-to-run templates are in `examples/templates/`:
+Ready-to-run templates are in `examples/agents/`:
+
+| Template | What it demonstrates | Provider |
+|----------|----------------------|----------|
+| `slm_weather_agent.py` | Single + chained tools against a live local model | LM Studio / Ollama |
+| `slm_rag_agent.py` | RAG retrieval against a live local model | LM Studio / Ollama |
+| `weather_agent.py` | Same tools, mock provider (no API key needed) | Mock |
+| `rag_agent.py` | RAG with mock provider | Mock |
+| `gdpr_dsr_agent.py` | Sensitive workflow with checkpoint + audit | Mock |
+| `report_agent.py` | Scan → summarise → report pipeline | Mock |
+
+The `slm_*.py` templates run against any OpenAI-compatible endpoint by setting
+`CRP_LMSTUDIO_URL` and `CRP_LMSTUDIO_MODEL`. The mock templates work out of the box
+for CI and documentation.
+
+Additional reference templates are in `examples/templates/`:
 
 - `customer_support_agent.py`
 - `code_review_agent.py`
 - `research_report_agent.py`
 - `data_analyst_agent.py`
 - `local_slm_agent.py`
-
-Each template works with a mock provider out of the box and can be switched to a
-real model by changing one line.
 
 ## Reference
 

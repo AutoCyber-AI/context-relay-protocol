@@ -16,10 +16,12 @@ Prerequisites:
 from __future__ import annotations
 
 import os
+import sys
 
-from crp.providers.ollama_provider import OllamaProvider
+sys.path.insert(0, os.path.dirname(__file__))
 
 import crp
+from crp.providers.ollama import OllamaAdapter
 
 
 def get_local_time(timezone: str) -> str:
@@ -37,7 +39,7 @@ def list_files(directory: str) -> list[str]:
 
 # Use the local Ollama provider. If Ollama is not running, this will fail with
 # a clear connection error — no cloud API key is required.
-provider = OllamaProvider(
+provider = OllamaAdapter(
     model=os.environ.get("CRP_LOCAL_MODEL", "llama3.1"),
     base_url=os.environ.get("CRP_LOCAL_BASE_URL", "http://localhost:11434"),
 )
@@ -49,7 +51,7 @@ agent = crp.Agent(
         "You are a privacy-first assistant running entirely on the user's "
         "machine. Answer questions using only local tools."
     ),
-    profile="efficient-local",
+    profile="small-local",
 )
 
 if __name__ == "__main__":

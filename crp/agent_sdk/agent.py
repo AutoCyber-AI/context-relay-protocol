@@ -33,10 +33,12 @@ from crp.isa import (
     build_intent_section,
 )
 from crp.sdk.response import CRPResponseMeta
+from crp.security.clarify import ClarificationHandler
 from crp.state.cso import CognitiveStateObject
 from crp.stl.classifier import classify_operations
 from crp.stl.positioned import PositionedResult, run_positioned
 from crp.tools.capability_fabric import CapabilityProfile, PolicyContext, ToolCapabilityFabric
+from crp.tools.descriptor import SafetyClass
 from crp.tools.executor import CapabilityExecutor
 
 
@@ -124,6 +126,8 @@ class Agent:
         max_continuation_windows: int = 1,
         safety: str | dict[str, Any] | None = None,
         intent_classifier: IntentClassifier | None = None,
+        oversight_required: set[SafetyClass] | None = None,
+        clarify_handler: ClarificationHandler | None = None,
     ) -> None:
         """Create an Agent.
 
@@ -133,6 +137,9 @@ class Agent:
             provider: A CRP ``LLMProvider`` instance. If omitted, ``model`` is
                 resolved lazily on first run.
             tools: List of callables, ``ToolSpec`` dicts, or ``CapabilityDescriptor``.
+                A dict may include an ``"impl"`` callable alongside a
+                ``cost_profile={"safety_class": "destructive"}`` entry to attach
+                both a real implementation and a non-default safety class.
             policy: ``Policy`` or ``PolicyContext`` governing capability selection.
             system: Default system instruction.
             profile: Capability profile (``frontier``, ``capable-local``, ``small-local``).
@@ -142,6 +149,14 @@ class Agent:
             max_tokens: Max tokens per model call.
             max_continuation_windows: Continuation windows for generative ops.
             safety: Safety profile name or override dict.
+            oversight_required: Safety classes (e.g. ``{SafetyClass.DESTRUCTIVE}``)
+                that must be approved via ``clarify_handler`` before executing —
+                gates the individual tool call at execution time, not just the
+                plan (CRP-SPEC-033/034).
+            clarify_handler: Resolves oversight/clarification requests. If a
+                gated capability is selected and no handler (or a non-approving
+                one) is supplied, the run halts rather than executing it —
+                fail-safe default deny.
         """
         self.model = model
         self._provider = provider
@@ -153,6 +168,8 @@ class Agent:
         self.max_tokens = max_tokens
         self.max_continuation_windows = max_continuation_windows
         self.safety = safety or "balanced"
+        self.oversight_required = oversight_required or set()
+        self.clarify_handler = clarify_handler
 
         if isinstance(profile, str):
             self.profile = CapabilityProfile(profile)
@@ -269,7 +286,23 @@ class Agent:
         )
 
     def _map_operation_event(self, op_event: dict[str, Any]) -> AgentEvent:
-        """Map an OperationStateMachine event dict to an ``AgentEvent``."""
+        """Map a positioned-loop event dict to an ``AgentEvent``.
+
+        Two distinct shapes flow through this callback: ``OperationStateMachine``
+        transitions (keyed by ``state``) and the tool-observation notification
+        fired directly by ``run_positioned`` (keyed by ``event_type``). Routing
+        both through the same ``state``-only lookup silently mis-mapped
+        observations to a spurious extra ``FINAL``/``crp.run_complete`` event
+        instead of a proper ``TOOL_CALL_RESULT`` — fixed by branching on shape.
+        """
+        if op_event.get("event_type") == "observation_received":
+            return AgentEvent(
+                kind=AgentEventKind.OBSERVATION_RECEIVED,
+                operation=op_event.get("operation"),
+                operation_index=op_event.get("operation_index", 0),
+                detail=str(op_event.get("capability_id", "")),
+                data=op_event,
+            )
         state = op_event.get("state", "")
         kind_map = {
             "INTENT_CLASSIFIED": AgentEventKind.INTENT_CLASSIFIED,
@@ -281,7 +314,7 @@ class Agent:
             "COMPLETE": AgentEventKind.FINAL,
             "HALTED": AgentEventKind.HALT,
         }
-        kind = kind_map.get(state, AgentEventKind.FINAL)
+        kind = kind_map[state] if state in kind_map else AgentEventKind.FINAL
         return AgentEvent(
             kind=kind,
             operation=op_event.get("operation"),
@@ -400,6 +433,13 @@ class Agent:
         events: list[AgentEvent] = []
 
         def _op_event_callback(op_event: dict[str, Any]) -> None:
+            # The state machine's own COMPLETE event is superseded by the
+            # explicit run-level final event appended below (which carries
+            # the full operations list and the correct halted/halt-reason
+            # detail) — skip it here so the stream doesn't show two
+            # near-duplicate "run complete" events for a single run.
+            if op_event.get("state") == "COMPLETE":
+                return
             event = self._map_operation_event(op_event)
             events.append(event)
             if event_callback is not None:
@@ -414,8 +454,9 @@ class Agent:
             policy=self.policy,
             context_facts=None,
             max_operations=self.max_operations,
+            oversight_required=self.oversight_required or None,
             governor=None,
-            clarify_handler=None,
+            clarify_handler=self.clarify_handler,
             hmac_key=None,
             prior_cso=prior_cso,
             max_continuation_windows=self.max_continuation_windows,

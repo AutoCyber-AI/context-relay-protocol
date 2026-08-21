@@ -1,60 +1,74 @@
 # CRP Agent Templates
 
-Ready-to-run agentic AI templates built on the CRP v6 Agent SDK.
-Each template is a self-contained Python script with a mock SLM provider so you
-can run it without API keys; swap the provider for OpenAI, Anthropic, Ollama,
-or the CRP Gateway in one line.
+Ready-to-run agentic AI templates built on the CRP v6 Agent SDK. Every
+template in this directory runs against a **real** LLM — LM Studio, OpenAI,
+Anthropic, or Ollama — auto-detected by [`_shared.py`](_shared.py). None of
+them depend on a scripted/mocked model: what you see is what the protocol
+actually does.
 
 ## Prerequisites
 
 ```bash
-pip install crprotocol
+pip install crprotocol requests beautifulsoup4
 ```
 
-For the optional local-SLM template you will also need a running Ollama or
-LM Studio instance.
+Then have ONE of the following available (the templates auto-detect in this order):
 
-## Templates
+1. **LM Studio** — load any tool-calling model (e.g. `meta-llama-3.1-8b-instruct`, `qwen3-4b`) and start its local server (default `http://localhost:1234`).
+2. **Ollama** — `ollama serve` (default `http://localhost:11434`).
+3. `export OPENAI_API_KEY=...` or `export ANTHROPIC_API_KEY=...`
 
-| Template | Use case | Key CRP features |
-|----------|----------|------------------|
-| `customer_support_agent.py` | Ticket triage + knowledge-base lookup | Tool fabric, CSO carry-forward |
-| `code_review_agent.py` | PR review with policy + safety gates | Safety control plane, checkpoint |
-| `research_report_agent.py` | Multi-step research → synthesis | Multi-horizon context, continuation |
-| `data_analyst_agent.py` | CSV query + chart generation | Structured tool decoding |
-| `local_slm_agent.py` | Runs entirely on a local model | SLM-first execution profile |
+## The 3 flagship templates
 
-## Running a template
+These three are designed to each exercise a different slice of the full
+protocol surface — tool use, streaming, memory, safety, verification — end
+to end, on real-world agent shapes chosen because small/local models are
+genuinely good at them (narrow, repetitive, tool-heavy tasks).
+
+| Template | Real-world use case | Protocol features exercised |
+|----------|---------------------|------------------------------|
+| [`security_analyst_agent.py`](security_analyst_agent.py) | SOC/blue-team triage: look up a CVE, check threat intel, decide remediation | Tool Capability Fabric · **human-in-the-loop oversight gate** (`oversight_required` + `clarify_handler`) on a DESTRUCTIVE action · Verification Relay (`depth="thorough"`) · CSO memory relay across 3 turns · `run_tel()` AG-UI/governance event streaming · explicit `Policy` |
+| [`research_assistant_agent.py`](research_assistant_agent.py) | Research any topic using the live web | Real `web_search`/`read_page` tools (DuckDuckGo, no API key) · ISA intent + **coreference resolution** ("the top result" → last turn's search) · CSO memory relay · Verification Relay · quality/source reporting |
+| [`daily_assistant_agent.py`](daily_assistant_agent.py) | The most universally relatable shape: a personal daily/study assistant | Multi-tool fabric (weather, unit conversion, memory, quiz) · **CSO memory relay as the star feature** — recalls facts from 3+ turns back · `profile="small-local"` (tuned for genuinely small models) |
+
+Run any of them directly:
 
 ```bash
-cd examples/templates
-python customer_support_agent.py
+python examples/templates/security_analyst_agent.py
+python examples/templates/research_assistant_agent.py "your topic here"
+python examples/templates/daily_assistant_agent.py
 ```
 
-## Swapping the provider
+`security_analyst_agent.py` and `code_review_agent.py` both demonstrate the
+oversight gate. Set `CRP_DEMO_DENY=1` to see the deny/halt path instead of
+the approve path.
 
-Replace the mock `CustomProvider` with any of these:
+## The other 5 templates
 
-```python
-# OpenAI
-from crp.providers.openai_provider import OpenAIProvider
-provider = OpenAIProvider(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4o-mini")
+Narrower, single-scenario references — still real, still runnable, useful
+as smaller copy-paste starting points.
 
-# Anthropic
-from crp.providers.anthropic_provider import AnthropicProvider
-provider = AnthropicProvider(api_key=os.environ["ANTHROPIC_API_KEY"], model="claude-3-haiku")
-
-# Local Ollama
-from crp.providers.ollama_provider import OllamaProvider
-provider = OllamaProvider(model="llama3.1", base_url="http://localhost:11434")
-```
+| Template | Use case | Notes |
+|----------|----------|-------|
+| [`customer_support_agent.py`](customer_support_agent.py) | Ticket triage + KB lookup | Builds a **fresh agent per ticket** — see the `new_agent()` docstring for why that matters (ISA turn-history isn't reset by `prior_cso=None`) |
+| [`code_review_agent.py`](code_review_agent.py) | PR review with a real oversight gate on `merge_pr` | Same `oversight_required`/`clarify_handler` pattern as the security analyst template |
+| [`data_analyst_agent.py`](data_analyst_agent.py) | CSV query + chart-spec generation | 3 single-tool turns with CSO carry-forward (more reliable than one combined multi-tool request) |
+| [`research_report_agent.py`](research_report_agent.py) | Search → read → write a report section | Uses a small in-memory mock corpus (not live web) — see `research_assistant_agent.py` for the live-web version |
+| [`local_slm_agent.py`](local_slm_agent.py) | Fully local via Ollama | Minimal example, no fallback providers |
 
 ## From template to product
 
 Every template demonstrates the same CRP v6 contract:
 
-1. **Declare tools + policy** once.
-2. **Run the positioned loop** with `agent.run(...)`.
-3. **Carry the CSO** forward across turns with `prior_cso=result.cso`.
+1. **Declare tools + policy** once — plain Python callables, or a dict with
+   an `"impl"` key + `cost_profile={"safety_class": "destructive"}` for an
+   action that needs human sign-off.
+2. **Run the positioned loop** with `agent.run(...)` (or stream it with
+   `agent.run_tel()`).
+3. **Carry the CSO** forward across turns with `prior_cso=result.cso` — or
+   deliberately don't, for an independent case.
 4. **Inspect governance** via `result.crp.risk`, `result.crp.grounded`, and
    `result.how_it_was_built`.
+
+See [`docs/CRPv6_Agent_SDK_Usage_Guide.md`](../../docs/CRPv6_Agent_SDK_Usage_Guide.md)
+and the root [`CHEATSHEET.md`](../../CHEATSHEET.md) for the full API reference.

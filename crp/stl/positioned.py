@@ -51,6 +51,16 @@ logger = logging.getLogger("crp.stl.positioned")
 ModelCall = Callable[[str, "dict[str, Any] | None"], str]
 
 
+class ModelCallError(RuntimeError):
+    """Raised when a ``model_call`` genuinely failed (no output was produced).
+
+    Distinguishes a real provider failure from a legitimately short/empty model
+    answer, so ``run_positioned`` can halt honestly (SPEC-056 D3 — faithful
+    narration: never present a failed step as if it succeeded) instead of
+    silently assembling headline-only output around an empty body.
+    """
+
+
 def _estimate_tokens(text: str, count_tokens_fn: Callable[[str], int] | None = None) -> int:
     """Best-effort token count: the provider's exact tokenizer if given, else a
     conservative ~4 chars/token heuristic."""
@@ -145,11 +155,16 @@ def provider_model_call(
         )
         messages = [{"role": "user", "content": safe_prompt}]
         try:
-            text, _finish = provider.generate_chat(
+            text, finish = provider.generate_chat(
                 messages, temperature=temperature, max_tokens=safe_max_tokens
             )
         except TypeError:
-            text, _finish = provider.generate_chat(messages)
+            text, finish = provider.generate_chat(messages)
+        if finish == "error":
+            raise ModelCallError(
+                f"provider {getattr(provider, 'model_name', provider)!r} returned "
+                "finish_reason='error' (no output produced)"
+            )
         return text or ""
 
     return model_call
@@ -286,10 +301,22 @@ def _synthesise_answer(
     This is the integration step that turns raw tool payloads into coherent prose
     for the user. It runs only when the assembled operation outputs look like
     structured data and tool observations exist.
+
+    Small local models sometimes ignore "no JSON" instructions and echo the same
+    tool-call-shaped JSON as their "answer" (a model-capability limit, not a
+    parsing bug). One retry with a more forceful instruction is attempted; if the
+    model still cannot produce prose, a deterministic bullet rendering of the
+    facts is returned instead of surfacing raw JSON to the user — faithful
+    narration must never degrade to showing internal tool-call syntax.
     """
     facts: list[str] = []
     for obs in cso.tool_observations:
-        payload = getattr(obs, "payload", obs)
+        # ``cso.tool_observations`` entries are plain dicts (CognitiveStateObject
+        # stores ``observation.to_dict()``, never the object itself) — dict.get,
+        # not getattr, or "payload" silently falls back to the whole raw
+        # observation record (fact_id/provenance/etc.) instead of the tool's
+        # actual return value.
+        payload = obs.get("payload", obs) if isinstance(obs, dict) else getattr(obs, "payload", obs)
         if isinstance(payload, dict):
             # Keep concise but informative: full text fields can be long, so summarize.
             summary_items: list[str] = []
@@ -314,7 +341,22 @@ def _synthesise_answer(
         f"Facts gathered:\n{facts_text}\n\n"
         "Answer:"
     )
-    return model_call(prompt, None).strip()
+    answer = model_call(prompt, None).strip()
+
+    if _looks_like_structured_data(answer):
+        retry_prompt = (
+            prompt
+            + "\n\nYour previous attempt returned JSON or tool-call syntax, which is "
+            "not acceptable here. Write 2-4 plain English sentences summarising the "
+            "facts above. No braces, no quotes-around-keys, no code fences.\n\nAnswer:"
+        )
+        answer = model_call(retry_prompt, None).strip()
+
+    if _looks_like_structured_data(answer):
+        # Deterministic fallback — guaranteed coherent, never raw JSON/tool syntax.
+        answer = "Based on the investigation:\n" + "\n".join(f"- {f}" for f in facts[-6:])
+
+    return answer
 
 
 # Operations whose output is long-form generation and may span the token wall.
@@ -498,86 +540,104 @@ def run_positioned(
             if selection.selected:
                 tpf = build_tool_positioning_frame(frame, selection, profile=profile, depth=depth)
 
-        if op is STLOperation.CLARIFY and clarify_handler is not None:
-            request = ClarificationRequest(
-                question=frame.assignment or "Clarification needed to proceed.",
-                operation_type=op.name,
-                reason="missing_information",
-            )
-            resolution = resolve_clarification(request, clarify_handler)
-            if resolution.action is ClarificationAction.ABORT:
-                sm.halt("user_aborted")
-                outputs.append("[aborted by user]")
-                break
-            if resolution.action is ClarificationAction.ANSWER and resolution.answer:
-                cso.established_facts.append(EstablishedFact(
-                    fact_id=f"f_clar_{cso.window_number}_{len(cso.established_facts)}",
-                    statement=f"User clarification: {resolution.answer}",
-                    provenance=ProvenanceKind.USER,
-                    window_origin=cso.window_number,
-                ))
-                output = resolution.answer
-                sm.verify(detail="clarified-by-user")
-            else:
-                output = model_call(f"{state_ctx}\n\n{frame.to_prompt()}", None).strip()
-                sm.verify(detail="clarify-skipped")
-        elif tpf is not None and tpf.capabilities:
-            prompt = f"{state_ctx}\n\n{tpf.to_prompt()}"
-            raw = model_call(prompt, tpf.output_schema())
-            call = parse_tool_call(raw, tpf)
-
-            if call is not None and call.is_tool_call:
-                descriptor = fabric.get(call.capability_id or "") if fabric else None
-                halt = _preventive_check(descriptor, call, policy, op, oversight_required)
-                if halt is not None and _seek_oversight_approval(halt, call, op, clarify_handler):
-                    halt = None  # user approved the gated capability
-                if halt is not None:
-                    cso.record_preventive_halt(halt)
-                    sm.halt(halt["problematic_frame"]["violation"])
-                    outputs.append(f"[halted: {halt['problematic_frame']['violation']}]")
-                    break
-
-                sm.select_tool(call.capability_id or "")
-                if executor is not None and descriptor is not None and executor.has_impl(call.capability_id or ""):
-                    res = executor.execute(descriptor, call.arguments, op, window_id=cso.cso_id)
-                    sm.execute_tool(call.capability_id or "")
-                    if res.ok and res.observation is not None:
-                        cso.add_tool_observation(res.observation)
-                        output = _summarise_payload(res.observation.payload)
-                        sm.verify(detail="tool-grounded")
-                        if event_callback is not None:
-                            event_callback({
-                                "event_type": "observation_received",
-                                "operation": op.value,
-                                "operation_index": sm.current_index,
-                                "capability_id": call.capability_id,
-                                "payload": res.observation.payload,
-                            })
-                    else:
-                        output = f"[tool {call.capability_id} failed: {'; '.join(res.errors)}]"
-                        sm.verify(detail="tool-failed")
-                else:
-                    # Selection-only mode: no implementation registered; record the call.
-                    sm.execute_tool(call.capability_id or "")
-                    output = json.dumps(
-                        {"capability_id": call.capability_id, "arguments": call.arguments}
-                    )
-                    sm.verify(detail="selection-only")
-            else:
-                output = (call.answer if call else raw).strip()
-                sm.verify(detail="direct-answer")
-        else:
-            prompt = f"{state_ctx}\n\n{frame.to_prompt()}"
-            if max_continuation_windows > 1 and op in _GENERATIVE_OPS:
-                output, win = _generate_with_continuation(
-                    op, prompt, state_ctx, model_call, sm, max_continuation_windows
+        try:
+            if op is STLOperation.CLARIFY and clarify_handler is not None:
+                request = ClarificationRequest(
+                    question=frame.assignment or "Clarification needed to proceed.",
+                    operation_type=op.name,
+                    reason="missing_information",
                 )
-                continuation_windows_total += win
-                sm.verify(detail=f"direct-generation ({win} window{'s' if win != 1 else ''})")
+                resolution = resolve_clarification(request, clarify_handler)
+                if resolution.action is ClarificationAction.ABORT:
+                    sm.halt("user_aborted")
+                    outputs.append("[aborted by user]")
+                    break
+                if resolution.action is ClarificationAction.ANSWER and resolution.answer:
+                    cso.established_facts.append(EstablishedFact(
+                        fact_id=f"f_clar_{cso.window_number}_{len(cso.established_facts)}",
+                        statement=f"User clarification: {resolution.answer}",
+                        provenance=ProvenanceKind.USER,
+                        window_origin=cso.window_number,
+                    ))
+                    output = resolution.answer
+                    sm.verify(detail="clarified-by-user")
+                else:
+                    output = model_call(f"{state_ctx}\n\n{frame.to_prompt()}", None).strip()
+                    sm.verify(detail="clarify-skipped")
+            elif tpf is not None and tpf.capabilities:
+                prompt = f"{state_ctx}\n\n{tpf.to_prompt()}"
+                raw = model_call(prompt, tpf.output_schema())
+                call = parse_tool_call(raw, tpf)
+
+                if call is not None and call.is_tool_call:
+                    descriptor = fabric.get(call.capability_id or "") if fabric else None
+                    halt = _preventive_check(descriptor, call, policy, op, oversight_required)
+                    if halt is not None and _seek_oversight_approval(halt, call, op, clarify_handler):
+                        halt = None  # user approved the gated capability
+                    if halt is not None:
+                        cso.record_preventive_halt(halt)
+                        sm.halt(halt["problematic_frame"]["violation"])
+                        outputs.append(f"[halted: {halt['problematic_frame']['violation']}]")
+                        break
+
+                    sm.select_tool(call.capability_id or "")
+                    if executor is not None and descriptor is not None and executor.has_impl(call.capability_id or ""):
+                        res = executor.execute(descriptor, call.arguments, op, window_id=cso.cso_id)
+                        sm.execute_tool(call.capability_id or "")
+                        if res.ok and res.observation is not None:
+                            cso.add_tool_observation(res.observation)
+                            output = _summarise_payload(res.observation.payload)
+                            sm.verify(detail="tool-grounded")
+                            if event_callback is not None:
+                                event_callback({
+                                    "event_type": "observation_received",
+                                    # Uppercase token — matches the operation
+                                    # tag every other state-machine event uses
+                                    # (operation_to_token), so a UI can
+                                    # correlate TOOL_CALL_START/RESULT by the
+                                    # same call id instead of a casing mismatch.
+                                    "operation": op.name,
+                                    "operation_index": sm.current_index,
+                                    "capability_id": call.capability_id,
+                                    "payload": res.observation.payload,
+                                })
+                        else:
+                            output = f"[tool {call.capability_id} failed: {'; '.join(res.errors)}]"
+                            sm.verify(detail="tool-failed")
+                    else:
+                        # Selection-only mode: no implementation registered; record the call.
+                        sm.execute_tool(call.capability_id or "")
+                        output = json.dumps(
+                            {"capability_id": call.capability_id, "arguments": call.arguments}
+                        )
+                        sm.verify(detail="selection-only")
+                else:
+                    output = (call.answer if call else raw).strip()
+                    sm.verify(detail="direct-answer")
             else:
-                raw = model_call(prompt, None)
-                output = raw.strip()
-                sm.verify(detail="direct-generation")
+                prompt = f"{state_ctx}\n\n{frame.to_prompt()}"
+                if max_continuation_windows > 1 and op in _GENERATIVE_OPS:
+                    output, win = _generate_with_continuation(
+                        op, prompt, state_ctx, model_call, sm, max_continuation_windows
+                    )
+                    continuation_windows_total += win
+                    sm.verify(detail=f"direct-generation ({win} window{'s' if win != 1 else ''})")
+                else:
+                    raw = model_call(prompt, None)
+                    output = raw.strip()
+                    sm.verify(detail="direct-generation")
+        except ModelCallError as exc:
+            # A genuine provider failure (SPEC-056 D3 faithful narration): halt
+            # honestly rather than assembling a plausible-looking response
+            # around an empty body. ``sm.halt`` flips ``is_halted`` so the
+            # caller reports risk=CRITICAL / grounded=False, not a silent LOW.
+            logger.warning("Positioned loop: model call failed for operation %s: %s", op.name, exc)
+            sm.halt("provider_call_failed")
+            outputs.append(
+                "[unable to complete this step: the language model provider did not "
+                f"return a response — {exc}]"
+            )
+            break
 
         outputs.append(output)
         prior_ops.append(op.value)
@@ -592,13 +652,23 @@ def run_positioned(
 
     text = _assemble(user_request, operations[: len(outputs)], outputs)
 
+    # Trigger synthesis when the assembled text looks like raw tool-call JSON
+    # OR when it's blank — a model that mis-selected/misparsed a tool call still
+    # left real, usable tool observations behind; an empty answer in that case
+    # is a coherence bug, not a legitimate "nothing to say" response.
     if (
         final_synthesis
         and cso.tool_observations
-        and _looks_like_structured_data(text)
+        and (_looks_like_structured_data(text) or not text.strip())
         and not sm.is_halted
     ):
-        text = _synthesise_answer(user_request, model_call, cso, depth, prior_ops)
+        try:
+            text = _synthesise_answer(user_request, model_call, cso, depth, prior_ops)
+        except ModelCallError as exc:
+            # The operations themselves already succeeded (real tool
+            # observations exist) — degrade to the raw assembled output
+            # rather than losing a working result over a failed polish step.
+            logger.warning("Positioned loop: final synthesis call failed: %s", exc)
 
     if hmac_key:
         cso.extend_hmac_chain("", hmac_key)

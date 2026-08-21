@@ -64,6 +64,8 @@ _SYNTHESISE_MARKERS = {
 _GENERATE_MARKERS = {
     "write", "create", "draft", "produce", "compose", "generate",
     "make a", "build a", "design", "formulate",
+    "remember", "save this", "save that", "note down", "take note",
+    "keep in mind", "add a reminder", "remind me",
 }
 
 _VERIFY_MARKERS = {

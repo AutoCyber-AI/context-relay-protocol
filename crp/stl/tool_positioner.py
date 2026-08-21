@@ -207,6 +207,16 @@ def parse_tool_call(raw_output: str, frame: ToolPositioningFrame) -> ParsedToolC
         # directly; signal "no structured call" so the loop treats raw as the answer.
         return ParsedToolCall(capability_id=None, answer=raw_output.strip())
 
+    # Tolerate the OpenAI function-calling shape ({"name": ..., "parameters": {...}}).
+    # Local SLMs are heavily trained on that convention and slip into it — especially
+    # on a second/later tool-offering turn — even when the frame asks for
+    # capability_id/arguments; normalize rather than silently discarding the call.
+    if obj.get("capability_id") in (None, "", "null") and isinstance(obj.get("name"), str):
+        obj = {
+            "capability_id": obj["name"],
+            "arguments": obj.get("arguments", obj.get("parameters", {})),
+        }
+
     cid = obj.get("capability_id")
     if cid in (None, "", "null"):
         return ParsedToolCall(capability_id=None, answer=str(obj.get("answer", "")).strip())

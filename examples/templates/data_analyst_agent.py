@@ -4,18 +4,23 @@
 """CRP v6 Agent Template — Data Analyst Agent.
 
 Loads a CSV, answers questions with structured queries, and generates a
-simple chart description. Demonstrates structured tool decoding and the
-CRP structured-output path.
+simple chart description. Runs against a REAL model (LM Studio / OpenAI /
+Anthropic / Ollama — auto-detected).
+
+Run:
+    python examples/templates/data_analyst_agent.py
 """
 
 from __future__ import annotations
 
-import json
-import re
+import os
+import sys
 from typing import Any
 
+sys.path.insert(0, os.path.dirname(__file__))
+
 import crp
-from crp.providers.custom import CustomProvider
+from _shared import resolve_provider
 
 # ── Mock dataset ────────────────────────────────────────────────────────────
 
@@ -63,41 +68,7 @@ def plot_chart(chart_type: str, x_axis: str, y_axis: str, title: str) -> dict[st
 
 # ── Mock SLM ────────────────────────────────────────────────────────────────
 
-
-def _mock_generate(messages: list[dict[str, str]]) -> tuple[str, str]:
-    prompt = messages[-1]["content"]
-    objective_match = re.search(r"objective:\s*(.+)", prompt, re.IGNORECASE)
-    objective = (objective_match.group(1).strip() if objective_match else prompt).lower()
-
-    if "load" in objective or "csv" in objective or "data" in objective:
-        return (
-            json.dumps({"capability_id": "load_csv", "arguments": {"filename": "sales.csv"}}),
-            "stop",
-        )
-    if "query" in objective or "total" in objective or "sales" in objective or "growth" in objective:
-        region = "APAC" if "apac" in objective else None
-        return (
-            json.dumps({"capability_id": "query_data", "arguments": {"region": region}}),
-            "stop",
-        )
-    if "chart" in objective or "plot" in objective or "visual" in objective:
-        return (
-            json.dumps({"capability_id": "plot_chart", "arguments": {"chart_type": "bar", "x_axis": "region", "y_axis": "growth_pct", "title": "Q1→Q2 Growth by Region"}}),
-            "stop",
-        )
-
-    return (
-        json.dumps({"capability_id": None, "answer": "Analysis complete."}),
-        "stop",
-    )
-
-
-provider = CustomProvider(
-    generate_fn=_mock_generate,
-    count_tokens_fn=lambda text: max(1, len(text.split())),
-    context_size=8192,
-    name="mock-slm",
-)
+provider = resolve_provider()
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────
@@ -116,8 +87,14 @@ agent = crp.Agent(
 # ── Run ───────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    result = agent.run("Load sales.csv, calculate APAC growth, and create a bar chart")
-    print("Answer:", result.answer)
-    print("Operations:", result.how_it_was_built)
-    print("Grounded:", result.crp.grounded)
-    print("Sources:", result.sources)
+    step1 = agent.run("Load sales.csv.")
+    print("Step 1 —", step1.answer)
+    print("  Operations:", step1.how_it_was_built, " Sources:", len(step1.sources))
+
+    step2 = agent.run("Calculate the APAC region's growth from Q1 to Q2.", prior_cso=step1.cso)
+    print("Step 2 —", step2.answer)
+    print("  Operations:", step2.how_it_was_built, " Sources:", len(step2.sources))
+
+    step3 = agent.run("Create a bar chart of growth by region.", prior_cso=step2.cso)
+    print("Step 3 —", step3.answer)
+    print("  Operations:", step3.how_it_was_built, " Grounded:", step3.crp.grounded)

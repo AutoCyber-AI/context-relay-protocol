@@ -143,7 +143,16 @@ def compile_tool(
         cost_profile=spec.cost_profile,
         metadata={"description": spec.description, **spec.metadata},
     )
-    impl = source if callable(source) else None
+    # A plain callable is its own implementation. A dict source may declare an
+    # "impl" callable alongside explicit metadata (e.g. cost_profile.safety_class)
+    # — the only way to attach both a real implementation AND a non-default
+    # safety class through the public tools=[...] surface (SPEC-059 §3.2).
+    if callable(source):
+        impl: Callable[..., Any] | None = source
+    elif isinstance(source, dict) and callable(source.get("impl")):
+        impl = source["impl"]
+    else:
+        impl = None
     return CompiledTool(spec=spec, descriptor=descriptor, impl=impl)
 
 

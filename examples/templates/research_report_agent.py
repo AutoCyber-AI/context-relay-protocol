@@ -5,16 +5,22 @@
 
 Demonstrates multi-step research: search sources, read the best match, then
 synthesise a report section. CSO carry-forward keeps prior findings across
-the retrieval → read → write chain.
+the retrieval → read → write chain. Runs against a REAL model (LM Studio /
+OpenAI / Anthropic / Ollama — auto-detected).
+
+Run:
+    python examples/templates/research_report_agent.py
 """
 
 from __future__ import annotations
 
-import json
-import re
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 import crp
-from crp.providers.custom import CustomProvider
+from _shared import resolve_provider
 
 # ── Mock web index ──────────────────────────────────────────────────────────
 
@@ -56,43 +62,9 @@ def write_section(heading: str, body: str) -> dict[str, str]:
     return {"heading": heading, "body": body, "word_count": len(body.split())}
 
 
-# ── Mock SLM ────────────────────────────────────────────────────────────────
+# ── Real provider ────────────────────────────────────────────────────────
 
-
-def _mock_generate(messages: list[dict[str, str]]) -> tuple[str, str]:
-    prompt = messages[-1]["content"]
-    objective_match = re.search(r"objective:\s*(.+)", prompt, re.IGNORECASE)
-    objective = (objective_match.group(1).strip() if objective_match else prompt).lower()
-
-    if "search" in objective or "find" in objective:
-        return (
-            json.dumps({"capability_id": "search_web", "arguments": {"query": objective}}),
-            "stop",
-        )
-    if "read" in objective or "source" in objective:
-        sid = "crp-overview" if "crp" in objective else "slm-agentic"
-        return (
-            json.dumps({"capability_id": "read_source", "arguments": {"source_id": sid}}),
-            "stop",
-        )
-    if "write" in objective or "section" in objective or "report" in objective:
-        return (
-            json.dumps({"capability_id": "write_section", "arguments": {"heading": "CRP for Agentic SLMs", "body": "CRP positions context per call so SLMs stay coherent across long tasks."}}),
-            "stop",
-        )
-
-    return (
-        json.dumps({"capability_id": None, "answer": "Research complete."}),
-        "stop",
-    )
-
-
-provider = CustomProvider(
-    generate_fn=_mock_generate,
-    count_tokens_fn=lambda text: max(1, len(text.split())),
-    context_size=8192,
-    name="mock-slm",
-)
+provider = resolve_provider()
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────
@@ -112,14 +84,18 @@ agent = crp.Agent(
 # ── Run ───────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    step1 = agent.run("Research how CRP helps small language models do agentic tasks")
-    print("Step 1:", step1.answer[:200])
+    step1 = agent.run("Search for sources about how CRP helps small language models do agentic tasks.")
+    print("Step 1:", step1.answer[:300])
     print("Operations:", step1.how_it_was_built)
 
-    step2 = agent.run(
-        "Now write the final report section with citations.",
-        prior_cso=step1.cso,
-    )
-    print("\nStep 2:", step2.answer[:200])
+    step2 = agent.run("Read the most relevant source you found.", prior_cso=step1.cso)
+    print("\nStep 2:", step2.answer[:300])
     print("Operations:", step2.how_it_was_built)
-    print("Sources used:", len(step2.sources))
+
+    step3 = agent.run(
+        "Now write the final report section with citations.",
+        prior_cso=step2.cso,
+    )
+    print("\nStep 3:", step3.answer[:300])
+    print("Operations:", step3.how_it_was_built)
+    print("Sources used:", len(step3.sources))

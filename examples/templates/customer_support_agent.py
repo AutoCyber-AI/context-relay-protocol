@@ -4,17 +4,19 @@
 """CRP v6 Agent Template — Customer Support Agent.
 
 Triages incoming support tickets, searches a knowledge base, and escalates to
-a human when a refund or angry sentiment is detected. Runs with a mock SLM
-out of the box; swap the provider for production.
+a human when a refund or angry sentiment is detected. Runs against a REAL
+model (LM Studio / OpenAI / Anthropic / Ollama — auto-detected).
 """
 
 from __future__ import annotations
 
-import json
-import re
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 import crp
-from crp.providers.custom import CustomProvider
+from _shared import resolve_provider
 
 # ── Knowledge base ──────────────────────────────────────────────────────────
 
@@ -55,57 +57,33 @@ def escalate(reason: str) -> dict[str, str]:
     return {"status": "escalated", "reason": reason, "queue": "tier-2"}
 
 
-# ── Mock SLM ────────────────────────────────────────────────────────────────
-
-
-def _mock_generate(messages: list[dict[str, str]]) -> tuple[str, str]:
-    prompt = messages[-1]["content"]
-    lower = prompt.lower()
-    objective_match = re.search(r"objective:\s*(.+)", prompt, re.IGNORECASE)
-    objective = (objective_match.group(1).strip() if objective_match else lower).lower()
-
-    if "refund" in objective or "angry" in objective or "escalate" in objective:
-        return (
-            json.dumps({"capability_id": "escalate", "arguments": {"reason": "high-urgency billing issue"}}),
-            "stop",
-        )
-    if "classify" in objective or "ticket" in objective:
-        return (
-            json.dumps({"capability_id": "classify_ticket", "arguments": {"ticket": objective}}),
-            "stop",
-        )
-    if "search" in objective or "kb" in objective or "article" in objective:
-        category = "billing" if "billing" in objective or "refund" in objective else "general"
-        return (
-            json.dumps({"capability_id": "search_kb", "arguments": {"category": category}}),
-            "stop",
-        )
-
-    return (
-        json.dumps({"capability_id": None, "answer": "How can I help you today?"}),
-        "stop",
-    )
-
-
-provider = CustomProvider(
-    generate_fn=_mock_generate,
-    count_tokens_fn=lambda text: max(1, len(text.split())),
-    context_size=8192,
-    name="mock-slm",
-)
+provider = resolve_provider()
 
 
 # ── Agent ───────────────────────────────────────────────────────────────────
 
-agent = crp.Agent(
-    provider=provider,
-    tools=[classify_ticket, search_kb, escalate],
-    system=(
-        "You are a customer-support agent. Classify the ticket, search the KB, "
-        "and escalate high-urgency or billing disputes to a human."
-    ),
-    profile="capable-local",
-)
+
+def new_agent() -> crp.Agent:
+    """Build a fresh agent per independent ticket.
+
+    ``prior_cso=None`` clears the Cognitive State Object (established facts,
+    tool observations) between calls, but the ISA layer's turn history and
+    session-entity registry (used for intent classification and
+    coreference) live on the ``Agent`` instance itself and are NOT reset by
+    it. Unrelated tickets need a fresh agent, not just a fresh CSO — reuse
+    one agent instance only for genuine multi-turn continuations of the same
+    case.
+    """
+    return crp.Agent(
+        provider=provider,
+        tools=[classify_ticket, search_kb, escalate],
+        system=(
+            "You are a customer-support agent. Classify the ticket, search the KB, "
+            "and escalate high-urgency or billing disputes to a human."
+        ),
+        profile="capable-local",
+    )
+
 
 
 # ── Run ─────────────────────────────────────────────────────────────────────
@@ -117,7 +95,8 @@ if __name__ == "__main__":
     ]
 
     for ticket in tickets:
-        result = agent.run(f"Classify and handle this ticket: {ticket}")
+        # A fresh agent per ticket — each is an independent case (see new_agent()).
+        result = new_agent().run(f"Classify and handle this ticket: {ticket}")
         print(f"Ticket: {ticket}")
         print(f"  Answer: {result.answer}")
         print(f"  Operations: {result.how_it_was_built}")

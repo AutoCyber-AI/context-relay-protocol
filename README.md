@@ -27,6 +27,8 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
+  <a href="CHEATSHEET.md">Cheatsheet</a> •
+  <a href="#agent-templates">Templates</a> •
   <a href="#the-problem">The Problem</a> •
   <a href="#what-crp-does">Solution</a> •
   <a href="#inter-llm-context-sharing-http-sidecar">Inter-LLM Sharing</a> •
@@ -210,18 +212,25 @@ client = crp.Client(model="llama3.1")             # → OllamaAdapter
 
 ### Agent Templates
 
-Ready-to-run agentic AI templates are in [`examples/templates/`](examples/templates/):
+Ready-to-run agentic AI templates are in [`examples/templates/`](examples/templates/) —
+every one of them runs against a **real** LLM (LM Studio, OpenAI, Anthropic, or
+Ollama, auto-detected), not a scripted mock:
 
 ```bash
-pip install crprotocol
+pip install crprotocol requests beautifulsoup4
 cd examples/templates
-python customer_support_agent.py
+python security_analyst_agent.py        # SOC triage + human-in-the-loop oversight gate
+python research_assistant_agent.py "your topic here"   # live web search + coreference
+python daily_assistant_agent.py         # personal assistant, multi-turn memory
 ```
 
-Templates include: customer support, code review, research report, data analyst,
-and a fully local SLM agent. Each template works with a mock provider out of
-the box and can be switched to OpenAI, Anthropic, Ollama, or the CRP Gateway
-in one line.
+These 3 flagship templates each exercise a different slice of the protocol end
+to end — tool use, streaming, human oversight, memory relay, verification —
+see [`examples/templates/README.md`](examples/templates/README.md) for the
+full feature matrix. Five more single-scenario templates (customer support,
+code review, data analyst, research report, fully-local) are also in that
+directory. **See [`CHEATSHEET.md`](CHEATSHEET.md) for the complete API
+reference** — every class, every method, when to use it.
 
 ### Local Models (Zero-Config)
 

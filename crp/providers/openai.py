@@ -133,19 +133,33 @@ def _resolve_model_capabilities(
 ) -> tuple[int, int]:
     """Resolve context window and max output for any model.
 
-    Strategy (3-layer precedence):
-    1. Exact match in primary OpenAI table
-    2. Prefix match against model family table (open-source models)
-    3. Server-side probing via /v1/models/{model} (if base_url set)
+    Strategy (4-layer precedence):
+    1. Live server probe (if base_url set) — authoritative for local servers,
+       since it reports the context ACTUALLY loaded, which is frequently
+       smaller than a model family's advertised maximum (LM Studio in
+       particular defaults to a conservative loaded context regardless of
+       what the underlying model architecture supports). Probing first
+       avoids sending prompts sized for a 128K family default into a model
+       that is really only serving 4-8K, which otherwise surfaces as
+       "context length exceeded" failures deep in a run.
+    2. Exact match in primary OpenAI table
+    3. Prefix match against model family table (open-source models)
     4. Conservative fallback (8_192, 4_096) — NOT 128K
 
     Returns (context_window, max_output_tokens).
     """
-    # Layer 1: exact match (OpenAI models)
+    # Layer 1: live server probe — trust what the server reports is actually
+    # loaded over any static table (local/custom endpoints only).
+    if base_url:
+        probed = _probe_server_model_info(model, base_url)
+        if probed:
+            return probed
+
+    # Layer 2: exact match (OpenAI models)
     if model in _MODEL_CONTEXT:
         return (_MODEL_CONTEXT[model], _MODEL_MAX_OUTPUT.get(model, 4_096))
 
-    # Layer 2: prefix match against model families
+    # Layer 3: prefix match against model families
     lower = model.lower()
     for prefix, ctx, max_out in _MODEL_FAMILY_CONTEXT:
         if lower.startswith(prefix):
@@ -154,12 +168,6 @@ def _resolve_model_capabilities(
                 model, prefix, ctx, max_out,
             )
             return (ctx, max_out)
-
-    # Layer 3: server-side probing (non-OpenAI servers may expose metadata)
-    if base_url:
-        probed = _probe_server_model_info(model, base_url)
-        if probed:
-            return probed
 
     # Layer 4: conservative fallback — NOT 128K (that's dangerous for small models)
     logger.warning(
@@ -178,10 +186,42 @@ def _probe_server_model_info(
     """Probe the server for model metadata.
 
     Tries (in order):
-    1. GET /v1/models/{model} — some servers include context_length
-    2. GET /api/show (Ollama-compat) — includes modelfile with num_ctx
+    1. GET /api/v0/models (LM Studio native) — reports the context ACTUALLY
+       loaded for this model, not just its architecture's maximum.
+    2. GET /v1/models/{model} — some servers include context_length
+    3. GET /api/show (Ollama-compat) — includes modelfile with num_ctx
     """
     url = base_url.rstrip("/")
+    # LM Studio's native API lives at the server root; base_url is typically
+    # the OpenAI-compat "<root>/v1" path, so strip that suffix to reach it.
+    root = url[:-3] if url.endswith("/v1") else url
+
+    # Attempt 0: LM Studio native endpoint — the loaded_context_length field
+    # is the ground truth for what the server will actually serve, which is
+    # commonly SMALLER than the model family's advertised max_context_length
+    # (LM Studio defaults new loads to a conservative context window unless
+    # explicitly configured otherwise).
+    try:
+        req = urllib.request.Request(
+            f"{root}/api/v0/models",
+            headers={"Accept": "application/json"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+            for entry in data.get("data", []):
+                if entry.get("id") != model:
+                    continue
+                ctx = entry.get("loaded_context_length") or entry.get("max_context_length")
+                if ctx and isinstance(ctx, int) and ctx > 0:
+                    max_out = min(ctx // 4, 16_384)
+                    logger.info(
+                        "LM Studio native probe found model '%s': ctx=%d, max_out=%d (state=%s)",
+                        model, ctx, max_out, entry.get("state", "unknown"),
+                    )
+                    return (ctx, max_out)
+    except Exception:
+        logger.debug("LM Studio native probe /api/v0/models failed (expected for non-LM-Studio servers)")
 
     # Attempt 1: /v1/models/{model} (vLLM, TGI expose max_model_len here)
     try:

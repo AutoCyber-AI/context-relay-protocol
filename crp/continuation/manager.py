@@ -414,8 +414,26 @@ class ContinuationManager:
             config=TriggerConfig(max_continuations=self._config.max_continuations),
         )
 
+        # Repetition guard: if this window reproduced the immediately preceding
+        # window's raw output near-verbatim, the model has nothing more to
+        # add — continuing would just keep regenerating the same text and
+        # burn the continuation budget. Compared against
+        # ``window_outputs`` (per-window raw records), not ``self._outputs``
+        # (which gets progressively stitched/combined), so the comparison is
+        # always "this window vs. the immediately preceding one," not
+        # "this window vs. an ever-growing combined blob."
+        _is_repeat = (
+            len(self._state.window_outputs) > 1
+            and bool(output.strip())
+            and self._state.window_outputs[-1]["output"].strip()
+            == self._state.window_outputs[-2]["output"].strip()
+        )
+
         # 3-way termination check
-        if self._state.gap_result.is_complete:
+        if _is_repeat:
+            self._state.finished = True
+            self._state.termination_reason = "repetition_detected"
+        elif self._state.gap_result.is_complete:
             self._state.finished = True
             self._state.termination_reason = "gap_fulfilled"
         elif self._state.completion_result.is_complete:

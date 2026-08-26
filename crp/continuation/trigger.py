@@ -24,8 +24,13 @@ class TriggerConfig:
     # If the model stopped with an output smaller than this, the stop is
     # treated as authoritative — continuing would just produce another
     # trivial stop.  Prevents runaway continuation loops against toy / test
-    # providers that return very short fixed responses.
-    gap_override_min_output_tokens: int = 16
+    # providers that return very short fixed responses, AND against a real
+    # model giving a genuinely complete short conversational answer (e.g.
+    # a one-sentence factual reply is commonly 20-40 tokens — 16 was too
+    # low and let those legitimately-complete answers trigger needless
+    # continuation; the repetition guard in ContinuationManager.process_window
+    # is the backstop if this threshold is ever still too low for a given case).
+    gap_override_min_output_tokens: int = 48
 
 
 @dataclass

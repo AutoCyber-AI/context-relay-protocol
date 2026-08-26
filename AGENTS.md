@@ -60,6 +60,12 @@ after every material change.
 - 🔄 Spec/reference consistency pass across `docs/`, `site-docs/`, research corpus.
 - ⬜ `crp download-models` end-to-end verification on a clean machine.
 - ⬜ Live-public-benchmark reproduction by an independent party (AgentDojo/AgentHarm).
+- ✅ SDK/DX hardening pass (2026-08-26): fixed a real LM Studio auto-detect
+  gap, a live continuation repetition-loop bug, and opaque provider error
+  logging — see `docs/CRP_SDK_HARDENING_STATUS_2026-08-26.md` for the full
+  honest done/not-done accounting (includes 2 known, NOT-yet-fixed gaps:
+  silent-fallback-to-broken-`CustomProvider` in `crp/sdk/client.py`, and an
+  Axiom 9 watermark-disclosure gap in `specification/`/`schemas/`).
 
 ### Wave 3 — Hosted product + money funnel (NOT STARTED)
 - ⬜ Extract `frontend/agent-console/` and build CDN asset pipeline.

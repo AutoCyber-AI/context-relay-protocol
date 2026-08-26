@@ -28,7 +28,7 @@ genuinely good at them (narrow, repetitive, tool-heavy tasks).
 | Template | Real-world use case | Protocol features exercised |
 |----------|---------------------|------------------------------|
 | [`security_analyst_agent.py`](security_analyst_agent.py) | SOC/blue-team triage: look up a CVE, check threat intel, decide remediation | Tool Capability Fabric · **human-in-the-loop oversight gate** (`oversight_required` + `clarify_handler`) on a DESTRUCTIVE action · Verification Relay (`depth="thorough"`) · CSO memory relay across 3 turns · `run_tel()` AG-UI/governance event streaming · explicit `Policy` |
-| [`research_assistant_agent.py`](research_assistant_agent.py) | Research any topic using the live web | Real `web_search`/`read_page` tools (DuckDuckGo, no API key) · ISA intent + **coreference resolution** ("the top result" → last turn's search) · CSO memory relay · Verification Relay · quality/source reporting |
+| [`research_assistant_agent.py`](research_assistant_agent.py) | Research any topic using real search | Real `web_search`/`read_page` tools (Wikipedia's public Search API, no key) · ISA intent + **coreference resolution** ("the top result" → last turn's search) · CSO memory relay · Verification Relay · quality/source reporting |
 | [`daily_assistant_agent.py`](daily_assistant_agent.py) | The most universally relatable shape: a personal daily/study assistant | Multi-tool fabric (weather, unit conversion, memory, quiz) · **CSO memory relay as the star feature** — recalls facts from 3+ turns back · `profile="small-local"` (tuned for genuinely small models) |
 
 Run any of them directly:

@@ -475,10 +475,10 @@ class OpenAIAdapter(LLMProvider):
                     )
                     time.sleep(delay)
                 else:
-                    logger.error("OpenAI API error: %s", type(exc).__name__)
+                    logger.error("OpenAI API error: %s: %s", type(exc).__name__, exc)
                     return ("", "error")
 
-        logger.error("OpenAI API failed after %d retries: %s", self._MAX_RETRIES, type(last_exc).__name__)
+        logger.error("OpenAI API failed after %d retries: %s: %s", self._MAX_RETRIES, type(last_exc).__name__, last_exc)
         return ("", "error")
 
     def count_tokens(self, text: str) -> int:

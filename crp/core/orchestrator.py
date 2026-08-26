@@ -89,6 +89,57 @@ logger = logging.getLogger("crp.orchestrator")
 # Auto-detection: zero-config provider resolution
 # ---------------------------------------------------------------------------
 
+def _detect_lmstudio_provider() -> LLMProvider | None:
+    """Probe a local LM Studio server and return a bound provider, or ``None``.
+
+    LM Studio speaks the OpenAI-compatible API (``/v1/models``,
+    ``/v1/chat/completions``) but also exposes a native endpoint
+    (``/api/v0/models``) that reports which model is actually *loaded* — used
+    here to pick a real, ready model id instead of guessing. Silent by design:
+    any failure (not running, no model loaded, network hiccup) returns
+    ``None`` so callers can fall through to the next detection step.
+    """
+    import json as _json
+    import urllib.request
+
+    base_url = os.environ.get("CRP_LMSTUDIO_URL", "http://localhost:1234/v1").rstrip("/")
+    root = base_url[:-3] if base_url.endswith("/v1") else base_url
+
+    model_id: str | None = None
+    try:
+        req = urllib.request.Request(f"{root}/api/v0/models", method="GET")
+        with urllib.request.urlopen(req, timeout=1.0) as resp:
+            data = _json.loads(resp.read())
+        loaded = [
+            m for m in data.get("data", [])
+            if m.get("state") == "loaded" and m.get("type") == "llm"
+        ]
+        if loaded:
+            model_id = loaded[0]["id"]
+    except Exception:
+        pass
+
+    if model_id is None:
+        # Native endpoint unavailable or nothing loaded yet — fall back to the
+        # OpenAI-compatible listing (JIT-loading servers still report models here).
+        try:
+            req = urllib.request.Request(f"{base_url}/models", method="GET")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                data = _json.loads(resp.read())
+            models = [m for m in data.get("data", []) if "embed" not in str(m.get("id", "")).lower()]
+            if models:
+                model_id = models[0]["id"]
+        except Exception:
+            return None
+
+    if model_id is None:
+        return None
+
+    from crp.providers.openai import OpenAIAdapter
+    logger.info("Auto-detected LM Studio at %s — using model %r", base_url, model_id)
+    return OpenAIAdapter(model=model_id, base_url=base_url, api_key="lm-studio")
+
+
 def _auto_detect_provider(model: str | None = None) -> LLMProvider:
     """Auto-detect the best available LLM provider.
 
@@ -96,8 +147,11 @@ def _auto_detect_provider(model: str | None = None) -> LLMProvider:
       1. If ``model`` is given and matches a known provider pattern, use that.
       2. If ``OPENAI_API_KEY`` is set → OpenAIAdapter.
       3. If ``ANTHROPIC_API_KEY`` is set → AnthropicAdapter.
-      4. If Ollama is running locally (``OLLAMA_HOST`` or localhost:11434) → OllamaAdapter.
-      5. Raise a helpful error.
+      4. If a local LM Studio server is running (``CRP_LMSTUDIO_URL`` or
+         ``localhost:1234``) → OpenAIAdapter bound to it, model auto-selected
+         from whichever model LM Studio actually has loaded.
+      5. If Ollama is running locally (``OLLAMA_HOST`` or localhost:11434) → OllamaAdapter.
+      6. Raise a helpful error.
     """
     import os
 
@@ -123,6 +177,13 @@ def _auto_detect_provider(model: str | None = None) -> LLMProvider:
         from crp.providers.anthropic import AnthropicAdapter
         return AnthropicAdapter()
 
+    # Try a local LM Studio server before Ollama — starting its server is a
+    # deliberate user action, so its presence is a stronger signal of intent
+    # than a possibly-idle background Ollama daemon.
+    lmstudio_provider = _detect_lmstudio_provider()
+    if lmstudio_provider is not None:
+        return lmstudio_provider
+
     # Try Ollama on localhost (fast-fail to keep init latency low)
     ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
     try:
@@ -143,7 +204,8 @@ def _auto_detect_provider(model: str | None = None) -> LLMProvider:
         "       client = crp.Client(model='gpt-4o')\n"
         "  3. Set an API key environment variable:\n"
         "       OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=...\n"
-        "  4. Start Ollama locally:\n"
+        "  4. Start LM Studio's local server (http://localhost:1234) with a model loaded, or\n"
+        "  5. Start Ollama locally:\n"
         "       ollama serve && ollama pull llama3.1"
     )
 

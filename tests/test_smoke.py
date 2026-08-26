@@ -8,7 +8,7 @@ from __future__ import annotations
 def test_version() -> None:
     from crp import __version__
 
-    assert __version__ == "6.0.0"
+    assert __version__ == "6.0.1"
 
 
 def test_imports() -> None:

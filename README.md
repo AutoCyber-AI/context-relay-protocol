@@ -154,7 +154,7 @@ For every LLM call you already make, CRP:
 ## Key Differentiators
 
 - **Embedded library, not a server** — zero deployment overhead. `pip install crprotocol` and you're running. No Docker, no infrastructure. Optional HTTP sidecar (`crp serve`) for [inter-LLM context sharing](#inter-llm-context-sharing-http-sidecar) — never started automatically
-- **Works with any LLM provider** — auto-detected, 3 fields to configure. Built-in adapters for OpenAI, Anthropic, Ollama, and llama.cpp — plus `CustomProvider` to wrap any LLM in 3 lines
+- **Works with any LLM provider** — auto-detected, 3 fields to configure. Built-in adapters for OpenAI, Anthropic, Ollama, LM Studio, and llama.cpp — plus `CustomProvider` to wrap any LLM in 3 lines
 - **Structured knowledge extraction** — 6-stage graduated pipeline (regex → statistical NLP → GLiNER NER → UIE relations → RST discourse → LLM-assisted relational). Not just text chunking
 - **Contextual Knowledge Fabric (CKF)** — graph-structured knowledge with 4-mode retrieval (graph walk + pattern query + semantic fallback + community summaries), event-sourced history, and cross-session persistence
 - **Two-sided provenance** — CRP classifies every model *output* as `CONTEXT_GROUNDED | PARAMETRIC | MIXED | UNCERTAIN` **and** records every *input* fact's upstream source (RAG chunk, vector DB, MCP tool, function call, web search, user turn, file upload, agent memory, or parametric). `ContextManifest` lets you sign a declaration of intended sources; anything observed outside the declaration is flagged as `CONTEXT_ATTESTATION_MISMATCH` in the audit log. Foundational for **ISO/IEC 42001 §4**, **EU AI Act Art. 10**, and **GDPR Art. 30**
@@ -176,7 +176,8 @@ For every LLM call you already make, CRP:
 ```python
 import crp
 
-# Auto-detects your LLM from environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, or Ollama)
+# Auto-detects your LLM: OPENAI_API_KEY, ANTHROPIC_API_KEY, a running LM Studio
+# server (http://localhost:1234), or a running Ollama instance (http://localhost:11434)
 client = crp.Client()
 output, report = client.dispatch(
     system_prompt="You are a helpful assistant.",
@@ -292,7 +293,7 @@ client.ingest(api_response)     # Available in next window's envelope
 ### Configuration
 
 ```bash
-# .env — ALL optional (CRP auto-detects LLM from API keys or local Ollama)
+# .env — ALL optional (CRP auto-detects LLM from API keys, or a local LM Studio / Ollama server)
 CRP_ENABLED=true                   # Master switch (default: enabled)
 CRP_LOG_ENVELOPES=false            # Debug logging (default: false)
 CRP_MAX_CONTINUATIONS=50           # Safety limit on continuation windows
@@ -481,7 +482,7 @@ Your system prompt and task input pass through unchanged. The envelope is additi
 
 ### Output Guarantee
 
-`dispatch()` returns the complete, unmodified LLM output. Always. Extraction is a read-only side effect — it never modifies, filters, or summarizes the returned string.
+`dispatch()` returns the complete, unmodified LLM output. Always. Extraction is a read-only side effect — it never modifies, filters, or summarizes the returned string. The one exception is licensing, not content: a short `<!-- CRP™ | ELv2 | ... -->` attribution comment is appended after the model's text (disable with `CRP_DISABLE_WATERMARK=1`). It never alters, truncates, or reorders anything the model said.
 
 ---
 
@@ -1155,11 +1156,12 @@ print(result.how_it_was_built)
 
 | Provider | Import | Requirements |
 |----------|--------|-------------|
-| Auto-detect | `crp.Client()` | Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or run Ollama |
+| Auto-detect | `crp.Client()` | Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or run LM Studio / Ollama locally |
 | Custom (any LLM) | `crp.providers.CustomProvider` | None |
 | OpenAI / Azure | `crp.providers.OpenAIAdapter` | `openai>=1.0`, `tiktoken` |
 | Anthropic | `crp.providers.AnthropicAdapter` | `anthropic>=0.25` |
 | Ollama | `crp.providers.OllamaAdapter` | Running Ollama instance |
+| LM Studio | `crp.providers.OpenAIAdapter` (auto-detected) | Running LM Studio local server, a model loaded |
 | llama.cpp | `crp.providers.LlamaCppAdapter` | `llama-cpp-python` or HTTP server |
 
 **Key Features:**

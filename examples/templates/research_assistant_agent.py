@@ -3,10 +3,12 @@
 # Licensed under Elastic License 2.0 — see LICENSE.md for details.
 """Flagship template — Research & Knowledge Assistant.
 
-A general-purpose research agent that can search the live web (DuckDuckGo,
-no API key required) and read real pages on ANY topic — swap the topic on
-the command line and it works unchanged. Runs against a REAL model
-(LM Studio / OpenAI / Anthropic / Ollama — auto-detected).
+A general-purpose research agent that can search real, existing knowledge
+(Wikipedia's public MediaWiki Search API — free, no API key required,
+officially documented at https://www.mediawiki.org/wiki/API:Search) and read
+real pages on ANY topic — swap the topic on the command line and it works
+unchanged. Runs against a REAL model (LM Studio / OpenAI / Anthropic /
+Ollama — auto-detected).
 
 Protocol features this template exercises:
 
@@ -29,40 +31,56 @@ from __future__ import annotations
 
 import os
 import sys
+from urllib.parse import quote
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 import requests
+from _shared import resolve_provider
 from bs4 import BeautifulSoup
 
 import crp
-from _shared import resolve_provider
 
 _UA = "Mozilla/5.0 (compatible; CRP-research-agent/1.0; +https://crprotocol.io)"
 
+# Wikipedia's own public REST/action API — free, no API key, no rate-limit
+# registration required for reasonable use, officially documented at
+# https://www.mediawiki.org/wiki/API:Search. Replaces an earlier version of
+# this template that scraped https://html.duckduckgo.com/html/ directly —
+# an undocumented HTML surface that can change or block scrapers without
+# notice. This is a real, existing, versioned API instead.
+_WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
+
 
 def web_search(query: str) -> list[dict]:
-    """Search the live web and return the top result titles, URLs, and snippets."""
+    """Search Wikipedia's public Search API and return the top matching articles."""
     try:
-        resp = requests.post(
-            "https://html.duckduckgo.com/html/",
-            data={"q": query},
+        resp = requests.get(
+            _WIKIPEDIA_API,
+            params={
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "srlimit": 5,
+                "format": "json",
+            },
             headers={"User-Agent": _UA},
             timeout=10,
         )
         resp.raise_for_status()
-    except requests.RequestException as exc:
+        hits = resp.json().get("query", {}).get("search", [])
+    except (requests.RequestException, ValueError) as exc:
         return [{"error": f"search failed: {exc}"}]
 
-    soup = BeautifulSoup(resp.text, "html.parser")
     results = []
-    for link, snippet in zip(
-        soup.select(".result__a")[:5], soup.select(".result__snippet")[:5], strict=False
-    ):
+    for hit in hits:
+        title = hit.get("title", "")
+        # Strip MediaWiki's <span class="searchmatch"> highlight markup from the snippet.
+        snippet = BeautifulSoup(hit.get("snippet", ""), "html.parser").get_text()
         results.append({
-            "title": link.get_text(strip=True),
-            "url": link.get("href", ""),
-            "snippet": snippet.get_text(strip=True) if snippet else "",
+            "title": title,
+            "url": f"https://en.wikipedia.org/wiki/{quote(title.replace(' ', '_'))}",
+            "snippet": snippet,
         })
     return results or [{"error": "no results"}]
 

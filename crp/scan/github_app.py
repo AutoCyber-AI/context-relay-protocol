@@ -134,7 +134,7 @@ class GithubAppClient:
         returns a 404 regardless of a valid installation_id/token.
         """
         token = self.installation_token(installation_id)
-        url = f"{_GITHUB_API_BASE}/installation/repositories"
+        url: str | None = f"{_GITHUB_API_BASE}/installation/repositories"
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",

@@ -28,11 +28,11 @@ class EmailConnector(CheckpointConnector):
     name = "email"
 
     def __init__(self) -> None:
-        self.host = os.environ.get("EMAIL_SMTP_HOST")
+        self.host: str | None = os.environ.get("EMAIL_SMTP_HOST")
         self.port = int(os.environ.get("EMAIL_SMTP_PORT", "587") or "587")
         self.user = os.environ.get("EMAIL_SMTP_USER")
         self.password = os.environ.get("EMAIL_SMTP_PASSWORD")
-        self.from_addr = os.environ.get("EMAIL_FROM")
+        self.from_addr: str | None = os.environ.get("EMAIL_FROM")
         self.to_addrs = [
             a.strip()
             for a in (os.environ.get("EMAIL_TO", "").split(","))
@@ -43,6 +43,7 @@ class EmailConnector(CheckpointConnector):
         return bool(self.host and self.from_addr and self.to_addrs)
 
     def _message(self, checkpoint: dict[str, Any]) -> MIMEMultipart:
+        assert self.from_addr is not None  # gated by is_configured()
         subject = f"CRP checkpoint {checkpoint.get('checkpoint_id')} requires approval"
         status_url = checkpoint.get("status_url", "")
         body_text = (
@@ -102,6 +103,8 @@ class EmailConnector(CheckpointConnector):
             return {"channel": self.name, "ok": False, "detail": str(exc)}
 
     def _send_sync(self, msg: MIMEMultipart) -> None:
+        assert self.host is not None  # gated by is_configured()
+        assert self.from_addr is not None
         server = smtplib.SMTP(self.host, self.port)
         try:
             server.starttls()

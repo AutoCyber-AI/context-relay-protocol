@@ -9,8 +9,8 @@ import pytest
 from crp.comply.no_code import (
     NoCodeTranslatorError,
     express_requirement,
-    generate_config,
     generate_code_change,
+    generate_config,
     refuse_to_fabricate,
 )
 

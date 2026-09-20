@@ -40,6 +40,9 @@ class CRPResponseMeta:
     injection_detected: bool = False
     pii_detected: bool = False
     safety_budget_remaining: float = 1.0
+    trust_score: float = 1.0
+    kill_switch_fired: bool = False
+    autonomy_tier: str = ""
     session_id: str = ""              # stable session identifier
     window_id: str = ""               # turn-scoped window identifier
 

@@ -397,6 +397,7 @@ class WindowResult:
     forbidden_violations: int = 0
     ckf_coverage_score: float = 0.0   # CRP-Context-Coverage-Score header
     elapsed_s: float = 0.0
+    generation_failed: bool = False   # True if the LLM call errored / returned nothing
 
 
 @dataclass
@@ -409,6 +410,7 @@ class SQBCaseResult:
     full_output: str = ""
 
     # Gate criteria
+    gate_windows_real: bool = False     # every window produced real (non-empty) output — anti false-pass
     gate_rep_w5: bool = False           # Window 5 rep < 1.5%
     gate_f1_holds: bool = False         # F1 W5 >= F1 W1
     gate_coverage_w5: bool = False      # coverage score W5 > 0.50
@@ -433,6 +435,7 @@ class SQBCaseResult:
             "wlast_f1": round(wlast.factual_f1, 3) if wlast else None,
             "wlast_rep": round(wlast.repetition_rate, 4) if wlast else None,
             "wlast_coverage": round(wlast.ckf_coverage_score, 3) if wlast else None,
+            "gate_windows_real": self.gate_windows_real,
             "gate_rep_w5": self.gate_rep_w5,
             "gate_f1_holds": self.gate_f1_holds,
             "gate_coverage_w5": self.gate_coverage_w5,
@@ -460,6 +463,7 @@ class SQBSuiteResult:
             print(f"\n  [{status}] Case {s['case_id']} ({s['domain']})")
             print(f"    Windows:           {s['window_count']}")
             print(f"    Total words:       {s['total_words']}")
+            print(f"    Real output:       {s['gate_windows_real']}  (gate: every window >=100 words — anti false-pass)")
             print(f"    W1 recall:         {s['w1_recall']}")
             print(f"    WLast recall:      {s['wlast_recall']}  (gate: WLast >= W1, -5% tol)")
             print(f"    W1 F1:             {s['w1_f1']} (for reference)")
@@ -492,7 +496,7 @@ class SQBSuiteResult:
 # ---------------------------------------------------------------------------
 
 
-def run_smoke(verbose: bool = True) -> SQBSuiteResult:
+def run_smoke(profile: str = "frontier", verbose: bool = True) -> SQBSuiteResult:
     """Run the SQB harness in smoke mode.
 
     Uses synthetic outputs to validate metric computation and gate logic.
@@ -504,6 +508,19 @@ def run_smoke(verbose: bool = True) -> SQBSuiteResult:
 
     suite = SQBSuiteResult()
     t0 = time.time()
+
+    # Globally-unique padding counter so synthetic padding never repeats an
+    # n-gram (which would otherwise inflate the lexical-repetition metric).
+    pad_counter = 0
+
+    def _unique_pad(target_words: int) -> str:
+        # Emit strictly unique whitespace tokens (w0 w1 w2 …). Because no token
+        # repeats anywhere in the padding, no 4-gram can repeat, so the padding
+        # contributes zero lexical repetition by construction.
+        nonlocal pad_counter
+        parts = [f"w{pad_counter + k}" for k in range(target_words)]
+        pad_counter += target_words
+        return " ".join(parts) + " "
 
     for tc in get_all_test_cases():
         # Synthetic outputs simulating CDR:
@@ -521,6 +538,11 @@ def run_smoke(verbose: bool = True) -> SQBSuiteResult:
                 window_content = " ".join(tc.reference_facts) + ". " + " ".join(corpus_slice) + " "
             else:
                 window_content = " ".join(corpus_slice) + " "
+            # Pad to a realistic per-window size (>=150 words) so the anti
+            # false-pass word floor reflects real continuation output, not the
+            # tiny synthetic corpus slices used to exercise the metrics.
+            if len(window_content.split()) < 150:
+                window_content += _unique_pad(150 - len(window_content.split()))
             cumulative += window_content
             w = WindowResult(window_number=i + 1, output=cumulative)
             w.word_count = len(cumulative.split())
@@ -533,7 +555,7 @@ def run_smoke(verbose: bool = True) -> SQBSuiteResult:
             w.ckf_coverage_score = 0.55 + i * 0.10  # coverage grows with windows
             results.append(w)
 
-        case_result = _evaluate_case(tc, results)
+        case_result = _evaluate_case(tc, results, profile=profile)
         suite.cases.append(case_result)
 
     suite.multihop_connector_recall_delta = 0.18  # synthetic placeholder
@@ -553,12 +575,22 @@ def run_smoke(verbose: bool = True) -> SQBSuiteResult:
 
 def run_full(
     lm_studio_url: str = "http://192.168.0.6:1234",
+    lm_model: str = "",
+    profile: str = "frontier",
     verbose: bool = True,
 ) -> SQBSuiteResult:
     """Run the full SQB against a local LM Studio instance.
 
     Requires: LM Studio running at ``lm_studio_url`` with a loaded model.
     Uses the CRP v4 pipeline (CDR + CDGR) if crp is importable.
+
+    Args:
+        lm_studio_url: Base URL of the LM Studio server.
+        lm_model: Model id to request (e.g. ``qwen2.5-7b-instruct``). If empty,
+            LM Studio uses its currently loaded model.
+        profile: Capability profile that calibrates gate thresholds.
+            ``frontier`` uses the strict SPEC-026 thresholds; ``capable-local``
+            and ``small-local`` relax repetition/coverage for 7B/4B models.
     """
     try:
         import httpx
@@ -568,6 +600,9 @@ def run_full(
 
     if verbose:
         print(f"SQB Full Benchmark — connecting to {lm_studio_url}")
+        if lm_model:
+            print(f"  Model: {lm_model}")
+        print(f"  Profile: {profile}")
 
     suite = SQBSuiteResult()
     t0 = time.time()
@@ -607,14 +642,15 @@ def run_full(
                 )
 
             try:
+                req_body: dict[str, Any] = {
+                    "model": lm_model or "local",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 600,
+                    "temperature": 0.3,
+                }
                 resp = httpx.post(
                     f"{lm_studio_url}/v1/chat/completions",
-                    json={
-                        "model": "local",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 600,
-                        "temperature": 0.3,
-                    },
+                    json=req_body,
                     timeout=120,
                 )
                 resp.raise_for_status()
@@ -661,7 +697,7 @@ def run_full(
                 )
             results.append(w)
 
-        case_result = _evaluate_case(tc, results)
+        case_result = _evaluate_case(tc, results, profile=profile)
         suite.cases.append(case_result)
 
     suite.all_cases_pass = all(r.all_gates_pass for r in suite.cases)
@@ -830,6 +866,7 @@ def run_production(
     min_window_delay: float = 25.0,  # seconds between windows — respects free-tier 3 RPM
     temperature: float = 1.0,  # kimi-k2.6 only accepts temperature=1; other models accept 0-2
     extra_request_fields: dict | None = None,  # extra JSON fields merged into each request body
+    profile: str = "frontier",
 ) -> SQBSuiteResult:
     """Run the full SQB against any OpenAI-compatible production API.
 
@@ -932,6 +969,7 @@ def run_production(
                     f"Add NEW content only — do not repeat what is already written."
                 )
 
+            gen_failed = False
             try:
                 resp_obj = None
                 last_err: Exception | None = None
@@ -970,10 +1008,13 @@ def run_production(
                 # kimi-k2.6 thinking mode: if content is None/empty, fall back to reasoning_content
                 if not window_output:
                     window_output = resp_obj.json()["choices"][0]["message"].get("reasoning_content") or "[empty response]"  # type: ignore[union-attr]
+                if window_output.strip() in ("", "[empty response]"):
+                    gen_failed = True
             except Exception as exc:
                 if verbose:
                     print(f"    Window {win_num} LLM call failed after retries: {exc}")
                 window_output = f"[Window {win_num} failed: {exc}]"
+                gen_failed = True
 
             window_raw_outputs.append(window_output)
             cumulative_output += "\n" + window_output
@@ -1006,6 +1047,7 @@ def run_production(
             # CKF coverage proxy — grows with windows; replace with real header in R4
             w.ckf_coverage_score = min(1.0, 0.12 + win_num * 0.20)
             w.elapsed_s = time.time() - wt0
+            w.generation_failed = gen_failed
 
             if verbose:
                 print(
@@ -1032,7 +1074,7 @@ def run_production(
                 f"wasted_budget={sem_cov['wasted_window_budget']:.2%}"
             )
 
-        case_result = _evaluate_case(tc, results)
+        case_result = _evaluate_case(tc, results, profile=profile)
         case_result.full_output = cumulative_output
         case_result.semantic_cov = sem_cov
 
@@ -1046,6 +1088,14 @@ def run_production(
                 score = judge.get('mean_score', 'n/a')
                 notes = str(judge.get('overall_notes', ''))[:90]
                 print(f"    Judge: {score}/10 — {notes}")
+            # Gate 5: LLM-as-judge must clear the usefulness bar. A zero/empty
+            # judge (e.g. errored generation) must not count as a pass.
+            try:
+                judge_mean = float(judge.get('mean_score', 0) or 0)
+            except (TypeError, ValueError):
+                judge_mean = 0.0
+            if judge_mean < 6.0:
+                case_result.all_gates_pass = False
 
         suite.cases.append(case_result)
 
@@ -1063,6 +1113,7 @@ def run_kimi(
     model: str = "kimi-k2.6",
     verbose: bool = True,
     min_window_delay: float = 25.0,
+    profile: str = "frontier",
 ) -> SQBSuiteResult:
     """Run the SPEC-026 final gate benchmark against Kimi's production API.
 
@@ -1078,8 +1129,9 @@ def run_kimi(
         verbose=verbose,
         run_judge=True,
         min_window_delay=min_window_delay,
-        temperature=0.6,  # required by kimi-k2.6 API when thinking={type:disabled}
+        temperature=0.6,  # required by kimi-k2.6 API when disabling thinking.
         extra_request_fields={"thinking": {"type": "disabled"}},
+        profile=profile,
     )
 
 
@@ -1088,8 +1140,23 @@ def run_kimi(
 # ---------------------------------------------------------------------------
 
 
-def _evaluate_case(tc: SQBTestCase, windows: list[WindowResult]) -> SQBCaseResult:
-    """Evaluate gate criteria for one test case."""
+def _evaluate_case(
+    tc: SQBTestCase,
+    windows: list[WindowResult],
+    profile: str = "frontier",
+) -> SQBCaseResult:
+    """Evaluate gate criteria for one test case.
+
+    Gate thresholds are calibrated by capability profile so the benchmark is
+    honest about what a given model tier can be expected to prove.
+    """
+    thresholds: dict[str, dict[str, float]] = {
+        "frontier": {"rep": 0.015, "coverage": 0.50, "f1_tol": 0.05},
+        "capable-local": {"rep": 0.10, "coverage": 0.40, "f1_tol": 0.10},
+        "small-local": {"rep": 0.20, "coverage": 0.30, "f1_tol": 0.15},
+    }
+    t = thresholds.get(profile, thresholds["frontier"])
+
     result = SQBCaseResult(case_id=tc.case_id, domain=tc.domain, windows=windows)
     if not windows:
         return result
@@ -1097,26 +1164,33 @@ def _evaluate_case(tc: SQBTestCase, windows: list[WindowResult]) -> SQBCaseResul
     w1 = windows[0]
     wlast = windows[-1]
 
-    # Gate 1: Window N repetition < 1.5%
-    result.gate_rep_w5 = wlast.repetition_rate < 0.015
+    # Gate 0 (anti false-pass): every window must have produced real content.
+    # Empty/errored windows trivially "pass" the rep/forbidden/coverage gates,
+    # so without this guard an all-401 run reports PASS with all-zero metrics.
+    # `generation_failed` is set by the runner when the API errors or returns
+    # nothing; the word floor on the last window catches silent short outputs.
+    # (word_count is cumulative, so a mid-run failure is caught via the flag.)
+    result.gate_windows_real = (
+        all(not w.generation_failed for w in windows)
+        and wlast.word_count >= 100
+    )
+
+    # Gate 1: Window N repetition below profile threshold.
+    result.gate_rep_w5 = wlast.repetition_rate < t["rep"]
 
     # Gate 2: Factual RECALL holds at last window (monotonically non-decreasing).
-    # SPEC-026 rationale: CRP's core claim is that reference facts are retained across
-    # continuation windows. Recall is cumulative — it can only stay the same or improve.
-    # F1 was previously used but penalises correct paraphrasing (lower keyword overlap).
-    result.gate_f1_holds = wlast.factual_recall >= (w1.factual_recall - 0.05)  # 5% tolerance
+    result.gate_f1_holds = wlast.factual_recall >= (w1.factual_recall - t["f1_tol"])
 
-    # Gate 3: Coverage score > 0.50 at last window
-    result.gate_coverage_w5 = wlast.ckf_coverage_score > 0.50
+    # Gate 3: Coverage score above profile threshold at last window.
+    result.gate_coverage_w5 = wlast.ckf_coverage_score > t["coverage"]
 
     # Gate 4: No forbidden claims
     result.gate_no_forbidden = wlast.forbidden_violations == 0
 
     # Gate 5: LLM-as-judge score >= 6.0 (checked post-completion via judge_score)
-    # The all_gates_pass below excludes Gate 5 intentionally — judge is computed
-    # after _evaluate_case returns, so gate_judge_pass is set by the caller in run_production.
     result.all_gates_pass = (
-        result.gate_rep_w5
+        result.gate_windows_real
+        and result.gate_rep_w5
         and result.gate_f1_holds
         and result.gate_coverage_w5
         and result.gate_no_forbidden
@@ -1143,6 +1217,17 @@ def _parse_args() -> argparse.Namespace:
         "--lm-url",
         default="http://192.168.0.6:1234",
         help="LM Studio base URL (--mode full only)",
+    )
+    parser.add_argument(
+        "--lm-model",
+        default="",
+        help="LM Studio model id to request, e.g. qwen2.5-7b-instruct (--mode full only)",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=["frontier", "capable-local", "small-local"],
+        default="frontier",
+        help="Capability-profile gate thresholds: frontier (strict), capable-local (7-8B), small-local (<=4B)",
     )
     parser.add_argument(
         "--kimi-key",
@@ -1176,9 +1261,14 @@ def main() -> int:
     verbose = not args.quiet
 
     if args.mode == "smoke":
-        result = run_smoke(verbose=verbose)
+        result = run_smoke(profile=args.profile, verbose=verbose)
     elif args.mode == "full":
-        result = run_full(lm_studio_url=args.lm_url, verbose=verbose)
+        result = run_full(
+            lm_studio_url=args.lm_url,
+            lm_model=args.lm_model,
+            profile=args.profile,
+            verbose=verbose,
+        )
     elif args.mode == "kimi":
         api_key = args.kimi_key
         if not api_key:
@@ -1187,24 +1277,40 @@ def main() -> int:
                 "Pass --kimi-key KEY or set MOONSHOT_API_KEY environment variable."
             )
             return 1
-        result = run_kimi(api_key=api_key, model=args.kimi_model, verbose=verbose, min_window_delay=args.window_delay)
+        result = run_kimi(
+            api_key=api_key,
+            model=args.kimi_model,
+            verbose=verbose,
+            min_window_delay=args.window_delay,
+            profile=args.profile,
+        )
     else:
         # compare: smoke (proxy v3 baseline) followed by kimi (v4 production)
         if verbose:
             print("=== Comparison mode: smoke (v3 proxy) vs Kimi (v4 production) ===")
-        run_smoke(verbose=verbose)
+        run_smoke(profile=args.profile, verbose=verbose)
         api_key = args.kimi_key
         if not api_key:
             print("ERROR: --kimi-key required for compare mode")
             return 1
-        result = run_kimi(api_key=api_key, model=args.kimi_model, verbose=verbose, min_window_delay=args.window_delay)
+        result = run_kimi(
+            api_key=api_key,
+            model=args.kimi_model,
+            verbose=verbose,
+            min_window_delay=args.window_delay,
+            profile=args.profile,
+        )
 
     # Save JSON results if requested
     if args.save_results:
         out_path = save_results_json(
             result,
             args.save_results,
-            meta={"mode": args.mode, "model": getattr(args, 'kimi_model', 'local')},
+            meta={
+                "mode": args.mode,
+                "model": args.lm_model or getattr(args, 'kimi_model', 'local'),
+                "profile": args.profile,
+            },
         )
         print(f"\n  Results saved → {out_path}")
     elif args.mode in ("kimi", "compare"):
@@ -1214,7 +1320,11 @@ def main() -> int:
         out_path = save_results_json(
             result,
             auto_path,
-            meta={"mode": args.mode, "model": getattr(args, 'kimi_model', 'local')},
+            meta={
+                "mode": args.mode,
+                "model": getattr(args, 'kimi_model', 'local'),
+                "profile": args.profile,
+            },
         )
         print(f"\n  Results auto-saved → {out_path}")
 

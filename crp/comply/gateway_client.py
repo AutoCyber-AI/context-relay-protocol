@@ -131,6 +131,7 @@ def _capability_allowed(name: str, allowed_features: set[str]) -> bool:
         return False
     # Advanced capabilities require starter+
     advanced = {"sso", "data_residency", "custom_rules", "hosted_llm"}
-    if name in advanced and not any(f in allowed_features for f in {"comply_scale", "gateway_team"}):
-        return False
-    return True
+    return not (
+        name in advanced
+        and not any(f in allowed_features for f in {"comply_scale", "gateway_team"})
+    )

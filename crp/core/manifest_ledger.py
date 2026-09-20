@@ -137,10 +137,10 @@ class ManifestLedgerEntry:
     @classmethod
     def from_jsonl(cls, line: str) -> ManifestLedgerEntry:
         """Create a new instance from a JSON Lines record.
-        
+
             Args:
                 line (str): The line value.
-        
+
             Returns:
                 ``ManifestLedgerEntry``.
         """
@@ -546,7 +546,7 @@ class EnvVarKeyProvider(KeyProvider):
 
     def current(self) -> bytes:
         """Execute current and return the result.
-        
+
             Returns:
                 ``bytes``.
         """
@@ -554,7 +554,7 @@ class EnvVarKeyProvider(KeyProvider):
 
     def candidates(self) -> Iterable[bytes]:
         """Execute candidates and return the result.
-        
+
             Returns:
                 ``Iterable[bytes]``.
         """
@@ -620,7 +620,7 @@ class RotatingKeyProvider(KeyProvider):
 
     def current(self) -> bytes:
         """Execute current and return the result.
-        
+
             Returns:
                 ``bytes``.
         """
@@ -629,7 +629,7 @@ class RotatingKeyProvider(KeyProvider):
 
     def candidates(self) -> Iterable[bytes]:
         """Execute candidates and return the result.
-        
+
             Returns:
                 ``Iterable[bytes]``.
         """

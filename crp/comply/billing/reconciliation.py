@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 import stripe
 
 from crp.comply.billing.constants import PLAN_FEATURES, PLAN_QUOTAS
@@ -33,7 +33,7 @@ def reconcile_subscriptions(
     Returns:
         Dict with ``checked``, ``repaired``, ``errors`` counts.
     """
-    result = {"checked": 0, "repaired": 0, "errors": 0, "details": []}
+    result: dict[str, Any] = {"checked": 0, "repaired": 0, "errors": 0, "details": []}
 
     try:
         subs = stripe.Subscription.list(
@@ -46,7 +46,10 @@ def reconcile_subscriptions(
         result["errors"] += 1
         return result
 
-    for sub in subs.auto_paging_iter():
+    # StripeObject is dict-like at runtime but not modelled as a Mapping
+    # in the stripe stubs; annotate Any to keep the existing access patterns.
+    subs_iter: Any = subs.auto_paging_iter()
+    for sub in subs_iter:
         if result["checked"] >= limit:
             break
         result["checked"] += 1

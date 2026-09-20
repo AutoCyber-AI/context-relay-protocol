@@ -18,7 +18,6 @@ from crp.core.orchestrator import CRPOrchestrator
 from crp.providers.base import LLMProvider
 from crp.security.audit_trail import ComplianceEventType
 
-
 # ---------------------------------------------------------------------------
 # Test providers
 # ---------------------------------------------------------------------------

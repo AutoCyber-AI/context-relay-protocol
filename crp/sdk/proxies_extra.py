@@ -464,7 +464,12 @@ class _ScanProxy:
             CRPScanGitHubApp wrapper instance.
         """
         try:
-            from crp.scan.github_app import CRPScanGitHubApp as _RealApp
+            # Latent gap: module defines GithubAppClient, not
+            # CRPScanGitHubApp; ImportError is caught and the fallback
+            # below runs. Left as-is to avoid a behavior change.
+            from crp.scan.github_app import (  # type: ignore[attr-defined]
+                CRPScanGitHubApp as _RealApp,
+            )
 
             return _RealApp()
         except ImportError:
@@ -577,7 +582,12 @@ class _ComplyProxy:
             ComplyGatewayClient instance (or the real class if available).
         """
         try:
-            from crp.comply.gateway_client import ComplyGatewayClient as RealClient
+            # Latent gap: module has no ComplyGatewayClient class (module
+            # level functions only); ImportError is caught and the fallback
+            # below runs. Left as-is to avoid a behavior change.
+            from crp.comply.gateway_client import (  # type: ignore[attr-defined]
+                ComplyGatewayClient as RealClient,
+            )
 
             return RealClient()
         except ImportError:

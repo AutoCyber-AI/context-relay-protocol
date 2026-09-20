@@ -13,7 +13,7 @@ import secrets
 import time
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 
 from crp.comply.billing.entitlements import _clerk_headers
 

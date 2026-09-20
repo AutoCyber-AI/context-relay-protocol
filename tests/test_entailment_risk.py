@@ -49,7 +49,6 @@ from crp.provenance.hallucination_scorer import (
     score_hallucination_risk,
 )
 
-
 # ===================================================================
 # Helper factories
 # ===================================================================
@@ -901,8 +900,8 @@ class TestReportGeneration:
 
     def test_markdown_includes_entailment_section(self):
         """Markdown report should have entailment section."""
-        from crp.provenance.report_generator import generate_markdown_report
         from crp.provenance._types import ProvenanceReport
+        from crp.provenance.report_generator import generate_markdown_report
 
         report = ProvenanceReport(
             session_id="test-session",
@@ -926,8 +925,8 @@ class TestReportGeneration:
 
     def test_markdown_shows_contradictions(self):
         """Contradictions should appear prominently in markdown."""
-        from crp.provenance.report_generator import generate_markdown_report
         from crp.provenance._types import ProvenanceReport
+        from crp.provenance.report_generator import generate_markdown_report
 
         report = ProvenanceReport(
             session_id="s", window_id="w", timestamp=0.0,
@@ -948,8 +947,8 @@ class TestReportGeneration:
 
     def test_markdown_includes_risk_section(self):
         """Risk section should appear in markdown."""
-        from crp.provenance.report_generator import generate_markdown_report
         from crp.provenance._types import ProvenanceReport
+        from crp.provenance.report_generator import generate_markdown_report
 
         report = ProvenanceReport(
             session_id="s", window_id="w", timestamp=0.0,
@@ -975,8 +974,8 @@ class TestReportGeneration:
 
     def test_json_includes_entailment(self):
         """JSON report should include entailment data."""
-        from crp.provenance.report_generator import generate_json_report
         from crp.provenance._types import ProvenanceReport
+        from crp.provenance.report_generator import generate_json_report
 
         report = ProvenanceReport(
             session_id="s", window_id="w", timestamp=0.0,
@@ -997,8 +996,8 @@ class TestReportGeneration:
 
     def test_json_includes_risk_assessment(self):
         """JSON report should include risk assessment."""
-        from crp.provenance.report_generator import generate_json_report
         from crp.provenance._types import ProvenanceReport
+        from crp.provenance.report_generator import generate_json_report
 
         report = ProvenanceReport(
             session_id="s", window_id="w", timestamp=0.0,

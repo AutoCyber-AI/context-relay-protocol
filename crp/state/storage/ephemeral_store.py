@@ -68,7 +68,7 @@ def _detect_structure(data: Any) -> str:
             return DataStructure.CODE
         # Tabular: lines with consistent delimiter counts
         lines = stripped.split("\n")[:5]
-        if len(lines) >= 2 and all("," in l or "\t" in l for l in lines):
+        if len(lines) >= 2 and all("," in ln or "\t" in ln for ln in lines):
             return DataStructure.TABULAR
     return DataStructure.TEXT
 

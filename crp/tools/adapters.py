@@ -89,5 +89,8 @@ def fabric_from_callables(
     for fn in callables:
         descriptor = descriptor_from_callable(fn, operation_types)
         fabric.register(descriptor)
-        executor.register_impl(descriptor.capability_id, lambda args, _fn=fn: _fn(**args))
+        # ``_fn=fn`` default binds the current loop iteration's callable.
+        def impl(args: dict[str, Any], _fn: Callable[..., Any] = fn) -> Any:
+            return _fn(**args)
+        executor.register_impl(descriptor.capability_id, impl)
     return fabric, executor

@@ -6,7 +6,11 @@ from __future__ import annotations
 
 import pytest
 
-from crp.comply.checkpoint_inbox import CheckpointInboxError, list_active_checkpoints, resolve_checkpoint
+from crp.comply.checkpoint_inbox import (
+    CheckpointInboxError,
+    list_active_checkpoints,
+    resolve_checkpoint,
+)
 from crp.security.checkpoint import CheckpointResolutionAction
 from crp.security.control_plane import get_default_control_plane
 

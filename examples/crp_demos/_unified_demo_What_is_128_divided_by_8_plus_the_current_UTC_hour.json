@@ -1,0 +1,734 @@
+{
+  "generated_at": "2026-09-03T05:20:29.000483+00:00",
+  "question": "What is 128 divided by 8 plus the current UTC hour?",
+  "model": "meta-llama-3.1-8b-instruct",
+  "endpoint": "http://localhost:1234/v1/",
+  "raw_llm": {
+    "mode": "RAW LLM",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is 128 divided by 8 plus the current UTC hour?",
+    "response": "{\"name\": \"div\", \"parameters\": {\"a\": 128, \"b\": 8}} \n{\"name\": \"add\", \"parameters\": {\"a\": \"hour\", \"b\": 1}}",
+    "finish_reason": "stop",
+    "elapsed_s": 10.48
+  },
+  "crp_agent_no_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is 128 divided by 8 plus the current UTC hour?",
+    "response": "The current UTC hour is not provided in the facts, so we can't determine its value. However, we do know that 128 divided by 8 equals 16.0 (source: division operation). \n\nTo answer the user's question, we would need to know the current UTC hour and perform the addition of this hour with the result of the division operation.",
+    "operations": "retrieve",
+    "preset": null,
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 1
+    },
+    "elapsed_s": 30.45,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['RETRIEVE'] \u2192 planned operations: RETRIEVE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 calculate\n*tool-select* \u2014 Selected tool: calculate for operation: RETRIEVE\n\n## Calling calculate\n*tool-call* \u2014 {\n  \"capability\": \"calculate\",\n  \"arguments\": {\n    \"a\": 128,\n    \"b\": 8,\n    \"operation\": \"/\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 0, \"capability_id\": \"calculate\", \"payload\": {\"result\": 16.0}}\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['RETRIEVE']Selected calculate\n\n## Final answer\n*answer* \u2014 The current UTC hour is not provided in the facts, so we can't determine its value. However, we do know that 128 divided by 8 equals 16.0 (source: division operation). \n\nTo answer the user's question, we would need to know the current UTC hour and perform the addition of this hour with the result of the division operation.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 1\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 1\n- **halted**: False\n- **trust_score**: 1.0\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "ba6c00c369da",
+        "ts": 1788412749.839263,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "9c224b4c1734",
+        "ts": 1788412749.8408678,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['RETRIEVE']",
+          "plan": [
+            "RETRIEVE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "b05cd1f6feb9",
+        "ts": 1788412749.8408866,
+        "messageId": "reasoning",
+        "delta": "plan=['RETRIEVE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "c94669615725",
+        "ts": 1788412749.840968,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "8788f35953cb",
+        "ts": 1788412749.8409827,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "bc19a8a7342e",
+        "ts": 1788412762.4356525,
+        "toolCallId": "RETRIEVE_0",
+        "toolCallName": "calculate",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "9a9e2827b4c5",
+        "ts": 1788412762.4356675,
+        "messageId": "reasoning",
+        "delta": "Selected calculate"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "ca572ced39f0",
+        "ts": 1788412762.435903,
+        "toolCallId": "RETRIEVE_0",
+        "delta": "{\"capability\": \"calculate\", \"arguments\": {\"a\": 128, \"b\": 8, \"operation\": \"/\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "231522ed4e16",
+        "ts": 1788412762.4359136,
+        "toolCallId": "RETRIEVE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "ef57e2ff107d",
+        "ts": 1788412762.436069,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "fe6a4439c3d8",
+        "ts": 1788412762.4361923,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "faddc5b25f0b",
+        "ts": 1788412762.4362028,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "f371d4b575d3",
+        "ts": 1788412762.4362297,
+        "toolCallId": "RETRIEVE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 0,
+          "capability_id": "calculate",
+          "payload": {
+            "result": 16.0
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "b832596fcf50",
+        "ts": 1788412762.4362793,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "a115d9c5c02d",
+        "ts": 1788412776.7143908,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "12d7e5329afd",
+        "ts": 1788412776.7145019,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "552391c4e95c",
+        "ts": 1788412776.7146654,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 1,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 1,
+          "halted": false,
+          "trust_score": 1.0,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "e27556171204",
+        "ts": 1788412776.7146964,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "8421824726e4",
+        "ts": 1788412776.7147064,
+        "messageId": "final",
+        "delta": "The current UTC hour is not provided in the facts, so we can't determine its value. However, we do know that 128 divided by 8 equals 16.0 (source: division operation). \n\nTo answer the user's question, we would need to know the current UTC hour and perform the addition of this hour with the result of the division operation."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "e3251eda4d53",
+        "ts": 1788412776.7147145,
+        "messageId": "final"
+      }
+    ]
+  },
+  "crp_agent_with_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is 128 divided by 8 plus the current UTC hour?",
+    "response": "The current UTC hour is not provided in the facts, but we can calculate it using Python's datetime module. The result of dividing 128 by 8 is consistently 16.0 across multiple calculations.",
+    "operations": "retrieve \u2192 retrieve \u2192 verify \u2192 synthesise",
+    "preset": "research_assistant",
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 3
+    },
+    "elapsed_s": 52.24,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE'] \u2192 planned operations: RETRIEVE, RETRIEVE, VERIFY, SYNTHESISE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 calculate\n*tool-select* \u2014 Selected tool: calculate for operation: RETRIEVE\n\n## Calling calculate\n*tool-call* \u2014 {\n  \"capability\": \"calculate\",\n  \"arguments\": {\n    \"a\": 128,\n    \"b\": 8,\n    \"operation\": \"/\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 0, \"capability_id\": \"calculate\", \"payload\": {\"result\": 16.0}}\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Operation: VERIFY\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 calculate\n*tool-select* \u2014 Selected tool: calculate for operation: VERIFY\n\n## Calling calculate\n*tool-call* \u2014 {\n  \"capability\": \"calculate\",\n  \"arguments\": {\n    \"a\": 128,\n    \"b\": 8,\n    \"operation\": \"/\"\n  }\n}\n\n## Operation completed: VERIFY\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"VERIFY\", \"operation_index\": 2, \"capability_id\": \"calculate\", \"payload\": {\"result\": 16.0}}\n\n## Operation: SYNTHESISE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 calculate\n*tool-select* \u2014 Selected tool: calculate for operation: SYNTHESISE\n\n## Calling calculate\n*tool-call* \u2014 {\n  \"capability\": \"calculate\",\n  \"arguments\": {\n    \"a\": 128,\n    \"b\": 8,\n    \"operation\": \"/\"\n  }\n}\n\n## Operation completed: SYNTHESISE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"SYNTHESISE\", \"operation_index\": 3, \"capability_id\": \"calculate\", \"payload\": {\"result\": 16.0}}\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']Selected calculateSelected calculateSelected calculate\n\n## Final answer\n*answer* \u2014 The current UTC hour is not provided in the facts, but we can calculate it using Python's datetime module. The result of dividing 128 by 8 is consistently 16.0 across multiple calculations.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 3\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 3\n- **halted**: False\n- **trust_score**: 0.85\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "719f4aefaacb",
+        "ts": 1788412780.331733,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "688fe6e7e092",
+        "ts": 1788412780.3324947,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']",
+          "plan": [
+            "RETRIEVE",
+            "RETRIEVE",
+            "VERIFY",
+            "SYNTHESISE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "142032d7f3d2",
+        "ts": 1788412780.3325052,
+        "messageId": "reasoning",
+        "delta": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "d22ace584206",
+        "ts": 1788412780.33255,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "08b328c6e86b",
+        "ts": 1788412780.3325613,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "a492846ce5e1",
+        "ts": 1788412790.521009,
+        "toolCallId": "RETRIEVE_0",
+        "toolCallName": "calculate",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "cca59c387aa8",
+        "ts": 1788412790.5210235,
+        "messageId": "reasoning",
+        "delta": "Selected calculate"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "2aa011db429d",
+        "ts": 1788412790.5213861,
+        "toolCallId": "RETRIEVE_0",
+        "delta": "{\"capability\": \"calculate\", \"arguments\": {\"a\": 128, \"b\": 8, \"operation\": \"/\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "975b571f456d",
+        "ts": 1788412790.5213954,
+        "toolCallId": "RETRIEVE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "176d8d282d34",
+        "ts": 1788412790.5216393,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "da1e0945bd8a",
+        "ts": 1788412790.5218852,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "3309be0478b5",
+        "ts": 1788412790.5219862,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "4878c8eec8ff",
+        "ts": 1788412790.5220683,
+        "toolCallId": "RETRIEVE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 0,
+          "capability_id": "calculate",
+          "payload": {
+            "result": 16.0
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "8d202c14664a",
+        "ts": 1788412790.5221412,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "216bc17577a2",
+        "ts": 1788412790.5221825,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "c25b38e4eab3",
+        "ts": 1788412790.5221903,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "45a9d32b26fd",
+        "ts": 1788412800.105451,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "0b985d612e4b",
+        "ts": 1788412800.1054707,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "8d7980297ce2",
+        "ts": 1788412800.1055393,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "80b9c2c98280",
+        "ts": 1788412800.1055808,
+        "step": "VERIFY"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "2123e9d0abf9",
+        "ts": 1788412800.1055908,
+        "messageId": "narrative",
+        "delta": "Positioning VERIFY... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "f6f747b5ed78",
+        "ts": 1788412809.3272827,
+        "toolCallId": "VERIFY_2",
+        "toolCallName": "calculate",
+        "reason": "VERIFY"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "c5df3bdc3f1a",
+        "ts": 1788412809.3272989,
+        "messageId": "reasoning",
+        "delta": "Selected calculate"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "eb958aab1779",
+        "ts": 1788412809.327633,
+        "toolCallId": "VERIFY_2",
+        "delta": "{\"capability\": \"calculate\", \"arguments\": {\"a\": 128, \"b\": 8, \"operation\": \"/\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "fcc6c461d73d",
+        "ts": 1788412809.3276439,
+        "toolCallId": "VERIFY_2"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "b76230bb7662",
+        "ts": 1788412809.327786,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "27aa8612fb9b",
+        "ts": 1788412809.3279033,
+        "step": "VERIFY"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "2eeac63d9718",
+        "ts": 1788412809.3279135,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "b84eb0656f4d",
+        "ts": 1788412809.32794,
+        "toolCallId": "VERIFY_2",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "VERIFY",
+          "operation_index": 2,
+          "capability_id": "calculate",
+          "payload": {
+            "result": 16.0
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "368addefe127",
+        "ts": 1788412809.3279848,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "VERIFY"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "f1ea851d5125",
+        "ts": 1788412809.3280332,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "9536e9a8f97e",
+        "ts": 1788412809.3280442,
+        "messageId": "narrative",
+        "delta": "Positioning SYNTHESISE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "3d64b4fd52e2",
+        "ts": 1788412817.5056913,
+        "toolCallId": "SYNTHESISE_3",
+        "toolCallName": "calculate",
+        "reason": "SYNTHESISE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "387d63cf003e",
+        "ts": 1788412817.505703,
+        "messageId": "reasoning",
+        "delta": "Selected calculate"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "f8aade6a989a",
+        "ts": 1788412817.5059247,
+        "toolCallId": "SYNTHESISE_3",
+        "delta": "{\"capability\": \"calculate\", \"arguments\": {\"a\": 128, \"b\": 8, \"operation\": \"/\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "47d08121e88c",
+        "ts": 1788412817.5059328,
+        "toolCallId": "SYNTHESISE_3"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "167f88a23580",
+        "ts": 1788412817.5060427,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "becdf44829c0",
+        "ts": 1788412817.5061312,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "b459b9f63df4",
+        "ts": 1788412817.506139,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "de5e3da76426",
+        "ts": 1788412817.506161,
+        "toolCallId": "SYNTHESISE_3",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "SYNTHESISE",
+          "operation_index": 3,
+          "capability_id": "calculate",
+          "payload": {
+            "result": 16.0
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "8ab880b59ac7",
+        "ts": 1788412817.506194,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "SYNTHESISE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "65e6f388665e",
+        "ts": 1788412828.998248,
+        "name": "crp.trust",
+        "value": {
+          "score": 0.85,
+          "action": "allow",
+          "reason": "1 IoC(s) detected: shell_injection"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "0eb4fa9a10d3",
+        "ts": 1788412828.9983773,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "c4827ffb66c5",
+        "ts": 1788412828.9985213,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 3,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 3,
+          "halted": false,
+          "trust_score": 0.85,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "401f82d6e2e9",
+        "ts": 1788412828.9985657,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "25d3602a2273",
+        "ts": 1788412828.998578,
+        "messageId": "final",
+        "delta": "The current UTC hour is not provided in the facts, but we can calculate it using Python's datetime module. The result of dividing 128 by 8 is consistently 16.0 across multiple calculations."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "41d0e5434317",
+        "ts": 1788412828.9985883,
+        "messageId": "final"
+      }
+    ]
+  }
+}

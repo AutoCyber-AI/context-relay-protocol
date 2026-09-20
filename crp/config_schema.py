@@ -181,7 +181,7 @@ def validate_config(data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
 
     def _check_type(path: str, value: Any, expected: str) -> None:
-        type_map = {
+        type_map: dict[str, type | tuple[type, ...]] = {
             "string": str,
             "integer": int,
             "number": (int, float),

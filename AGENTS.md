@@ -67,6 +67,19 @@ after every material change.
   silent-fallback-to-broken-`CustomProvider` in `crp/sdk/client.py`, and an
   Axiom 9 watermark-disclosure gap in `specification/`/`schemas/`).
 
+> ### 🔴 OUTSTANDING TODOS (explicitly deferred, not forgotten — 2026-08-26)
+> 1. **`crp/sdk/client.py::_ensure_orchestrator()`** silently falls back to a
+>    stub `CustomProvider` returning `("", "stop")` when auto-detection
+>    raises `ValueError` — should raise loudly instead. NOT FIXED.
+> 2. **Axiom 9 ("unmodified output") disclosure** of the license watermark
+>    append is only in `README.md` — still missing from
+>    `specification/02_CORE_PROTOCOL.md`, `crp/core/session.py` docstring,
+>    and `schemas/quality-report.json`. NOT FIXED.
+> 3. Whole-repo `ruff check` / spec-reference consistency pass — pre-existing,
+>    not addressed this session.
+> 4. `crp download-models` clean-machine verification — pre-existing, not
+>    addressed this session.
+
 ### Wave 3 — Hosted product + money funnel (NOT STARTED)
 - ⬜ Extract `frontend/agent-console/` and build CDN asset pipeline.
 - ⬜ Gateway production hardening: auth, key vault, rate limits, quota.

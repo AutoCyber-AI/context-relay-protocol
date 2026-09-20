@@ -28,8 +28,8 @@ import logging
 import os
 import random
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 import uuid
 from typing import Any
 
@@ -134,7 +134,7 @@ class LlamaCppAdapter(LLMProvider):
 
     def context_window_size(self) -> int:
         """Return the current context window count.
-        
+
             Returns:
                 ``int``.
         """
@@ -254,7 +254,7 @@ class LlamaCppAdapter(LLMProvider):
 
         Returns ``(text, finish_reason, tool_calls, raw_assistant_message)``.
         """
-        max_tokens = kwargs.pop("max_tokens", self._max_tokens)
+        max_tokens: Any = kwargs.pop("max_tokens", self._max_tokens)
 
         if self._server_url:
             return self._generate_http_with_tools(
@@ -294,7 +294,10 @@ class LlamaCppAdapter(LLMProvider):
         **kwargs: object,
     ) -> tuple[str, str, list[dict[str, object]] | None, dict[str, object] | None]:
         """Generate via llama.cpp's OpenAI-compatible HTTP endpoint with tools."""
-        url = f"{self._server_url.rstrip('/')}/v1/chat/completions"
+        # Caller guarantees _server_url is set when this method is used
+        # (see generate_chat_with_tools); the empty-string fallback never
+        # triggers but keeps the type narrow.
+        url = f"{(self._server_url or '').rstrip('/')}/v1/chat/completions"
         payload = json.dumps({
             "messages": messages,
             "tools": tools,
@@ -353,7 +356,7 @@ class LlamaCppAdapter(LLMProvider):
 
         raw_tool_calls = message.get("tool_calls")
         if raw_tool_calls:
-            tool_calls_out: list[dict[str, object]] = []
+            tool_calls_out: list[dict[str, Any]] = []
             for tc in raw_tool_calls:
                 func = tc.get("function", {}) or {}
                 args_raw = func.get("arguments")

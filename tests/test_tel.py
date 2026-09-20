@@ -146,6 +146,54 @@ class TestAgentEventMapping:
         mapped = map_agent_event(ae)
         assert mapped[0].type == EventType.RUN_ERROR
 
+    def test_intent_plan_read_from_data(self) -> None:
+        ae = AgentEvent(
+            kind=AgentEventKind.INTENT_CLASSIFIED,
+            data={"data": {"plan": ["RETRIEVE", "GENERATE"]}},
+        )
+        mapped = map_agent_event(ae)
+        assert mapped[0].payload["value"]["plan"] == ["RETRIEVE", "GENERATE"]
+
+    def test_trust_decision_maps_to_custom(self) -> None:
+        ae = AgentEvent(
+            kind=AgentEventKind.TRUST_DECISION,
+            data={"trust_score": 0.55, "action": "gate", "reason": "secret_pattern"},
+        )
+        mapped = map_agent_event(ae)
+        custom = [e for e in mapped if e.type == EventType.CUSTOM]
+        assert len(custom) == 1
+        assert custom[0].payload["name"] == "crp.trust"
+        assert custom[0].payload["value"]["score"] == 0.55
+
+    def test_kill_switch_maps_to_custom(self) -> None:
+        ae = AgentEvent(
+            kind=AgentEventKind.KILL_SWITCH_FIRED,
+            data={"trust_score": 0.0, "reason": "threshold_crossed"},
+        )
+        mapped = map_agent_event(ae)
+        custom = [e for e in mapped if e.type == EventType.CUSTOM]
+        assert custom[0].payload["name"] == "crp.kill_switch"
+
+    def test_checkpoint_maps_to_custom(self) -> None:
+        req = AgentEvent(
+            kind=AgentEventKind.CHECKPOINT_REQUESTED,
+            detail="cp-1",
+            data={"request": {"tool": "delete"}},
+        )
+        res = AgentEvent(
+            kind=AgentEventKind.CHECKPOINT_RESOLVED,
+            detail="cp-1",
+            data={"resolution": "approve", "reviewer": "alice"},
+        )
+        assert any(
+            e.payload.get("name") == "crp.checkpoint" and e.payload.get("value", {}).get("action") == "requested"
+            for e in map_agent_event(req)
+        )
+        assert any(
+            e.payload.get("name") == "crp.checkpoint" and e.payload.get("value", {}).get("action") == "resolved"
+            for e in map_agent_event(res)
+        )
+
 
 class TestFaithfulNarration:
     def test_supported_claim_passes(self) -> None:

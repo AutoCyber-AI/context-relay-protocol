@@ -728,9 +728,11 @@ async def _step13_18_governance_analysis_async(
     except ValueError:
         risk_level = RiskLevel.LOW
     budget = AgentSafetyBudget(budget=session.safety_budget)
-    decision = budget.account(risk_level)
-    session.safety_budget = decision.budget
-    if decision.halted:
+    # Renamed from ``decision`` — that name is already bound to the
+    # PolicyDecision from Step 14's enforce_policy above.
+    budget_decision = budget.account(risk_level)
+    session.safety_budget = budget_decision.budget
+    if budget_decision.halted:
         report.risk_level = "CRITICAL"
         report.halt_reason = "safety_budget_depleted"
         session.record_audit(

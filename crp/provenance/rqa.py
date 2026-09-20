@@ -71,10 +71,10 @@ def compute_quality_score(
 
     def clamp(x: float) -> float:
         """Execute clamp and return the result.
-        
+
             Args:
                 x (float): The x value.
-        
+
             Returns:
                 ``float``.
         """

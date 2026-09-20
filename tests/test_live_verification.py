@@ -370,7 +370,7 @@ def tier3_rbac_admin_reset(prov):
 
 def run_all(provider_name: str, model: str):
     print(f"\n{'='*60}")
-    print(f"CRP 2.0 Live Verification Suite")
+    print("CRP 2.0 Live Verification Suite")
     print(f"Provider: {provider_name} | Model: {model}")
     print(f"{'='*60}\n")
 
@@ -395,7 +395,7 @@ def run_all(provider_name: str, model: str):
         t(prov)
 
     # Tier 2: Multi-Window
-    print(f"\nTIER 2: Multi-Window & State")
+    print("\nTIER 2: Multi-Window & State")
     print("-" * 40)
     tier2_tests = [
         tier2_fact_accumulation,
@@ -407,7 +407,7 @@ def run_all(provider_name: str, model: str):
         t(prov)
 
     # Tier 3: Security
-    print(f"\nTIER 3: Security")
+    print("\nTIER 3: Security")
     print("-" * 40)
     tier3_tests = [
         tier3_injection_detection,

@@ -135,7 +135,7 @@ class CRPConfig:
 
         text = p.read_text(encoding="utf-8")
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]  # PyYAML ships no PEP 561 stubs
             data = yaml.safe_load(text) or {}
         except Exception:
             # Fallback to JSON if yaml not available or parse fails
@@ -154,7 +154,7 @@ class CRPConfig:
         logger.info("Loaded CRP config from %s", path)
         return inst
 
-    def save(self, path: str | None = None) -> None:
+    def save(self, path: str | Path | None = None) -> None:
         """Persist current config to disk.
 
         Args:

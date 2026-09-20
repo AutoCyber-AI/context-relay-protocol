@@ -18,6 +18,7 @@ from __future__ import annotations
 import pytest
 
 from crp.envelope.packer import PackedFact
+from crp.provenance import DecisionProvenanceEngine, ProvenanceConfig
 from crp.provenance._types import (
     AttributionType,
     ClaimAttribution,
@@ -27,17 +28,16 @@ from crp.provenance._types import (
     DistortionType,
     FabricationResult,
     FabricationType,
+    FactScore,
     FidelityReport,
     OmissionResult,
     OmissionSeverity,
-    FactScore,
+    ProvenanceReport,
 )
-from crp.provenance.distortion_detector import detect_distortions
-from crp.provenance.omission_analyzer import analyze_omissions
-from crp.provenance.fabrication_detector import detect_fabrications
 from crp.provenance.contradiction_detector import detect_contradictions
-from crp.provenance import DecisionProvenanceEngine, ProvenanceConfig
-
+from crp.provenance.distortion_detector import detect_distortions
+from crp.provenance.fabrication_detector import detect_fabrications
+from crp.provenance.omission_analyzer import analyze_omissions
 
 # ===================================================================
 # Helper factories
@@ -792,10 +792,8 @@ class TestDPEFidelityIntegration:
 class TestReportGeneratorFidelity:
     """Tests for fidelity sections in generated reports."""
 
-    def _make_report_with_fidelity(self) -> "ProvenanceReport":
+    def _make_report_with_fidelity(self) -> ProvenanceReport:
         """Create a report with fidelity data for testing."""
-        from crp.provenance._types import ProvenanceReport
-
         fid = FidelityReport(
             distortions=[
                 DistortionResult(

@@ -26,10 +26,10 @@ class InMemoryBackend(StorageBackend):
 
     def get(self, key: str) -> Any:
         """Execute get and return the result.
-        
+
             Args:
                 key (str): The key value.
-        
+
             Returns:
                 ``Any``.
         """
@@ -39,12 +39,12 @@ class InMemoryBackend(StorageBackend):
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """Execute set and return the result.
-        
+
             Args:
                 key (str): The key value.
                 value (Any): The value value.
                 ttl (int | None): The ttl value.
-        
+
             Returns:
                 ``None``.
         """
@@ -57,10 +57,10 @@ class InMemoryBackend(StorageBackend):
 
     def delete(self, key: str) -> None:
         """Execute delete and return the result.
-        
+
             Args:
                 key (str): The key value.
-        
+
             Returns:
                 ``None``.
         """
@@ -70,7 +70,7 @@ class InMemoryBackend(StorageBackend):
 
     def keys(self) -> list[str]:
         """Execute keys and return the result.
-        
+
             Returns:
                 ``list[str]``.
         """
@@ -80,7 +80,7 @@ class InMemoryBackend(StorageBackend):
 
     def size(self) -> int:
         """Return the current size count.
-        
+
             Returns:
                 ``int``.
         """

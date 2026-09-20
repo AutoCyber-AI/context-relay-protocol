@@ -69,6 +69,10 @@ dev = [
     "ruff>=0.1,<1",
     "mypy>=1.5,<2",
     "pip-audit>=2.6,<3",
+    # crp_shared (repo-local shared server package) test collection needs these
+    "fastapi>=0.110,<1",
+    "asyncpg>=0.29,<1",
+    "webauthn>=2.0,<3",
 ]
 docs = [
     "mkdocs-material>=9.5,<10",
@@ -81,7 +85,7 @@ docs = [
     "lxml>=5.0,<7",
 ]
 mcp = [
-    "mcp>=1.12.0",
+    "mcp>=1.12.0,<2",
     "pyyaml>=6.0",
     "httpx>=0.24,<1",
     "pyjwt[crypto]>=2.8,<3",
@@ -109,11 +113,17 @@ packages = ["crp", "crp_mcp"]
 [tool.hatch.build.targets.wheel.force-include]
 "site-docs/spec" = "crp_mcp/spec_corpus/spec"
 "site-docs/topics" = "crp_mcp/spec_corpus/topics"
+# NOTE: The built CDN console lives in frontend/agent-console/dist/ and is
+# intentionally NOT bundled in the wheel by default (it requires Node to build
+# and would bloat the package).  Use `npm run build` in frontend/agent-console/
+# and mount it manually, or add a CI step to force-include it if desired.
 
 [tool.hatch.build.targets.sdist]
 include = [
     "crp/**/*.py",
     "crp/**/*.json",
+    "crp/**/*.yaml",
+    "crp/**/*.yml",
     "crp_mcp/**/*.py",
     "crp_mcp/**/*.json",
     "schemas/*.json",
@@ -174,15 +184,16 @@ warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
 
+# numpy 2.5+ ships stubs using PEP 695 `type` statements (3.12+ syntax), which
+# mypy rejects when targeting py3.10 and which halts all further checking.
+# Skip following numpy internals — its symbols become Any, which is precise
+# enough for the small surface CRP uses. follow_imports_for_stubs is required
+# for per-module follow_imports to apply to stub files at all.
+follow_imports_for_stubs = true
+
 [[tool.mypy.overrides]]
-module = [
-    "tests.test_live_comprehensive",
-    "tests.test_live_full_capture",
-    "tests.test_live_long_generation",
-]
-# Live verification scripts are standalone CLIs, not unit tests; their types
-# are intentionally loose to support interactive debugging across providers.
-ignore_errors = true
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -36,7 +36,7 @@ import logging
 import re
 import threading
 import time
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -375,7 +375,7 @@ class ContextEnforcer:
 
     # ---------------------------------------------------------------- config
 
-    def with_sink(self, sink: AuditSink) -> "ContextEnforcer":
+    def with_sink(self, sink: AuditSink) -> ContextEnforcer:
         """Return a shallow copy with a different sink (ergonomic swap)."""
         return ContextEnforcer(
             policy=self.policy,
@@ -613,7 +613,7 @@ class ContextEnforcer:
         integrators who want a per-turn audit record even if they never
         authored a manifest.
         """
-        from .manifest_derive import derive_sources_from_messages, derive_manifest_from_messages
+        from .manifest_derive import derive_manifest_from_messages, derive_sources_from_messages
 
         sid = session_id or self._session_id
         effective_manifest = manifest

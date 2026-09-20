@@ -14,7 +14,6 @@ import pytest
 # ═══════════════════════════════════════════════════════════════════════
 # §21 relay_strategies unit tests
 # ═══════════════════════════════════════════════════════════════════════
-
 from crp.core.relay_strategies import (
     AugmentationEvent,
     ContextIndex,
@@ -34,7 +33,6 @@ from crp.core.relay_strategies import (
     detect_index_references,
     find_relevant_facts_for_sentence,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers — lightweight Fact & WarmStore mocks
@@ -711,8 +709,7 @@ class TestDispatchStreamAugmented:
                 "CRP ", "uses ", "envelope ", "construction. ",
                 "It ", "has ", "6 ", "phases.",
             ]
-            for t in tokens:
-                yield t
+            yield from tokens
 
         provider.generate_chat_stream.side_effect = mock_stream
 
@@ -752,8 +749,7 @@ class TestDispatchStreamAugmented:
             call_count[0] += 1
             # Each call yields a sentence about CRP envelope
             tokens = [f"CRP envelope handles phase {call_count[0]} of context. "]
-            for t in tokens:
-                yield t
+            yield from tokens
 
         provider.generate_chat_stream.side_effect = mock_stream
 

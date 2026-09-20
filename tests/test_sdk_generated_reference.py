@@ -12,7 +12,6 @@ import pytest
 
 import crp
 
-
 ROOT = Path(__file__).resolve().parent.parent
 MODULES_DIR = ROOT / "site-docs" / "api" / "modules"
 

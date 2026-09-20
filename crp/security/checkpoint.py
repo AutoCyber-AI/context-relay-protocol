@@ -244,20 +244,20 @@ class Checkpoint:
 
         def decorator(func: Callable) -> Callable:
             """Execute decorator and return the result.
-            
+
                 Args:
                     func (Callable): The func value.
-            
+
                 Returns:
                     ``Callable``.
             """
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 """Execute async wrapper and return the result.
-                
+
                     Args:
                         *args: Variable positional arguments.
                         **kwargs: Variable keyword arguments.
-                
+
                     Returns:
                         ``Any``.
                 """
@@ -289,11 +289,11 @@ class Checkpoint:
 
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 """Execute sync wrapper and return the result.
-                
+
                     Args:
                         *args: Variable positional arguments.
                         **kwargs: Variable keyword arguments.
-                
+
                     Returns:
                         ``Any``.
                 """

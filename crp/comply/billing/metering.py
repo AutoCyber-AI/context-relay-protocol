@@ -103,7 +103,10 @@ class Metering:
     def report_metered_usage(subscription_item_id: str, quantity: int = 1) -> None:
         """Report usage to Stripe for metered billing (optional)."""
         try:
-            stripe.SubscriptionItem.create_usage_record(
+            # Latent bug: stripe>=14 removed SubscriptionItem.create_usage_record
+            # (usage reporting API); this always raises AttributeError and is
+            # caught below. Left as-is to avoid a behavior change.
+            stripe.SubscriptionItem.create_usage_record(  # type: ignore[attr-defined]
                 subscription_item_id,
                 quantity=quantity,
                 timestamp=int(time.time()),

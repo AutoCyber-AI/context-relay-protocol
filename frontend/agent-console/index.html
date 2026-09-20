@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRP Agent Console</title>
+  <script>
+    window.CRP_STREAM_URL = window.CRP_STREAM_URL || '/v1/tel/stream';
+    window.CRP_CHAT_URL = window.CRP_CHAT_URL || '/v1/chat/completions';
+    window.CRP_SESSION_ID = window.CRP_SESSION_ID || '';
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

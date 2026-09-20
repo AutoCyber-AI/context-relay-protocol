@@ -7,11 +7,24 @@ description: CRP is the agentic positioning layer for SLM-first AI. MCP exposes 
 
 # Why CRP?
 
-## The Context Problem Nobody Has Solved
+## The Agentic Governance Problem Nobody Has Solved
 
-Every AI application faces the same fundamental limitation: **LLMs have finite context and finite output.** Ask for a comprehensive document and it truncates. Build a multi-turn agent and context degrades. Deploy to production and there's no audit trail.
+Every AI application now faces three problems at once:
+
+1. **LLMs have finite context and output** — long tasks truncate and prior context degrades.
+2. **Agents need safety and grounding** — tool-using agents can take wrong actions, hallucinate sources, or leak data without visible controls.
+3. **Governance must be provable** — EU AI Act, ISO 42001, NIST AI RMF, and SOC 2-for-AI all require evidence that controls actually ran, not just that they exist on paper.
 
 Existing solutions each solve one piece:
+
+- **RAG** retrieves documents but doesn't manage output, continuation, or safety
+- **MemGPT/Letta** pages memory but burns tokens on self-management
+- **LangChain/LlamaIndex** chains prompts but has no structured context lifecycle or audit chain
+- **MCP** exposes tools but doesn't decide which agent uses them, when, or with what context
+- **A2A** connects agents but doesn't position them on the right task with the right tools
+- **CRP** is the positioning and governance layer: it selects operations, loads only the tools each call needs, carries state forward, runs safety checks, and proves every step
+
+**CRP is the first protocol that manages the complete context lifecycle** — ingestion, extraction, packing, dispatch, continuation, quality assessment, safety verification, and cross-session persistence — as a single, coherent, auditable system.
 
 - **RAG** retrieves documents but doesn't manage output or continuation
 - **MemGPT/Letta** pages memory but burns tokens on self-management

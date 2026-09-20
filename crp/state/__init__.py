@@ -2,16 +2,11 @@
 # Licensed under Elastic License 2.0 — see LICENSE.md for details.
 """State management — facts, warm store, event log, snapshots, cold storage."""
 
+from .backends import InMemoryBackend, StorageBackend, StorageBackendError
 from .cold_storage import PersistedStateHeader, persist_to_cold, restore_from_cold
 from .compaction import CompactionConfig, CompactionResult, compact, should_compact  # noqa: F401
-from .critical_state import CriticalState, StructuralState
-from .event_log import FactEventLog
-from .fact import StateFact, set_embedding_function
-from .serialization import FactGraphSerializer
-from .snapshot import EventLogSnapshot, SnapshotManager
-from .backends import InMemoryBackend, StorageBackend, StorageBackendError
-from .warm_store import WarmStateStore, WarmStoreConfig
 from .coverage_set import CoverageEntry, CoverageSet, ResidualItem
+from .critical_state import CriticalState, StructuralState
 from .cso import (
     CognitiveStateObject,
     Decision,
@@ -24,6 +19,8 @@ from .cso import (
     preservation_report,
     relay_cso,
 )
+from .event_log import FactEventLog
+from .fact import StateFact, set_embedding_function
 from .horizons import ContextTier, MultiHorizonContext, TurnEntry
 from .memory_authority import (
     Authority,
@@ -34,7 +31,17 @@ from .memory_authority import (
     MemoryTier,
 )
 from .scratch_buffer import ScratchBuffer, ScratchEntry, ScratchPersistence
-from .storage import StorageRouter, AccessPattern, RollingContextLog, HotCache, InvertedIndex, EphemeralStore
+from .serialization import FactGraphSerializer
+from .snapshot import EventLogSnapshot, SnapshotManager
+from .storage import (
+    AccessPattern,
+    EphemeralStore,
+    HotCache,
+    InvertedIndex,
+    RollingContextLog,
+    StorageRouter,
+)
+from .warm_store import WarmStateStore, WarmStoreConfig
 
 __all__ = [
     "AccessPattern",

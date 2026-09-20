@@ -3,7 +3,14 @@
 """Envelope construction — 6-phase algorithm, scoring, packing, formatting."""
 
 from .builder import EnvelopeResult, EnvelopeState, compute_envelope_budget, construct
-from .cdr import CDR_MIN_RELEVANCE, CDRRankResult, CDRScoredFact, cdr_rank, cdr_score, update_coverage_after_window
+from .cdr import (
+    CDR_MIN_RELEVANCE,
+    CDRRankResult,
+    CDRScoredFact,
+    cdr_rank,
+    cdr_score,
+    update_coverage_after_window,
+)
 from .decomposer import DecompositionResult, decompose_task_aspects
 from .formatter import EnvelopeSection, format_envelope
 from .packer import PackedFact, PackingResult, estimate_tokens, pack_facts

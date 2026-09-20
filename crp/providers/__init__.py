@@ -14,6 +14,8 @@ Usage::
     provider = OllamaAdapter(model="llama3.1")
 """
 
+from typing import Any
+
 from crp.providers.base import LLMProvider
 from crp.providers.custom import CustomProvider
 from crp.providers.discovery import (
@@ -28,8 +30,9 @@ from crp.providers.llamacpp import LlamaCppAdapter
 from crp.providers.ollama import OllamaAdapter
 from crp.providers.openai import OpenAIAdapter
 
+
 # Lazy import for optional dependency: Anthropic
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name == "AnthropicAdapter":
         from crp.providers.anthropic import AnthropicAdapter
         return AnthropicAdapter

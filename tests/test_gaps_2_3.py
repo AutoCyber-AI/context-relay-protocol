@@ -38,7 +38,6 @@ from crp.core.manifest_derive import (
 )
 from crp.core.manifest_ledger import ManifestLedger
 
-
 # ===========================================================================
 # G5 — Default-enforcer safety net
 # ===========================================================================
@@ -154,7 +153,7 @@ class TestG4HashChain:
         sink = JSONLinesFileSink(out)
         sink.emit({"event_type": "TEST", "x": 1})
         sink.emit({"event_type": "TEST", "x": 2})
-        lines = [json.loads(l) for l in out.read_text().splitlines()]
+        lines = [json.loads(line) for line in out.read_text().splitlines()]
         assert len(lines) == 2
         assert lines[0]["x"] == 1 and lines[1]["x"] == 2
 

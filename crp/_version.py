@@ -2,4 +2,4 @@
 # Licensed under Elastic License 2.0 — see LICENSE.md for details.
 """CRP — Context Relay Protocol SDK."""
 
-__version__ = "6.0.1"
+__version__ = "6.1.1"

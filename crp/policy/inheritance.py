@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .mode import merge_policies
-from .model import RiskLevel, SafetyPolicy, _REP_RANK
+from .model import _REP_RANK, RiskLevel, SafetyPolicy
 
 
 @dataclass

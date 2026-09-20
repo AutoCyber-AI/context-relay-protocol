@@ -27,7 +27,7 @@ def _normalise_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Normalise an OpenAI parameter schema to a lightweight JSON Schema."""
     if not isinstance(schema, dict):
         return {"type": "object"}
-    out: dict[str, Any] = {"type": _OPENAI_TYPE_TO_JSON.get(schema.get("type"), "object")}
+    out: dict[str, Any] = {"type": _OPENAI_TYPE_TO_JSON.get(schema.get("type") or "", "object")}
     if "properties" in schema and isinstance(schema["properties"], dict):
         out["properties"] = {
             k: _normalise_schema(v) for k, v in schema["properties"].items()

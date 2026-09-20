@@ -9,6 +9,8 @@ enforcing the ABNF grammar.  Malformed policies raise :class:`PolicySyntaxError`
 
 from __future__ import annotations
 
+from typing import Any
+
 from .model import (
     QUALITY_TIERS,
     SOURCE_VALUES,
@@ -47,7 +49,7 @@ def _parse_threshold(directive: str, value: str) -> float:
     return f
 
 
-def _parse_enum(directive: str, value: str, enum_cls, label: str):
+def _parse_enum(directive: str, value: str, enum_cls: type[Any], label: str) -> Any:
     try:
         return enum_cls(value)
     except ValueError as exc:

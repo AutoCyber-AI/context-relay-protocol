@@ -77,10 +77,17 @@ class CapabilityRouter:
             fabric.register(descriptor)
             impl = self._impls.get(descriptor.capability_id)
             if impl is not None:
-                executor.register_impl(
-                    descriptor.capability_id,
-                    lambda args, _fn=impl: _fn(args),
-                )
+                # Narrow before using as a closure default (mypy does not
+                # retain the None-check inside the nested def).
+                impl_fn = impl
+
+                def _register_impl(
+                    args: dict[str, Any],
+                    _fn: Callable[[dict[str, Any]], Any] = impl_fn,
+                ) -> Any:
+                    return _fn(args)
+
+                executor.register_impl(descriptor.capability_id, _register_impl)
         self._fabric = fabric
         self._executor = executor
         return fabric, executor

@@ -36,8 +36,45 @@ from crp.core.window import (
 from crp.security.audit_trail import ComplianceEventType
 
 if TYPE_CHECKING:
+    import threading
+    from collections.abc import Callable
+
+    from crp.advanced.cqs import CQSDetector
+    from crp.advanced.cross_window import CrossWindowValidator
+    from crp.advanced.curator import LLMContextCurator
+    from crp.advanced.feedback import FeedbackLoop
+    from crp.advanced.meta_learning import MetaLearningEngine
+    from crp.advanced.review_cycle import ReviewCycleManager
+    from crp.advanced.scale_mode import ScaleModeSelector
+    from crp.advanced.source_grounding import SourceGroundingEngine
+    from crp.ckf.fabric import ContextualKnowledgeFabric
+    from crp.core.circuit_breaker import CircuitBreaker
+    from crp.core.config import CRPConfig
+    from crp.core.session import SessionHandle
+    from crp.core.window import WindowDAG
     from crp.envelope.builder import EnvelopeResult
+    from crp.extraction.pipeline import ExtractionPipeline
+    from crp.extraction.types import ExtractionResult as PipelineExtractionResult
     from crp.extraction.types import Fact
+    from crp.observability.events import EventEmitter
+    from crp.observability.telemetry import TelemetryWriter
+    from crp.provenance import DecisionProvenanceEngine
+    from crp.providers.base import LLMProvider
+    from crp.resources.resource_manager import ResourceManager
+    from crp.security.audit_trail import ComplianceAuditTrail
+    from crp.security.binding import SessionBindingManager
+    from crp.security.compliance import ComplianceReporter, RiskClassifier
+    from crp.security.consent import (
+        ConsentManager,
+        HumanOversightController,
+        ProcessingRecordKeeper,
+    )
+    from crp.security.injection import InjectionDetector
+    from crp.security.privacy import DataLineageTracker, PIIScanner, RetentionManager
+    from crp.security.quarantine import IngestQuarantine
+    from crp.security.rbac import RBACEnforcer
+    from crp.security.validation import InputValidator
+    from crp.state.warm_store import WarmStateStore
 
 logger = logging.getLogger("crp.orchestrator")
 
@@ -210,7 +247,66 @@ class DispatchMixin:
     """Mixin providing all CRP dispatch strategies.
 
     Methods access orchestrator state via ``self`` (multiple inheritance).
+    The attribute declarations below are initialised by
+    ``CRPOrchestrator.__init__``; the ``if TYPE_CHECKING`` method stubs are
+    implemented by ``CRPOrchestrator`` or ``ExtractionMixin`` (multiple
+    inheritance). Neither changes runtime behaviour.
     """
+
+    # ── State initialised by CRPOrchestrator.__init__ ──────────
+    _provider: LLMProvider
+    _config: CRPConfig
+    _session: SessionHandle
+    _lock: threading.RLock
+    _warm_store: WarmStateStore
+    _extraction: ExtractionPipeline
+    _ckf: ContextualKnowledgeFabric
+    _embedding_fn: Callable[[str], list[float]] | None
+    _dag: WindowDAG
+    _windows_completed: int
+    _total_input_tokens: int
+    _total_output_tokens: int
+    _continuation_windows_total: int
+    _circuit_breaker: CircuitBreaker
+    _resource_manager: ResourceManager
+    _emitter: EventEmitter
+    _telemetry_writer: TelemetryWriter | None
+    _continuation_config: ContinuationConfig
+    _curator: LLMContextCurator
+    _meta_learning: MetaLearningEngine
+    _provenance_engine: DecisionProvenanceEngine
+    _source_grounding: SourceGroundingEngine
+    _cqs_detector: CQSDetector
+    _cross_window_validator: CrossWindowValidator
+    _feedback_loop: FeedbackLoop
+    _review_cycle: ReviewCycleManager
+    _scale_mode: ScaleModeSelector
+    # Security subsystems (delegated to SecurityManager, §audit4 CQ-C1)
+    _injection_detector: InjectionDetector
+    _input_validator: InputValidator
+    _session_binding: SessionBindingManager
+    _rbac: RBACEnforcer
+    _compliance_audit: ComplianceAuditTrail
+    _quarantine: IngestQuarantine
+    _pii_scanner: PIIScanner
+    _retention_manager: RetentionManager
+    _lineage_tracker: DataLineageTracker
+    _consent_manager: ConsentManager
+    _processing_records: ProcessingRecordKeeper
+    _human_oversight: HumanOversightController
+    _risk_classifier: RiskClassifier
+    _compliance_reporter: ComplianceReporter
+
+    if TYPE_CHECKING:
+        def _check_session(self) -> None: ...
+        def _check_budget(self, input_tokens: int) -> None: ...
+        def _app_context_manifest(self) -> Any | None: ...
+        def _extract_and_store(
+            self,
+            text: str,
+            source_window_id: str,
+            task_intent: TaskIntent | None = ...,
+        ) -> PipelineExtractionResult: ...
 
     def _build_envelope(
         self,
@@ -537,7 +633,7 @@ class DispatchMixin:
     # Resource snapshot for WindowMetrics
     # ------------------------------------------------------------------
 
-    def _resource_fields(self) -> dict[str, object]:
+    def _resource_fields(self) -> dict[str, Any]:
         """Compute resource-related fields for WindowMetrics."""
         mgr = getattr(self, "_resource_manager", None)
         if mgr is None:
@@ -558,7 +654,7 @@ class DispatchMixin:
 
     def _marginal_fields(
         self, output_text: str, facts_before: int,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         """Compute marginal_gain and sections_covered from dispatch output."""
         facts_after = self._warm_store.fact_count
         new_facts = max(facts_after - facts_before, 0)
@@ -574,7 +670,7 @@ class DispatchMixin:
     # Adaptive allocator fields for WindowMetrics (§resource-alloc)
     # ------------------------------------------------------------------
 
-    def _allocator_fields(self) -> dict[str, object]:
+    def _allocator_fields(self) -> dict[str, Any]:
         """Compute adaptive-allocator telemetry for WindowMetrics."""
         alloc = getattr(self, "_adaptive_allocator", None)
         if alloc is None:
@@ -2253,7 +2349,7 @@ class DispatchMixin:
         # ---------- Build MINIMAL initial messages ----------
         # Key difference from push model: NO envelope.
         # The LLM will pull context on demand via tool calls.
-        messages: list[dict[str, object]] = [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": tool_system},
             {"role": "user", "content": task_input},
         ]
@@ -2327,13 +2423,14 @@ class DispatchMixin:
                     break
 
                 # Execute tool calls
+                tc_items: list[dict[str, Any]] = list(raw_tool_calls)
                 parsed_calls = [
                     ToolCall(
                         id=tc["id"],
                         name=tc["function"]["name"],
                         arguments=tc["function"]["arguments"],
                     )
-                    for tc in raw_tool_calls
+                    for tc in tc_items
                 ]
                 results = executor.execute_batch(parsed_calls)
                 total_tool_tokens += sum(r.tokens_used for r in results)
@@ -3734,6 +3831,10 @@ class DispatchMixin:
                 augmented_system, task_input, **kwargs,
             )
 
+        # Both branches above always assign a non-None report (the
+        # multi-step loop runs at least once when plan.steps > 1).
+        assert inner_report is not None
+
         # ══════════════════════════════════════════════════════════
         # PHASE 5b: CONTINUATION AWARENESS
         #
@@ -3822,7 +3923,7 @@ class DispatchMixin:
                 ).facts
                 _last_output = cont_output
                 output = f"{output}\n\n{cont_output}"
-                inner_finish = cont_report.telemetry.get("finish_reason", "stop") if cont_report else "stop"
+                inner_finish = (cont_report.telemetry or {}).get("finish_reason", "stop") if cont_report else "stop"
                 agentic_continuation_windows += getattr(cont_report, "continuation_windows", 0)
                 cont_state = cont_mgr.process_window(
                     task_intent=task_input,

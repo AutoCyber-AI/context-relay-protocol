@@ -1,19 +1,21 @@
 """Debug gap analysis to understand gap_score=1.000 issue."""
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+import re
+
 from crp.continuation.gap import (
+    FULFILLMENT_THRESHOLD,
+    _expand_enumerated_items,
     _extract_l1_structural,
     _extract_l2_semantic,
-    _expand_enumerated_items,
     _text_overlap,
+    clear_requirement_cache,
     extract_task_requirements,
     gap_analysis,
-    clear_requirement_cache,
-    FULFILLMENT_THRESHOLD,
 )
-import re
 
 TASK = """You are writing a comprehensive technical reference document.
 
@@ -141,10 +143,10 @@ clear_requirement_cache()
 result = gap_analysis(TASK, fake_facts, document_headings=fake_headings)
 print(f"\nGap score: {result.gap_score:.3f}")
 print(f"Fulfilled: {result.fulfilled_count}/{result.total_count}")
-print(f"\nFulfilled requirements:")
+print("\nFulfilled requirements:")
 for r in result.requirements:
     if r.fulfilled:
         print(f"  ✓ {r.text[:60]} (score={r.fulfillment_score:.3f})")
-print(f"\nUnfulfilled requirements (first 10):")
+print("\nUnfulfilled requirements (first 10):")
 for r in result.unfulfilled[:10]:
     print(f"  ✗ {r.text[:60]} (best_score={r.fulfillment_score:.3f})")

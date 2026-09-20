@@ -1,0 +1,173 @@
+{
+  "sqb_version": "4.0.0b1",
+  "run_timestamp": "2026-09-02T20:39:26.653432+00:00",
+  "meta": {
+    "mode": "smoke",
+    "model": "kimi-k2.6",
+    "profile": "capable-local"
+  },
+  "all_cases_pass": true,
+  "multihop_connector_recall_delta": 0.18,
+  "elapsed_total_s": 0.0,
+  "cases": [
+    {
+      "case_id": "sqb-001",
+      "domain": "technical",
+      "gates": {
+        "rep_wlast": true,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": true
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 64,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.5,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.55,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 2,
+          "word_count": 107,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.6666666666666666,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.65,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 3,
+          "word_count": 154,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.6666666666666666,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.75,
+          "elapsed_s": 0.0
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-002",
+      "domain": "regulatory",
+      "gates": {
+        "rep_wlast": true,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": true
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 44,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.2,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.55,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 2,
+          "word_count": 71,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.2,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.65,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 3,
+          "word_count": 106,
+          "repetition_rate": 0.0097,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.2,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.75,
+          "elapsed_s": 0.0
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-003",
+      "domain": "multihop",
+      "gates": {
+        "rep_wlast": true,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": true
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 41,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.55,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 2,
+          "word_count": 65,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.65,
+          "elapsed_s": 0.0
+        },
+        {
+          "window_number": 3,
+          "word_count": 85,
+          "repetition_rate": 0.0,
+          "factual_recall": 1.0,
+          "factual_precision": 1.0,
+          "factual_f1": 1.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.75,
+          "elapsed_s": 0.0
+        }
+      ]
+    }
+  ]
+}

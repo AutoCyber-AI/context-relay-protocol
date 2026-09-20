@@ -41,7 +41,6 @@ from crp.provenance.claim_detector import classify_claim, split_into_sentences
 from crp.provenance.provenance_chain import build_provenance_chain
 from crp.security.audit_trail import ComplianceEventType
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

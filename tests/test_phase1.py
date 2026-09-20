@@ -959,7 +959,7 @@ class TestLazyImports:
         """crp.NoSuchThing raises AttributeError."""
         import crp
         with pytest.raises(AttributeError, match="no attribute"):
-            crp.NoSuchThing
+            _ = crp.NoSuchThing
 
     def test_main_module_runnable(self) -> None:
         """crp.__main__ exists and imports cli."""

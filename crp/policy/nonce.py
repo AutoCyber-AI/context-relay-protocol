@@ -27,7 +27,7 @@ def bind_policy(policy_value: str, nonce: str, secret: str | bytes) -> str:
     recomputed by the gateway from the trusted session secret.
     """
     key = secret.encode("utf-8") if isinstance(secret, str) else secret
-    msg = f"{nonce}:{policy_value}".encode("utf-8")
+    msg = f"{nonce}:{policy_value}".encode()
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 

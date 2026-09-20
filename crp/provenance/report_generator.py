@@ -14,13 +14,13 @@ from typing import Any
 
 from ._types import (
     AttributionType,
-    ClaimType,
     EntailmentLabel,
+    FidelityReport,
     HallucinationRisk,
+    HallucinationRiskReport,
     OmissionSeverity,
     ProvenanceReport,
 )
-
 
 # ---------------------------------------------------------------------------
 # Markdown report
@@ -359,15 +359,15 @@ def generate_json_report(report: ProvenanceReport) -> dict[str, Any]:
     }
 
 
-def _serialize_risk(risk: object) -> dict[str, object] | None:
+def _serialize_risk(risk: HallucinationRiskReport | None) -> dict[str, object] | None:
     """Serialize HallucinationRiskReport for JSON output."""
     if risk is None:
         return None
     return {
-        "window_risk_level": risk.window_risk_level.value,  # type: ignore[union-attr]
-        "mean_risk_score": risk.mean_risk_score,  # type: ignore[union-attr]
-        "high_risk_count": risk.high_risk_count,  # type: ignore[union-attr]
-        "critical_risk_count": risk.critical_risk_count,  # type: ignore[union-attr]
+        "window_risk_level": risk.window_risk_level.value,
+        "mean_risk_score": risk.mean_risk_score,
+        "high_risk_count": risk.high_risk_count,
+        "critical_risk_count": risk.critical_risk_count,
         "assessments": [
             {
                 "claim_index": a.claim_index,
@@ -380,22 +380,21 @@ def _serialize_risk(risk: object) -> dict[str, object] | None:
                 "specificity_signal": a.specificity_signal,
                 "risk_factors": a.risk_factors,
             }
-            for a in risk.assessments  # type: ignore[union-attr]
+            for a in risk.assessments
         ],
     }
 
 
-def _serialize_fidelity(fid: object) -> dict[str, Any] | None:
+def _serialize_fidelity(fid: FidelityReport | None) -> dict[str, Any] | None:
     """Serialize FidelityReport for JSON output."""
     if fid is None:
         return None
-    # fid is a FidelityReport but we avoid import cycle via duck typing
     return {
-        "fidelity_score": fid.fidelity_score,  # type: ignore[union-attr]
-        "distortion_count": fid.distortion_count,  # type: ignore[union-attr]
-        "fabrication_count": fid.fabrication_count,  # type: ignore[union-attr]
-        "critical_omission_count": fid.critical_omission_count,  # type: ignore[union-attr]
-        "contradiction_count": fid.contradiction_count,  # type: ignore[union-attr]
+        "fidelity_score": fid.fidelity_score,
+        "distortion_count": fid.distortion_count,
+        "fabrication_count": fid.fabrication_count,
+        "critical_omission_count": fid.critical_omission_count,
+        "contradiction_count": fid.contradiction_count,
         "distortions": [
             {
                 "claim_index": d.claim_index,
@@ -406,7 +405,7 @@ def _serialize_fidelity(fid: object) -> dict[str, Any] | None:
                 "claim_value": d.claim_value,
                 "fact_value": d.fact_value,
             }
-            for d in fid.distortions  # type: ignore[union-attr]
+            for d in fid.distortions
         ],
         "fabrications": [
             {
@@ -416,7 +415,7 @@ def _serialize_fidelity(fid: object) -> dict[str, Any] | None:
                 "entity_type": f.entity_type.value,
                 "severity": f.severity,
             }
-            for f in fid.fabrications  # type: ignore[union-attr]
+            for f in fid.fabrications
         ],
         "omissions": [
             {
@@ -425,7 +424,7 @@ def _serialize_fidelity(fid: object) -> dict[str, Any] | None:
                 "relevance_score": o.fact_relevance_score,
                 "severity": o.severity.value,
             }
-            for o in fid.omissions  # type: ignore[union-attr]
+            for o in fid.omissions
         ],
         "contradictions": [
             {
@@ -435,6 +434,6 @@ def _serialize_fidelity(fid: object) -> dict[str, Any] | None:
                 "severity": c.severity,
                 "detail": c.detail,
             }
-            for c in fid.contradictions  # type: ignore[union-attr]
+            for c in fid.contradictions
         ],
     }

@@ -10,25 +10,29 @@
 <h1 align="center">Context Relay Protocol (CRP)™</h1>
 
 <p align="center">
-  <strong>An open protocol for agentic context and tool orchestration across LLM invocations.</strong>
+  <strong>A Python SDK + open protocol for agentic AI governance and transparency — local-first, self-hosted, private by default.</strong>
 </p>
 
 <p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/Spec-CC_BY--SA_4.0-blue.svg" alt="Spec: CC BY-SA 4.0"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/Code-ELv2-orange.svg" alt="Code: Elastic License 2.0"></a>
-  <img src="https://img.shields.io/badge/Spec_Version-6.0.0-brightgreen.svg" alt="Spec Version: 6.0.0">
+  <img src="https://img.shields.io/badge/Spec_Version-6.1.1-brightgreen.svg" alt="Spec Version: 6.1.1">
   <img src="https://img.shields.io/badge/RFC_2119-Conformant-orange.svg" alt="RFC 2119">
   <img src="https://img.shields.io/badge/Language_Neutral-JSON_Schema-yellow.svg" alt="Language Neutral">
-  <img src="https://img.shields.io/badge/Status-v6.0.0-blue.svg" alt="Status: v6.0.0">
+  <img src="https://img.shields.io/badge/Status-v6.1.1-blue.svg" alt="Status: v6.1.1">
   <a href="https://github.com/AutoCyber-AI/context-relay-protocol/actions"><img src="https://img.shields.io/github/actions/workflow/status/AutoCyber-AI/context-relay-protocol/ci.yml?label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-3%2C232%2B-brightgreen.svg" alt="3,232+ tests">
+  <img src="https://img.shields.io/badge/tests-3%2C482-brightgreen.svg" alt="3,482 tests">
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="CHEATSHEET.md">Cheatsheet</a> •
   <a href="#agent-templates">Templates</a> •
+  <a href="docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md">Presets</a> •
+  <a href="docs/CRPv6_VIDEO_STORYBOARD.md">Video</a> •
+  <a href="docs/CRPv6_VIDEO_ASSETS.md">Video Kit</a> •
+  <a href="docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md">Console</a> •
   <a href="#the-problem">The Problem</a> •
   <a href="#what-crp-does">Solution</a> •
   <a href="#inter-llm-context-sharing-http-sidecar">Inter-LLM Sharing</a> •
@@ -40,23 +44,64 @@
 
 ---
 
-> MCP exposes tools. A2A connects agents. **CRP positions every agent on the right task, with the right context and tools, at the right time** — now with a declarative `crp.Agent` SDK, ML-driven intent, verification, safety, and an AG-UI transparency stream. Built for SLM-first agentic AI.
+> **CRP wraps your LLM calls in a governed agent loop — tools, enforced reasoning phases, safety scanning, checkpoints, and HMAC-signed provenance — and it runs entirely on your machine.** Point it at LM Studio, Ollama, or llama.cpp local models, or any cloud provider. No hosted SaaS required; nothing leaves your network unless you say so.
+
+**What works now**
+
+- **`crp.Agent` agent SDK** — declare tools (plain Python functions) and policy once; the protocol runs the loop. MCP bridges in both directions via `crp_mcp/connectors`.
+- **Cognitive presets** — persona, reasoning phases, safeguards, emotions, and output profile in one YAML file — hard-enforced, not prompted.
+- **Safety on every call** — injection shield, PII detection, HTTP 451 halts, and a tamper-evident HMAC provenance chain.
+- **Unbounded context** — automatic continuation and stitching past context windows, plus bi-temporal CKF memory.
+- **Human-in-the-loop checkpoints** for destructive or ambiguous actions.
+- **Live Agent Console** — self-hosted (`examples/self_hosted_console.py`) or at `console.crprotocol.io`, with chain-of-thought narrative and governance cards.
+- **Quality gate:** 3,482 tests passing — ruff and mypy at zero errors.
+
+**30-second quickstart**
+
+```bash
+pip install crprotocol
+```
+
+```python
+import crp
+
+def get_weather(city: str) -> str:
+    """Current weather for a city."""
+    return f"{city}: 22°C and sunny."
+
+# Auto-detects a running LM Studio (:1234) or Ollama (:11434) server.
+agent = crp.Agent(tools=[get_weather], system="You are a helpful assistant.")
+result = agent.run("What's the weather in Sydney?")
+print(result.answer)
+```
+
+Then watch it work in the **Agent Console** — self-host with `python examples/self_hosted_console.py`
+(→ `http://127.0.0.1:8000/crp/console`) or open [console.crprotocol.io](https://console.crprotocol.io)
+and connect it to your backend.
+
+Key guides: [Console deployment](docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md) ·
+[Cognitive presets](docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md) ·
+[Demo & video walkthrough](docs/DEMO_REPRODUCTION_AND_VIDEO_GUIDE.md) ·
+[Agent SDK usage](docs/CRPv6_Agent_SDK_Usage_Guide.md)
 
 ---
 
 ## CRPv6 Status & Roadmap
 
-**Current version:** `v6.0.0`  
-**Test status:** `3232 passed, 3 skipped` in the non-live suite (live-LLM tests require a local endpoint).
+**Current version:** `v6.1.1` — `pip install crprotocol`  
+**Test status:** `3482 passed` in the non-live suite; live-LLM tests require a local endpoint.
 
-CRPv6 is **launch-ready for building governed, tool-using agents with local/SLM models**. The protocol runtime, Agent SDK, managed ML models, Gateway capability router, transparency emission layer, verification relay, and storage backends are implemented, tested, and published to PyPI and Hugging Face.
+CRPv6 is **launch-ready for building governed, tool-using agents with local/SLM models**. The protocol runtime, Agent SDK, managed ML models, Gateway capability router, transparency emission layer, cognitive presets, verification relay, and storage backends are implemented, tested, and published to PyPI and Hugging Face.
 
-The remaining work to make CRPv6 a **complete ML-first agentic AI ecosystem** is documented below and in the detailed roadmap:
+Key docs:
 
-- [`docs/CRPv6_Completeness_Roadmap.md`](docs/CRPv6_Completeness_Roadmap.md) — full strategic roadmap
+- [`docs/CRPv6_COMPANY_ANNOUNCEMENT.md`](docs/CRPv6_COMPANY_ANNOUNCEMENT.md) — press/investor brief
+- [`docs/CRPv6_VIDEO_STORYBOARD.md`](docs/CRPv6_VIDEO_STORYBOARD.md) — CRP-vs-raw-LLM video script
+- [`docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md`](docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md) — how to build and deploy the console to a CDN
+- [`docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md`](docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md) — user-defined reasoning, safeguards, emotions
+- [`docs/CRPv6_AGENTIC_ECOSYSTEM_CAPABILITIES.md`](docs/CRPv6_AGENTIC_ECOSYSTEM_CAPABILITIES.md) — every configurable capability
+- [`docs/CRPv6_TOOLS_AND_MCP.md`](docs/CRPv6_TOOLS_AND_MCP.md) — how tools connect and how MCP relates to CRP
 - [`docs/CRPv6_Operational_Readiness_Report.md`](docs/CRPv6_Operational_Readiness_Report.md) — current operational state
-- [`docs/CRPv6_Model_Training_Recipe.md`](docs/CRPv6_Model_Training_Recipe.md) — how to train the missing models
-- [`docs/CRPv6_Deployment_Backend_Guide.md`](docs/CRPv6_Deployment_Backend_Guide.md) — hosted backend wiring
 - [`docs/CRPv6_Agent_SDK_Usage_Guide.md`](docs/CRPv6_Agent_SDK_Usage_Guide.md) — Agent SDK usage
 
 The big philosophical shift: **ML is the default, rule-based is the degraded/offline path.**
@@ -1296,7 +1341,7 @@ Make local small models truly capable agentic citizens.
 | B1 | Local model catalog | SLM family templates (Qwen2.5, Phi-4, Llama-3.2, Gemma-2) | Prompt engineering for small models | Users need tested defaults, not trial-and-error | [`crp/providers/`](crp/providers/) | Add `crp/providers/local_model_catalog.py` with per-family chat templates |
 | B2 | Tool-call parsing for non-function-call SLMs | Constrained decoding + retry loops | Structured generation without tool-native APIs | 7B models often lack native function calling | [`crp/gateway/structured_decoder.py`](crp/gateway/structured_decoder.py), [`crp/tools/executor.py`](crp/tools/executor.py) | Regex/JSON-schema parsers + fallback LLM repair |
 | B3 | `crp serve --local-model` | llama.cpp / vLLM launcher | Local model serving, quantization | One-command local agent runtime | [`crp/cli/main.py`](crp/cli/main.py), [`crp/providers/llamacpp.py`](crp/providers/llamacpp.py) | Add CLI command, auto-download GGUF, start server, connect adapter |
-| B4 | Built-in tool library | Web search, Python exec, filesystem, DB, HTTP | Tool design, sandboxing | Agents need useful tools out of the box | [`crp/tools/builtins/`](crp/tools/builtins/) (new) | Implement safe built-ins with schemas and result summarization |
+| B4 | Built-in tool library | Web search, Python exec, filesystem, DB, HTTP | Tool design, sandboxing | Agents need useful tools out of the box | `crp/tools/builtins/` (planned) | Implement safe built-ins with schemas and result summarization |
 | B5 | Tool-result summarization | Small encoder/extractive summarizer | Observation compression | SLMs need compact tool observations | [`crp/tools/executor.py`](crp/tools/executor.py) | Summarize JSON/structured tool output before next turn |
 | B6 | Agent templates | Task-specific prompts and tool sets | Agent pattern design | Users should not build every agent from scratch | [`crp/agent_sdk/agent.py`](crp/agent_sdk/agent.py) | Add `crp.Agent.research()`, `.coder()`, `.analyst()`, etc. |
 | B7 | Multi-tool planner for long horizons | Small planning model or LLM-based planner | Hierarchical task planning | Long tasks need explicit planning beyond single-turn positioning | [`crp/stl/orchestrator.py`](crp/stl/orchestrator.py), [`crp/pp/`](crp/pp/) | Extend predictive positioning with plan decomposition |
@@ -1316,7 +1361,7 @@ Turn the local SDK into a multi-tenant service.
 | C5 | Hosted model serving | vLLM/TGI microservices | Model serving at scale | Hosted SLM option for users without GPUs | Infrastructure repo / Docker Compose | Deploy managed-model containers behind Gateway |
 | C6 | Production backend defaults | Redis + S3/R2 + PostgreSQL | Cloud-native state management | Memory/SQLite are not multi-tenant defaults | [`crp/infrastructure.py`](crp/infrastructure.py) | Add Postgres backend, make Redis/S3 default in hosted config |
 | C7 | Observability | OpenTelemetry traces/metrics | SRE for AI systems | Operators need latency/cost/quality dashboards | [`crp/observability/`](crp/observability/) | OTLP exporter, Grafana templates |
-| C8 | Billing + monetization | Stripe webhooks + usage metering | AI product billing | SaaS needs paid tiers | [`crp/monetisation/`](crp/monetisation/) | End-to-end Stripe/Clerk flow, token/operation metering |
+| C8 | Billing + monetization | Stripe webhooks + usage metering | AI product billing | SaaS needs paid tiers | `crp/monetisation/` (planned) | End-to-end Stripe/Clerk flow, token/operation metering |
 
 ---
 
@@ -1326,7 +1371,7 @@ CRP must play nicely with the rest of the agentic stack.
 
 | # | TODO | AI Component | Skill Gained | Why Needed | Where | How |
 |---|------|--------------|--------------|------------|-------|-----|
-| D1 | MCP server implementation | MCP protocol (stdio/SSE) | Model Context Protocol | CRP should expose its tools/knowledge as an MCP server | [`crp/mcp/`](crp/mcp/) (new) | Implement MCP server wrapping Tool Capability Fabric + CKF |
+| D1 | MCP server implementation | MCP protocol (stdio/SSE) | Model Context Protocol | CRP should expose its tools/knowledge as an MCP server | `crp/mcp/` (planned; see `crp_mcp/`) | Implement MCP server wrapping Tool Capability Fabric + CKF |
 | D2 | MCP client / tool consumer | MCP tool discovery + execution | Consuming external tools | CRP agents should use any MCP server | [`crp/tools/adapters.py`](crp/tools/adapters.py), [`crp/agent_sdk/`](crp/agent_sdk/) | Add MCP client adapter converting MCP tools to CRP capabilities |
 | D3 | Coding agent compatibility | Repository-aware context, code graph | Code intelligence, RAG over code | IDE/coding agents need CRP governance | [`crp/scan/`](crp/scan/), [`crp/ckf/`](crp/ckf/) | Semantic code ingestion, repo-wide fact graph, AST-aware extraction |
 | D4 | LangChain / LlamaIndex adapters | Adapter pattern | Framework interoperability | Lower friction for existing framework users | [`crp/integrations/`](crp/integrations/) | Add `CRPAgentExecutor`, `CRPCallbackHandler`, LlamaIndex memory/query engine |

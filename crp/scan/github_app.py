@@ -19,7 +19,7 @@ import tempfile
 import time
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class GithubAppClient:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_env(cls) -> "GithubAppClient":
+    def from_env(cls) -> GithubAppClient:
         """Create client from environment variables."""
         app_id = os.environ.get("GITHUB_APP_ID", "")
         client_id = os.environ.get("GITHUB_APP_CLIENT_ID", "")
@@ -67,7 +67,8 @@ class GithubAppClient:
 
         private_key_pem = ""
         if pem_path and os.path.isfile(pem_path):
-            private_key_pem = open(pem_path, encoding="utf-8").read()
+            with open(pem_path, encoding="utf-8") as f:
+                private_key_pem = f.read()
         else:
             # Fallback: read raw PEM from env (for Railway-style env vars)
             raw_pem = os.environ.get("GITHUB_APP_PRIVATE_KEY", "")
@@ -133,7 +134,7 @@ class GithubAppClient:
         returns a 404 regardless of a valid installation_id/token.
         """
         token = self.installation_token(installation_id)
-        url = f"{_GITHUB_API_BASE}/installation/repositories"
+        url: str | None = f"{_GITHUB_API_BASE}/installation/repositories"
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",

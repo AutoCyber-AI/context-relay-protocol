@@ -378,11 +378,12 @@ def verify_package_provenance() -> list[str]:
     # 1. Check importlib.metadata (pip-installed copy)
     try:
         from importlib.metadata import metadata as _pkg_metadata
-        meta = _pkg_metadata(_CANONICAL_PACKAGE)
+        # typeshed models PackageMetadata without the email-message ``get``
+        # the runtime object actually has.
+        meta: Any = _pkg_metadata(_CANONICAL_PACKAGE)
         author = meta.get("Author", "") or ""
         author_email = meta.get("Author-email", "") or ""
         pkg_license = meta.get("License", "") or ""
-        home_page = meta.get("Home-page", "") or meta.get("Project-URL", "") or ""
 
         if _CANONICAL_AUTHOR.lower() not in author.lower() and \
            _CANONICAL_AUTHOR.lower() not in author_email.lower():

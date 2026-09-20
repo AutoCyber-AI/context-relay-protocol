@@ -19,6 +19,13 @@ Public API:
 
 from __future__ import annotations
 
+from .autonomy import (
+    AutonomyAction,
+    AutonomyDecision,
+    AutonomyGovernor,
+    AutonomyMetrics,
+    AutonomyTier,
+)
 from .budget import (
     DECREMENT_RANGES,
     DEFAULT_DECREMENTS,
@@ -43,18 +50,6 @@ from .oversight import (
     now_iso,
     verify_oversight_token,
 )
-from .autonomy import (
-    AutonomyAction,
-    AutonomyDecision,
-    AutonomyGovernor,
-    AutonomyMetrics,
-    AutonomyTier,
-)
-from .runtime_governance import (
-    GovernedAction,
-    GovernedActionResult,
-    RuntimeGovernorConfig,
-)
 from .propagation import (
     DOWNSTREAM_HEADERS,
     NON_PROPAGATING_HEADERS,
@@ -64,6 +59,11 @@ from .propagation import (
     build_downstream_headers,
     check_delegation,
     filter_upstream_headers,
+)
+from .runtime_governance import (
+    GovernedAction,
+    GovernedActionResult,
+    RuntimeGovernorConfig,
 )
 
 __all__ = [

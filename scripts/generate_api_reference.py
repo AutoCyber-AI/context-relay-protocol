@@ -51,7 +51,7 @@ def _walk_modules() -> dict[str, list[str]]:
     import crp  # noqa: F401
 
     modules_by_pkg: dict[str, list[str]] = {}
-    for importer, modname, ispkg in pkgutil.walk_packages(
+    for _importer, modname, _ispkg in pkgutil.walk_packages(
         sys.modules[PACKAGE].__path__, PACKAGE + "."
     ):
         if modname in SKIP_MODULES:
@@ -80,7 +80,10 @@ def _page_content(top: str, modules: list[str]) -> str:
     for modname in modules:
         try:
             mod = importlib.import_module(modname)
-        except Exception:
+        except Exception as exc:
+            # Environment-dependent import failures change page content; make
+            # them visible in CI logs instead of silently altering the docs.
+            print(f"warning: skipping {modname}: {type(exc).__name__}: {exc}")
             continue
         if not _has_public_members(mod):
             continue
@@ -224,6 +227,10 @@ def main() -> int:
         if changed or not nav_ok:
             print("API reference is out of sync. Run:")
             print("    python scripts/generate_api_reference.py")
+            for path in changed:
+                print(f"  out-of-sync page: {path.name}")
+            if not nav_ok:
+                print("  out-of-sync nav: mkdocs.yml Full Module Reference block")
             return 1
         print("API reference is up to date.")
         return 0

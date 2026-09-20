@@ -11,7 +11,6 @@ Fixes three correctness gaps in CRP's retrieval layer:
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -37,9 +36,9 @@ def apply_recency_decay(
     if fact_timestamp.tzinfo is None:
         fact_timestamp = fact_timestamp.replace(tzinfo=timezone.utc)
     age_days = max(0.0, (session_time - fact_timestamp).total_seconds() / 86400.0)
-    # math.exp2 was added in Python 3.11 and is absent from the py310
-    # typeshed; the runtime env is 3.11+.
-    decay = floor + (1.0 - floor) * math.exp2(-age_days / half_life_days)  # type: ignore[attr-defined]
+    # math.exp2 was added in Python 3.11; 2.0 ** x is the identical operation
+    # and works on every supported version.
+    decay = floor + (1.0 - floor) * 2.0 ** (-age_days / half_life_days)
     return round(decay, 4)
 
 

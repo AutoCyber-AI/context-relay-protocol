@@ -21,6 +21,18 @@
 | 11 | `crp/scan/remediation.py` | `proposal.target_file` nonexistent field; `return pr_url` dict-vs-str | Remediation PR URL wrong |
 | 12 | `crp/sdk/proxies_extra.py` (×2) | `crp.scan.github_app.CRPScanGitHubApp` and `crp.comply.gateway_client.ComplyGatewayClient` don't exist (names differ / module is functions-only) | ImportError caught; stubs always used |
 
+## Round 2 — found by the coverage-test sweep (2026-09-20, tests-only sweep)
+
+| # | File:line | Defect | Runtime effect |
+|---|-----------|--------|----------------|
+| 13 | `crp/cli/main.py` | `click.version_option(package_name="crp")` but the dist is `crprotocol` | `crp --version` raises RuntimeError |
+| 14 | `crp/cli/main.py` (`safety.checkpoint`) | Declared defaults `"RISK_HIGH"`/`"HALT"` don't match enum values (`"risk >= HIGH"`/`"halt"`) | Defaults silently yield `CUSTOM_RULE`/`FALLBACK` |
+| 15 | `crp/integrations/app_discovery.py:154` | `profile_from_llamaindex(query_engine=...)` passes invalid `ContextSource` kwargs | Always raises `TypeError` (see also #7) |
+| 16 | `crp/cli/main.py` | `status`/`dispatch --json` report the orchestrator's internal session id, not the CLI session key | Confusing/wrong session ids in CLI JSON output |
+| 17 | `crp/cli/main.py` (`scan-remediate`) | PR success path writes `/tmp/crp_remediation_pr_url` (POSIX-only) | Crashes on Windows after a successful `gh pr create` |
+| 18 | feedback loop | Unknown-fact `boost` feedback silently returns 200 | No-op accepted as success |
+| 19 | `crp/cli/sidecar.py` | 403 ownership branch unreachable over HTTP with single shared auth token (non-matching bearer gets 401 first) | Dead code path (unit-tested directly) |
+
 ## Environment/stub quirks (not bugs — annotated, no action)
 
 - `crp/envelope/retrieval_integrity.py` — `math.exp2` is py3.11+; absent from py310 typeshed (runtime guards version).

@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Status-v6.1.1-blue.svg" alt="Status: v6.1.1">
   <a href="https://github.com/AutoCyber-AI/context-relay-protocol/actions"><img src="https://img.shields.io/github/actions/workflow/status/AutoCyber-AI/context-relay-protocol/ci.yml?label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-3%2C301-brightgreen.svg" alt="3,301 tests">
+  <img src="https://img.shields.io/badge/tests-3%2C482-brightgreen.svg" alt="3,482 tests">
 </p>
 
 <p align="center">
@@ -54,7 +54,7 @@
 - **Unbounded context** — automatic continuation and stitching past context windows, plus bi-temporal CKF memory.
 - **Human-in-the-loop checkpoints** for destructive or ambiguous actions.
 - **Live Agent Console** — self-hosted (`examples/self_hosted_console.py`) or at `console.crprotocol.io`, with chain-of-thought narrative and governance cards.
-- **Quality gate:** 3,301 tests passing — ruff and mypy at zero errors.
+- **Quality gate:** 3,482 tests passing — ruff and mypy at zero errors.
 
 **30-second quickstart**
 
@@ -89,7 +89,7 @@ Key guides: [Console deployment](docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md) ·
 ## CRPv6 Status & Roadmap
 
 **Current version:** `v6.1.1` — `pip install crprotocol`  
-**Test status:** `3301 passed` in the non-live suite; live-LLM tests require a local endpoint.
+**Test status:** `3482 passed` in the non-live suite; live-LLM tests require a local endpoint.
 
 CRPv6 is **launch-ready for building governed, tool-using agents with local/SLM models**. The protocol runtime, Agent SDK, managed ML models, Gateway capability router, transparency emission layer, cognitive presets, verification relay, and storage backends are implemented, tested, and published to PyPI and Hugging Face.
 

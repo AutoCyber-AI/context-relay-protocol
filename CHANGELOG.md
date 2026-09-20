@@ -14,6 +14,8 @@ All notable changes to `crprotocol` are documented in this file.
 ### Fixed
 - Snap-to-capability remap no longer shadows phase tool-allowlist halts (a model asking for a disallowed tool when one tool was offered was silently remapped and never halted).
 - Repo-wide quality gates: 343 ruff errors and 792 mypy errors fixed (both now zero); 4 broken documentation links; dependabot ecosystems configured; GitHub Actions moved to Node 24 (`actions/checkout@v5`).
+- CI dependency declarations: pinned `mcp<2` (FastMCP → MCPServer rename in mcp 2.x is a breaking API change); added `fastapi`, `asyncpg`, and `webauthn` to the `dev` extra so `crp_shared` test modules collect in a clean environment.
+- Test count badges refreshed to 3,482 (README and site ticker).
 
 ### Docs
 - New: `CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md`, `CRPv6_ANNOUNCEMENT_READINESS_REPORT.md`, `CRPv6_LATENT_BUG_PUNCHLIST.md`, `CRPv6_SLM_RECOMMENDATIONS.md`, `CRPv6_COGNITIVE_PRESETS_GUIDE.md`, `CRPv6_TOOLS_AND_MCP.md`, `CRPv6_AGENTIC_ECOSYSTEM_CAPABILITIES.md`, `CRPv6_VIDEO_STORYBOARD.md`, `CRPv6_VIDEO_ASSETS.md`.

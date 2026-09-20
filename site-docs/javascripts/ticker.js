@@ -4,7 +4,7 @@
   "use strict";
 
   const messages = [
-    { icon: "✅", text: "<strong>3,301 tests passing</strong> — ruff and mypy at zero errors", href: "/testing/", cta: "See test suite →" },
+    { icon: "✅", text: "<strong>3,482 tests passing</strong> — ruff and mypy at zero errors", href: "/testing/", cta: "See test suite →" },
     { icon: "🖥️", text: "<strong>Live agent console</strong> — console.crprotocol.io or self-hosted; connect any local backend", href: "https://console.crprotocol.io", cta: "Open console →" },
     { icon: "🧠", text: "<strong>Reasoning, safeguards &amp; emotions in one preset file</strong> — enforced, not prompted", href: "https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md", cta: "Preset guide →" },
     { icon: "🔐", text: "<strong>Every answer carries an HMAC provenance chain</strong> your auditors can verify", href: "/control-evidence/", cta: "See the evidence →" },

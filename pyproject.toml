@@ -180,6 +180,14 @@ warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
 
+# numpy 2.5+ ships stubs using PEP 695 `type` statements (3.12+ syntax), which
+# mypy rejects when targeting py3.10 and which halts all further checking.
+# Skip following numpy internals — its symbols become Any, which is precise
+# enough for the small surface CRP uses.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

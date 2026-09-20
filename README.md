@@ -10,7 +10,7 @@
 <h1 align="center">Context Relay Protocol (CRP)™</h1>
 
 <p align="center">
-  <strong>An open protocol for agentic context and tool orchestration across LLM invocations.</strong>
+  <strong>A Python SDK + open protocol for agentic AI governance and transparency — local-first, self-hosted, private by default.</strong>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Status-v6.1.1-blue.svg" alt="Status: v6.1.1">
   <a href="https://github.com/AutoCyber-AI/context-relay-protocol/actions"><img src="https://img.shields.io/github/actions/workflow/status/AutoCyber-AI/context-relay-protocol/ci.yml?label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-3%2C277%2B-brightgreen.svg" alt="3,277+ tests">
+  <img src="https://img.shields.io/badge/tests-3%2C301-brightgreen.svg" alt="3,301 tests">
 </p>
 
 <p align="center">
@@ -44,14 +44,52 @@
 
 ---
 
-> MCP exposes tools. A2A connects agents. **CRP positions every agent on the right task, with the right context and tools, at the right time** — now with a declarative `crp.Agent` SDK, ML-driven intent, verification, safety, and an AG-UI transparency stream. Built for SLM-first agentic AI.
+> **CRP wraps your LLM calls in a governed agent loop — tools, enforced reasoning phases, safety scanning, checkpoints, and HMAC-signed provenance — and it runs entirely on your machine.** Point it at LM Studio, Ollama, or llama.cpp local models, or any cloud provider. No hosted SaaS required; nothing leaves your network unless you say so.
+
+**What works now**
+
+- **`crp.Agent` agent SDK** — declare tools (plain Python functions) and policy once; the protocol runs the loop. MCP bridges in both directions via `crp_mcp/connectors`.
+- **Cognitive presets** — persona, reasoning phases, safeguards, emotions, and output profile in one YAML file — hard-enforced, not prompted.
+- **Safety on every call** — injection shield, PII detection, HTTP 451 halts, and a tamper-evident HMAC provenance chain.
+- **Unbounded context** — automatic continuation and stitching past context windows, plus bi-temporal CKF memory.
+- **Human-in-the-loop checkpoints** for destructive or ambiguous actions.
+- **Live Agent Console** — self-hosted (`examples/self_hosted_console.py`) or at `console.crprotocol.io`, with chain-of-thought narrative and governance cards.
+- **Quality gate:** 3,301 tests passing — ruff and mypy at zero errors.
+
+**30-second quickstart**
+
+```bash
+pip install crprotocol
+```
+
+```python
+import crp
+
+def get_weather(city: str) -> str:
+    """Current weather for a city."""
+    return f"{city}: 22°C and sunny."
+
+# Auto-detects a running LM Studio (:1234) or Ollama (:11434) server.
+agent = crp.Agent(tools=[get_weather], system="You are a helpful assistant.")
+result = agent.run("What's the weather in Sydney?")
+print(result.answer)
+```
+
+Then watch it work in the **Agent Console** — self-host with `python examples/self_hosted_console.py`
+(→ `http://127.0.0.1:8000/crp/console`) or open [console.crprotocol.io](https://console.crprotocol.io)
+and connect it to your backend.
+
+Key guides: [Console deployment](docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md) ·
+[Cognitive presets](docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md) ·
+[Demo & video walkthrough](docs/CRPv6_VIDEO_DEMO_GUIDE.md) ·
+[Agent SDK usage](docs/CRPv6_Agent_SDK_Usage_Guide.md)
 
 ---
 
 ## CRPv6 Status & Roadmap
 
 **Current version:** `v6.1.1` — `pip install crprotocol`  
-**Test status:** `3277 passed, 1 skipped` in the non-live suite; live-LLM tests require a local endpoint.
+**Test status:** `3301 passed` in the non-live suite; live-LLM tests require a local endpoint.
 
 CRPv6 is **launch-ready for building governed, tool-using agents with local/SLM models**. The protocol runtime, Agent SDK, managed ML models, Gateway capability router, transparency emission layer, cognitive presets, verification relay, and storage backends are implemented, tested, and published to PyPI and Hugging Face.
 

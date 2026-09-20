@@ -36,12 +36,21 @@ SKIP_MODULES = {
 
 
 def _has_public_members(module) -> bool:
-    """Return True if a module exposes any public class or function."""
+    """Return True if a module exposes any public class or function.
+
+    Only symbols defined in the module itself or re-exported from elsewhere
+    in ``crp`` count. Imported stdlib/typing artifacts (e.g. ``typing.Any``,
+    which ``inspect.isclass`` reports True for) are not public API, and
+    relying on them makes generation drift between environments.
+    """
     for name in dir(module):
         if name.startswith("_"):
             continue
         obj = getattr(module, name)
-        if inspect.isclass(obj) or inspect.isfunction(obj):
+        if not (inspect.isclass(obj) or inspect.isfunction(obj)):
+            continue
+        obj_module = getattr(obj, "__module__", "") or ""
+        if obj_module == module.__name__ or obj_module.startswith(PACKAGE):
             return True
     return False
 

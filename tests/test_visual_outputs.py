@@ -153,7 +153,12 @@ class TestEmbeddedConsole:
         root = Path(__file__).parent.parent
         dist = root / "frontend" / "agent-console" / "dist"
         static = root / "crp" / "frontend" / "static"
-        assert (dist / "index.html").exists() or (static / "index.html").exists()
+        index = (dist / "index.html").exists() or (static / "index.html").exists()
+        if not index:
+            pytest.skip(
+                "console bundle not built; run `npm run build` in "
+                "frontend/agent-console/ (not built in CI)"
+            )
         assets = dist / "assets" if dist.exists() else static / "assets"
         assert assets.exists()
         js = list(assets.glob("index-*.js"))

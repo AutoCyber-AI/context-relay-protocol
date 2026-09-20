@@ -90,11 +90,13 @@ def test_init_json_output() -> None:
 
 
 def test_dispatch_unknown_session_errors() -> None:
-    code, _, err = _invoke([
+    code, out, err = _invoke([
         "dispatch", "--session", "does-not-exist", "--task", "hello",
     ])
     assert code == 1
-    assert "unknown session" in err.lower()
+    # Click's CliRunner may merge stderr into the stdout buffer depending on
+    # platform/version, so assert on the combined output.
+    assert "unknown session" in (out + err).lower()
 
 
 def test_dispatch_auto_session() -> None:

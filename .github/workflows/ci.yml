@@ -41,6 +41,10 @@ jobs:
       - name: Run tests with coverage
         env:
           CRP_GLINER_DISABLED: 1
+          # Perf thresholds are calibrated for quiet, dedicated Linux hosts.
+          # GitHub-hosted runners are shared and the suite runs under coverage
+          # instrumentation, so allow the same 1.5x margin Windows takes.
+          CRP_PERF_SCALE: 1.5
         run: >
           pytest tests/ -v --tb=short --cov=crp --cov-report=term-missing --cov-fail-under=80
           --ignore=tests/test_gap_fixes_live.py

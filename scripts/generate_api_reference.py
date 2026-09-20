@@ -116,6 +116,18 @@ def _generate_pages(check: bool = False) -> list[Path]:
             existing = page_path.read_text(encoding="utf-8") if page_path.exists() else ""
             if existing != content:
                 changed.append(page_path)
+                # Print a compact diff so CI logs show exactly what drifted.
+                import difflib
+
+                diff = difflib.unified_diff(
+                    existing.splitlines(),
+                    content.splitlines(),
+                    fromfile=f"committed/{page_path.name}",
+                    tofile=f"generated/{page_path.name}",
+                    lineterm="",
+                )
+                for line in list(diff)[:40]:
+                    print(f"  {line}")
         else:
             page_path.write_text(content, encoding="utf-8")
             changed.append(page_path)

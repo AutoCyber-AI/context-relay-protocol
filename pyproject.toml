@@ -183,7 +183,10 @@ warn_unused_configs = true
 # numpy 2.5+ ships stubs using PEP 695 `type` statements (3.12+ syntax), which
 # mypy rejects when targeting py3.10 and which halts all further checking.
 # Skip following numpy internals — its symbols become Any, which is precise
-# enough for the small surface CRP uses.
+# enough for the small surface CRP uses. follow_imports_for_stubs is required
+# for per-module follow_imports to apply to stub files at all.
+follow_imports_for_stubs = true
+
 [[tool.mypy.overrides]]
 module = ["numpy", "numpy.*"]
 follow_imports = "skip"

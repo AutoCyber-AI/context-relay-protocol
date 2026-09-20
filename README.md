@@ -81,7 +81,7 @@ and connect it to your backend.
 
 Key guides: [Console deployment](docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md) ·
 [Cognitive presets](docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md) ·
-[Demo & video walkthrough](docs/CRPv6_VIDEO_DEMO_GUIDE.md) ·
+[Demo & video walkthrough](docs/DEMO_REPRODUCTION_AND_VIDEO_GUIDE.md) ·
 [Agent SDK usage](docs/CRPv6_Agent_SDK_Usage_Guide.md)
 
 ---

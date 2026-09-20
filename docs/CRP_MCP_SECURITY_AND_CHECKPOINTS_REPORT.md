@@ -223,7 +223,7 @@ The MCP tool `crp_safety_checkpoint` is a **local preview** of the protocol prim
 
 The **MCP client** is the primary user interface for tool approvals: it receives `requires_confirmation: true` and renders the Accept/Reject card. In **hosted** mode the approval is also pushed to the **CRP Comply dashboard** as a notification.
 
-See [Setting Up Real CRP Checkpoints](crp-checkpoints-setup.md) for the implementation plan.
+See [Setting Up Real CRP Checkpoints](CRP_CHECKPOINTS_SETUP_GUIDE.md) for the implementation plan.
 
 ---
 

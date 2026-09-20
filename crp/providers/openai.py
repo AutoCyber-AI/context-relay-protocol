@@ -22,8 +22,9 @@ import logging
 import os
 import random
 import time
-import urllib.request
 import urllib.error
+import urllib.request
+from collections.abc import Generator
 from typing import Any
 
 from crp.providers.base import LLMProvider
@@ -392,9 +393,7 @@ class OpenAIAdapter(LLMProvider):
             return True
         # Catch-all: retry anything with "channel", "connection", "reset" in message
         exc_msg = str(exc).lower()
-        if any(kw in exc_msg for kw in ("channel", "connection", "reset", "closed")):
-            return True
-        return False
+        return any(kw in exc_msg for kw in ("channel", "connection", "reset", "closed"))
 
     def generate_chat(
         self, messages: list[dict[str, str]], **kwargs: Any
@@ -489,7 +488,7 @@ class OpenAIAdapter(LLMProvider):
 
     def context_window_size(self) -> int:
         """Return the current context window count.
-        
+
             Returns:
                 ``int``.
         """
@@ -570,7 +569,7 @@ class OpenAIAdapter(LLMProvider):
                 # Extract tool calls if present
                 raw_tool_calls = choice.message.tool_calls
                 if raw_tool_calls:
-                    tool_calls_out: list[dict[str, object]] = []
+                    tool_calls_out: list[dict[str, Any]] = []
                     for tc in raw_tool_calls:
                         # Parse arguments (may be JSON string)
                         try:
@@ -648,12 +647,11 @@ class OpenAIAdapter(LLMProvider):
         self,
         messages: list[dict[str, str]],
         **kwargs: object,
-    ):
+    ) -> Generator[str, None, str]:
         """Stream token chunks from OpenAI.
 
         Yields individual token deltas. Return value is finish_reason.
         """
-        from collections.abc import Generator
 
         params: dict[str, object] = {
             "model": self._model,

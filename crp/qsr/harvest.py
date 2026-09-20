@@ -25,8 +25,6 @@ class RoutingExample:
     depth: str
     schema_depth: int = 0
 
-    schema_depth: int = 0
-
     # Decision
     model_id: str = ""
 

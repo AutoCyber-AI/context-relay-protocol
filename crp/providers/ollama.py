@@ -22,8 +22,8 @@ import logging
 import os
 import random
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 import uuid
 from typing import Any
 
@@ -234,7 +234,7 @@ class OllamaAdapter(LLMProvider):
 
     def context_window_size(self) -> int:
         """Return the current context window count.
-        
+
             Returns:
                 ``int``.
         """
@@ -313,7 +313,7 @@ class OllamaAdapter(LLMProvider):
                 done_reason = body.get("done_reason", "stop")
 
                 if raw_tool_calls:
-                    tool_calls_out: list[dict[str, object]] = []
+                    tool_calls_out: list[dict[str, Any]] = []
                     for tc in raw_tool_calls:
                         func = tc.get("function", {}) or {}
                         args_raw = func.get("arguments")

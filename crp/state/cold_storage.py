@@ -55,10 +55,10 @@ class PersistedStateHeader:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PersistedStateHeader:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
-        
+
             Returns:
                 ``PersistedStateHeader``.
         """

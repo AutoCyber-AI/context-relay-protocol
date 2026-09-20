@@ -44,16 +44,14 @@ Each strategy has fundamentally different characteristics:
 
 from __future__ import annotations
 
-import json
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from crp.extraction.types import Fact
     from crp.state.warm_store import WarmStateStore
-    from crp.ckf.fabric import ContextualKnowledgeFabric
 
 logger = logging.getLogger("crp.relay_strategies")
 
@@ -149,7 +147,7 @@ def analyze_output_against_kb(
             continue
 
         # Score candidates
-        best_id = max(candidate_facts, key=candidate_facts.get)
+        best_id = max(candidate_facts, key=lambda fid: candidate_facts[fid])
         best_overlap = candidate_facts[best_id]
         best_fact = next(f for f in all_facts if f.id == best_id)
 

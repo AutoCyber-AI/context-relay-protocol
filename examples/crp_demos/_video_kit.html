@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRPv6 Live Demo — Raw LLM vs CRP Agent</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #151b2e;
+      --panel-2: #1e2640;
+      --accent: #00d4aa;
+      --accent-2: #3b82f6;
+      --text: #e8eef8;
+      --muted: #94a3b8;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4rem 6vw;
+      border-bottom: 1px solid #ffffff10;
+    }
+    h1 { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0 0 1rem; }
+    h2 { font-size: clamp(1.4rem, 2.5vw, 2rem); color: var(--accent); margin: 0 0 1.5rem; }
+    h3 { font-size: 1.2rem; color: var(--accent-2); margin: 0 0 .75rem; }
+    p { max-width: 70ch; margin: .5rem 0; color: var(--muted); }
+    .lead { font-size: 1.25rem; color: var(--text); }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px #00000040;
+    }
+    .panel h3 { margin-top: 0; }
+    .bubble {
+      background: var(--panel-2);
+      border-radius: .75rem;
+      padding: 1rem;
+      margin-top: .75rem;
+      border-left: 4px solid var(--accent-2);
+    }
+    .bubble.raw { border-left-color: var(--danger); }
+    pre.json {
+      background: #0d1324;
+      border-radius: .5rem;
+      padding: .75rem;
+      overflow-x: auto;
+      font-size: .9rem;
+      color: #a5f3fc;
+      margin: .5rem 0 0;
+    }
+    .governance {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: .75rem;
+      margin-top: 1rem;
+    }
+    .card {
+      background: var(--panel-2);
+      border-radius: .5rem;
+      padding: .75rem;
+      text-align: center;
+    }
+    .card .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    .card .value { font-size: 1.1rem; font-weight: 700; margin-top: .25rem; }
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .timeline-step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: .4rem;
+      flex-shrink: 0;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-weight: 700; color: var(--text); }
+    .step-detail { color: var(--muted); font-size: .95rem; }
+    .cta {
+      display: inline-block;
+      background: var(--accent);
+      color: #00110d;
+      padding: .75rem 1.25rem;
+      border-radius: .5rem;
+      font-weight: 700;
+      text-decoration: none;
+      margin-top: 1rem;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .feature {
+      background: var(--panel);
+      border-radius: .75rem;
+      padding: 1.25rem;
+    }
+    .feature strong { color: var(--accent); }
+    .meta { font-size: .85rem; color: var(--muted); margin-top: .25rem; }
+    @media (max-width: 900px) {
+      .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<section class="slide">
+  <h1>CRPv6 — Raw LLM vs Governed Agent</h1>
+  <p class="lead">One question. Two paths. The difference is execution, transparency, and trust.</p>
+  <p class="meta">Model: meta-llama-3.1-8b-instruct &nbsp;|&nbsp; Endpoint: http://localhost:1234/v1/ &nbsp;|&nbsp; Generated: 2026-09-02T21:01:08</p>
+</section>
+
+<section class="slide">
+  <h2>The Question</h2>
+  <div class="panel">
+    <pre class="json">{"role":"user","content":"What is the weather in Sydney?"}</pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Side-by-Side Result</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>Raw LLM</h3>
+      <div class="bubble raw">
+        <p><strong>Emits tool-call JSON but executes nothing.</strong></p>
+        <pre class="json">{"name": "get_weather", "parameters": {"city": "Sydney"}}</pre>
+      </div>
+      <p class="meta">Finish reason: stop &nbsp;|&nbsp; Elapsed: 5.81s</p>
+    </div>
+    <div class="panel">
+      <h3>CRPv6 Agent</h3>
+      <div class="bubble">
+        The temperature in Sydney is currently 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. According to the weather code, it appears to be a clear or sunny day.
+      </div>
+      <div class="governance">
+        <div class="card "><div class="label">Risk</div><div class="value">LOW</div></div>
+        <div class="card "><div class="label">Grounded</div><div class="value">True</div></div>
+        <div class="card "><div class="label">Chain valid</div><div class="value">True</div></div>
+        <div class="card "><div class="label">Sources</div><div class="value">1</div></div>
+        <div class="card "><div class="label">Elapsed</div><div class="value">23.32s</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>What CRP Did — Chain of Thought</h2>
+  <div class="timeline">
+    <div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Intent classified</div><div class="step-detail">Detected intent: plan=['RETRIEVE'] → planned operations: RETRIEVE</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Operation: RETRIEVE</div><div class="step-detail">Positioning the task and selecting the right tools.</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool selected — get_weather</div><div class="step-detail">Selected tool: get_weather for operation: RETRIEVE</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Calling get_weather</div><div class="step-detail"><pre class="json">{</pre></div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool result received</div><div class="step-detail"><pre class="json">{"event_type": "observation_received", "operation": "RETRIEVE", "operation_index": 0, "capability_id": "get_weather", "payload": {"city": "Sydney", "temperature_c": 18.0, "windspeed_kmh": 13.5, "weather_code": 1}}</pre></div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Governance summary</div><div class="step-detail">risk=LOW, grounded=True, chain_valid=True</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Final answer</div><div class="step-detail">The temperature in Sydney is currently 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. According to the weather code, it appears to be a clear or sunny day.</div></div></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Cognitive Preset — research_assistant</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>Same tool, same question, governed preset</h3>
+      <div class="bubble">
+        The current temperature in Sydney is 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. The weather code indicates a clear or sunny day.
+      </div>
+      <div class="governance">
+        <div class="card "><div class="label">Risk</div><div class="value">LOW</div></div>
+        <div class="card "><div class="label">Grounded</div><div class="value">True</div></div>
+        <div class="card "><div class="label">Sources</div><div class="value">1</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Preset provides</h3>
+      <ul>
+        <li>Declarative reasoning phases</li>
+        <li>Safeguards with warn/ask/halt actions</li>
+        <li>Output tone and format expectations</li>
+        <li>Emotion/affect hooks</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Why CRPv6</h2>
+  <div class="grid-3">
+    <div class="feature"><strong>User-defined reasoning</strong><br/>Presets turn your thinking style, rules, and safeguards into runtime structure.</div>
+    <div class="feature"><strong>Live transparency</strong><br/>Every intent, tool call, result, and governance check streams as AG-UI + CRP events.</div>
+    <div class="feature"><strong>Provable provenance</strong><br/>Per-window HMAC chain links every step into a tamper-evident audit trail.</div>
+    <div class="feature"><strong>Model-agnostic</strong><br/>Identical governance contract on LM Studio, OpenAI, Anthropic, or Kimi.</div>
+    <div class="feature"><strong>Real tools, no ceremony</strong><br/>Plain Python functions become capabilities; MCP bridge is optional.</div>
+    <div class="feature"><strong>Quality gate proven</strong><br/>Full SQB benchmark passes against Kimi with all five gate criteria.</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Get Started</h2>
+  <p class="lead">Install the SDK and run the same live demo yourself.</p>
+  <pre class="json">pip install crprotocol
+python examples/crp_demos/unified_video_demo.py</pre>
+  <p><a class="cta" href="https://pypi.org/project/crprotocol/6.1.1/">View on PyPI</a></p>
+</section>
+
+</body>
+</html>

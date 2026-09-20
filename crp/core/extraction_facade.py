@@ -10,16 +10,35 @@ inherits from this class.
 from __future__ import annotations
 
 import logging
-import re
-import time
-import uuid
 from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
+from crp.core.errors import RateLimitExceededError, ValidationError
 from crp.core.task_intent import TaskIntent
 
 if TYPE_CHECKING:
+    import threading
+    from collections import deque
+
+    from crp.advanced.source_grounding import SourceGroundingEngine
+    from crp.ckf.fabric import ContextualKnowledgeFabric
+    from crp.core.config import CRPConfig
+    from crp.core.session import SessionHandle
+    from crp.extraction.pipeline import ExtractionPipeline
     from crp.extraction.types import ExtractionResult as PipelineExtractionResult
+    from crp.security.audit_trail import ComplianceAuditTrail
+    from crp.security.consent import (
+        ConsentManager,
+        HumanOversightController,
+        ProcessingRecordKeeper,
+    )
+    from crp.security.injection import InjectionDetector
+    from crp.security.integrity import FactIntegrityChain
+    from crp.security.privacy import DataLineageTracker, PIIScanner, RetentionManager
+    from crp.security.quarantine import IngestQuarantine
+    from crp.security.rbac import RBACEnforcer
+    from crp.security.validation import InputValidator
+    from crp.state.warm_store import WarmStateStore
 
 logger = logging.getLogger("crp.orchestrator")
 
@@ -40,7 +59,37 @@ class ExtractionMixin:
     """Mixin providing CRP extraction and ingestion methods.
 
     Methods access orchestrator state via ``self`` (multiple inheritance).
+    The attribute declarations below are initialised by
+    ``CRPOrchestrator.__init__``; the ``if TYPE_CHECKING`` method stub is
+    implemented by ``CRPOrchestrator`` (multiple inheritance). Neither
+    changes runtime behaviour.
     """
+
+    # ── State initialised by CRPOrchestrator.__init__ ──────────
+    _extraction: ExtractionPipeline
+    _extraction_history: deque[PipelineExtractionResult]
+    _warm_store: WarmStateStore
+    _ckf: ContextualKnowledgeFabric
+    _config: CRPConfig
+    _session: SessionHandle
+    _lock: threading.RLock
+    _windows_completed: int
+    _source_grounding: SourceGroundingEngine
+    _integrity_chain: FactIntegrityChain
+    _injection_detector: InjectionDetector
+    _input_validator: InputValidator
+    _rbac: RBACEnforcer
+    _compliance_audit: ComplianceAuditTrail
+    _consent_manager: ConsentManager
+    _processing_records: ProcessingRecordKeeper
+    _human_oversight: HumanOversightController
+    _pii_scanner: PIIScanner
+    _quarantine: IngestQuarantine
+    _retention_manager: RetentionManager
+    _lineage_tracker: DataLineageTracker
+
+    if TYPE_CHECKING:
+        def _check_session(self) -> None: ...
 
     def _extract_and_store(
         self,
@@ -122,7 +171,7 @@ class ExtractionMixin:
                 )
 
         # Auto-compact warm store if thresholds exceeded (§7.4)
-        from crp.state.compaction import should_compact, compact
+        from crp.state.compaction import compact, should_compact
         if should_compact(self._warm_store):
             try:
                 compact(
@@ -144,10 +193,14 @@ class ExtractionMixin:
         self,
         texts: list[str],
         task_intent: str = "",
-    ) -> list[int]:
-        """Batch ingest multiple texts, returning facts extracted per text (§6.6)."""
+    ) -> list[int | ExtractionResult]:
+        """Batch ingest multiple texts, returning facts extracted per text (§6.6).
+
+        Note: on success each entry is the ``ExtractionResult`` from
+        ``ingest()``; on failure the literal ``0`` is appended.
+        """
         self._check_session()
-        results: list[int] = []
+        results: list[int | ExtractionResult] = []
         for text in texts:
             try:
                 facts_count = self.ingest(text)

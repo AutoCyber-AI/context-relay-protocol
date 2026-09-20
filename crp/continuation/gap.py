@@ -9,9 +9,9 @@ import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 logger = logging.getLogger("crp.continuation.gap")
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from crp.extraction.types import Fact

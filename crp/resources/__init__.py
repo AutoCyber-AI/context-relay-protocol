@@ -20,16 +20,16 @@ from crp.resources.cost_model import (
     ProviderPricing,
     WindowCost,
 )
-from crp.resources.overhead_manager import (
-    PROTECTED_INTELLIGENCE,
-    SHEDDING_CASCADE,
-    OverheadBudgetManager,
-)
 from crp.resources.governor import (
     DeviceProfile,
     DeviceTier,
     ResourceGovernor,
     ResourcePlan,
+)
+from crp.resources.overhead_manager import (
+    PROTECTED_INTELLIGENCE,
+    SHEDDING_CASCADE,
+    OverheadBudgetManager,
 )
 from crp.resources.resource_manager import (
     MODEL_ESTIMATES,
@@ -50,6 +50,8 @@ __all__ = [
     "OverheadBudget",
     "OverheadDecision",
     "OverheadBudgetManager",
+    "PROTECTED_INTELLIGENCE",
+    "PromptEfficiency",
     "ProviderPricing",
     "ResourceManager",
     "ResourceSnapshot",

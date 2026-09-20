@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from crp.core.task_intent import TaskIntent
 from crp.envelope.builder import (
     CKF_GATE_TOKENS,
     CKF_RESERVE_RATIO,
@@ -17,7 +18,6 @@ from crp.envelope.builder import (
     EnvelopeState,
     construct,
 )
-from crp.core.task_intent import TaskIntent
 from crp.extraction.types import Fact, FactGraph
 
 

@@ -420,6 +420,7 @@ nav:
       - Ckf: api/modules/ckf.md
       - Cli: api/modules/cli.md
       - Clr: api/modules/clr.md
+      - Cognition: api/modules/cognition.md
       - Comply: api/modules/comply.md
       - Config: api/modules/config.md
       - Config Schema: api/modules/config_schema.md

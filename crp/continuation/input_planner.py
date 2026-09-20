@@ -15,8 +15,8 @@ silently compacting or truncating it.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
 
 
 @dataclass

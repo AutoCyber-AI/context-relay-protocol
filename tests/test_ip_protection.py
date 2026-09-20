@@ -32,10 +32,9 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers — reset enforcement state between tests
@@ -64,9 +63,11 @@ def clean_guard_state():
 @pytest.fixture
 def violations_dir(tmp_path):
     """Provide a temporary violations directory."""
-    with patch.dict(os.environ, {}, clear=False):
-        with patch("crp.license_guard.Path.home", return_value=tmp_path):
-            yield tmp_path
+    with (
+        patch.dict(os.environ, {}, clear=False),
+        patch("crp.license_guard.Path.home", return_value=tmp_path),
+    ):
+        yield tmp_path
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -85,7 +86,9 @@ class TestLicenseHeaderVerification:
     def test_all_core_modules_have_headers(self):
         """Every module in _CORE_MODULES must have the license header."""
         from crp.license_guard import (
-            _CORE_MODULES, _LICENSE_MARKER, _COPYRIGHT_MARKER,
+            _COPYRIGHT_MARKER,
+            _CORE_MODULES,
+            _LICENSE_MARKER,
         )
         for mod_name in _CORE_MODULES:
             mod = importlib.import_module(mod_name)
@@ -104,16 +107,17 @@ class TestLicenseHeaderVerification:
     def test_tampered_header_triggers_degradation(self):
         """Removing a license header must trigger feature degradation."""
         from crp.license_guard import (
-            _LICENSE_MARKER, _COPYRIGHT_MARKER, _state,
+            _COPYRIGHT_MARKER,
+            _LICENSE_MARKER,
+            _state,
         )
 
         # Create a tampered file and verify the detection logic
-        tampered_file = tempfile.NamedTemporaryFile(
+        with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False,
-        )
-        try:
+        ) as tampered_file:
             tampered_file.write("# No license header here\nimport os\n")
-            tampered_file.close()
+        try:
 
             # Verify our tampered file lacks the required markers
             with open(tampered_file.name, encoding="utf-8") as f:
@@ -140,7 +144,7 @@ class TestLicenseHeaderVerification:
 
     def test_feature_degradation_after_tamper(self):
         """Manually set tamper state and verify features are blocked."""
-        from crp.license_guard import is_feature_allowed, _state
+        from crp.license_guard import _state, is_feature_allowed
 
         # Clean state — everything allowed
         assert is_feature_allowed("stage_3") is True
@@ -195,8 +199,8 @@ class TestManagedServiceBlocking:
 
     def test_managed_service_flag_blocks(self):
         """CRP_MANAGED_SERVICE=true must raise CRPError."""
-        from crp.license_guard import check_managed_service_restriction, _state
         from crp.core.errors import CRPError
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
         with patch.dict(os.environ, {"CRP_MANAGED_SERVICE": "true"}, clear=False):
@@ -207,27 +211,31 @@ class TestManagedServiceBlocking:
 
     def test_multi_tenant_flag_blocks(self):
         """CRP_MULTI_TENANT=1 must raise CRPError."""
-        from crp.license_guard import check_managed_service_restriction, _state
         from crp.core.errors import CRPError
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
-        with patch.dict(os.environ, {"CRP_MULTI_TENANT": "1"}, clear=False):
-            with pytest.raises(CRPError):
-                check_managed_service_restriction()
+        with (
+            patch.dict(os.environ, {"CRP_MULTI_TENANT": "1"}, clear=False),
+            pytest.raises(CRPError),
+        ):
+            check_managed_service_restriction()
 
     def test_saas_mode_flag_blocks(self):
         """CRP_SAAS_MODE=yes must raise CRPError."""
-        from crp.license_guard import check_managed_service_restriction, _state
         from crp.core.errors import CRPError
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
-        with patch.dict(os.environ, {"CRP_SAAS_MODE": "yes"}, clear=False):
-            with pytest.raises(CRPError):
-                check_managed_service_restriction()
+        with (
+            patch.dict(os.environ, {"CRP_SAAS_MODE": "yes"}, clear=False),
+            pytest.raises(CRPError),
+        ):
+            check_managed_service_restriction()
 
     def test_false_flags_do_not_block(self):
         """Setting flags to '0'/'false'/'no' must NOT block."""
-        from crp.license_guard import check_managed_service_restriction, _state
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
         for val in ("0", "false", "no", "False", "NO"):
@@ -237,7 +245,7 @@ class TestManagedServiceBlocking:
 
     def test_commercial_license_bypasses_block(self):
         """A valid commercial license key must bypass managed-service block."""
-        from crp.license_guard import check_managed_service_restriction, _state
+        from crp.license_guard import _state, check_managed_service_restriction
 
         # Set commercial license
         _state.commercial_license = True
@@ -249,8 +257,8 @@ class TestManagedServiceBlocking:
 
     def test_error_contains_contact_info(self):
         """The CRPError must contain contact information for licensing."""
-        from crp.license_guard import check_managed_service_restriction, _state
         from crp.core.errors import CRPError
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
         with patch.dict(os.environ, {"CRP_MANAGED_SERVICE": "true"}, clear=False):
@@ -263,7 +271,7 @@ class TestManagedServiceBlocking:
 
     def test_infra_indicators_logged_not_blocked(self):
         """Kubernetes/ECS/GAE env vars must log a warning but NOT block."""
-        from crp.license_guard import check_managed_service_restriction, _state
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
         # Only infra indicators, no explicit managed-service flags
@@ -453,7 +461,7 @@ class TestIntegrityManifest:
 
     def test_manifest_contains_all_modules(self):
         """Manifest must include all core modules."""
-        from crp.license_guard import build_integrity_manifest, _CORE_MODULES
+        from crp.license_guard import _CORE_MODULES, build_integrity_manifest
         manifest = build_integrity_manifest()
         for mod in _CORE_MODULES:
             assert mod in manifest["modules"]
@@ -475,7 +483,8 @@ class TestIntegrityManifest:
     def test_verify_clean_manifest(self):
         """Verifying a fresh manifest against current state must show no changes."""
         from crp.license_guard import (
-            build_integrity_manifest, verify_integrity_manifest,
+            build_integrity_manifest,
+            verify_integrity_manifest,
         )
         manifest = build_integrity_manifest()
         changes = verify_integrity_manifest(manifest)
@@ -484,7 +493,8 @@ class TestIntegrityManifest:
     def test_verify_detects_simulated_change(self):
         """A manifest with a different fingerprint must detect the change."""
         from crp.license_guard import (
-            build_integrity_manifest, verify_integrity_manifest,
+            build_integrity_manifest,
+            verify_integrity_manifest,
         )
         manifest = build_integrity_manifest()
         # Simulate a change by altering a stored fingerprint
@@ -539,7 +549,9 @@ class TestPackageProvenance:
     def test_canonical_constants_present(self):
         """Canonical package metadata constants must exist."""
         from crp.license_guard import (
-            _CANONICAL_PACKAGE, _CANONICAL_AUTHOR, _CANONICAL_REPO,
+            _CANONICAL_AUTHOR,
+            _CANONICAL_PACKAGE,
+            _CANONICAL_REPO,
         )
         assert _CANONICAL_PACKAGE == "crp"
         assert "Vidiniotis" in _CANONICAL_AUTHOR
@@ -593,7 +605,7 @@ class TestGuardIntegrity:
 
     def test_guard_not_stubbed(self):
         """A stub file that always returns True/[] must fail integrity."""
-        from crp.license_guard import verify_guard_integrity, _state
+        from crp.license_guard import _state, verify_guard_integrity
 
         # Write a stub to a temp file and check it would be caught
         stub = "def verify_license_headers(): return []\n"
@@ -740,22 +752,24 @@ class TestStartupCheck:
         env_clean = {k: v for k, v in os.environ.items()
                      if k not in ("CRP_MANAGED_SERVICE", "CRP_MULTI_TENANT",
                                   "CRP_SAAS_MODE")}
-        with patch.dict(os.environ, env_clean, clear=True):
-            with patch("crp.license_guard.verify_license_headers",
-                       return_value=[]) as mock_headers, \
-                 patch("crp.license_guard.verify_package_provenance",
-                       return_value=[]) as mock_prov, \
-                 patch("crp.license_guard.verify_guard_integrity",
-                       return_value=True) as mock_guard, \
-                 patch("crp.license_guard.verify_origin_binding",
-                       return_value=[]) as mock_origin:
-                from crp.license_guard import _startup_check
-                _startup_check()
+        with (
+            patch.dict(os.environ, env_clean, clear=True),
+            patch("crp.license_guard.verify_license_headers",
+                  return_value=[]) as mock_headers,
+            patch("crp.license_guard.verify_package_provenance",
+                  return_value=[]) as mock_prov,
+            patch("crp.license_guard.verify_guard_integrity",
+                  return_value=True) as mock_guard,
+            patch("crp.license_guard.verify_origin_binding",
+                  return_value=[]) as mock_origin,
+        ):
+            from crp.license_guard import _startup_check
+            _startup_check()
 
-                mock_headers.assert_called_once()
-                mock_prov.assert_called_once()
-                mock_guard.assert_called_once()
-                mock_origin.assert_called_once()
+            mock_headers.assert_called_once()
+            mock_prov.assert_called_once()
+            mock_guard.assert_called_once()
+            mock_origin.assert_called_once()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -788,7 +802,7 @@ class TestGitHubThreatModel:
 
     def test_clone_rebrand_package_detected(self):
         """CLONE ATTACK: Re-branded package must be detected by provenance check."""
-        from crp.license_guard import _CANONICAL_PACKAGE, _CANONICAL_AUTHOR
+        from crp.license_guard import _CANONICAL_AUTHOR, _CANONICAL_PACKAGE
         # The canonical constants create a binding that a renamed fork would violate
         assert _CANONICAL_PACKAGE == "crp"
         assert "Vidiniotis" in _CANONICAL_AUTHOR
@@ -803,8 +817,8 @@ class TestGitHubThreatModel:
 
     def test_saas_deployment_blocked(self):
         """SAAS ATTACK: Deploying as managed service must be blocked."""
-        from crp.license_guard import check_managed_service_restriction, _state
         from crp.core.errors import CRPError
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = False
 
         with patch.dict(os.environ, {"CRP_MANAGED_SERVICE": "true"}):
@@ -814,7 +828,7 @@ class TestGitHubThreatModel:
 
     def test_fork_with_commercial_license_allowed(self):
         """LEGITIMATE USE: A fork WITH a commercial license must work."""
-        from crp.license_guard import check_managed_service_restriction, _state
+        from crp.license_guard import _state, check_managed_service_restriction
         _state.commercial_license = True
 
         with patch.dict(os.environ, {"CRP_MANAGED_SERVICE": "true"}):
@@ -861,7 +875,7 @@ class TestCopyrightCoverage:
                 missing.append(str(py_file.relative_to(crp_root.parent)))
 
         assert missing == [], (
-            f"Files missing copyright header:\n"
+            "Files missing copyright header:\n"
             + "\n".join(f"  - {f}" for f in missing)
         )
 
@@ -879,7 +893,7 @@ class TestCopyrightCoverage:
                 missing.append(str(py_file.relative_to(crp_root.parent)))
 
         assert missing == [], (
-            f"Files missing ELv2 license reference:\n"
+            "Files missing ELv2 license reference:\n"
             + "\n".join(f"  - {f}" for f in missing)
         )
 
@@ -905,7 +919,7 @@ class TestFeatureGateExhaustive:
     ])
     def test_degraded_feature_gate(self, feature, expected):
         """In degraded mode, only basic features are allowed."""
-        from crp.license_guard import is_feature_allowed, _state
+        from crp.license_guard import _state, is_feature_allowed
         _state.features_degraded = True
         assert is_feature_allowed(feature) is expected
 
@@ -915,7 +929,7 @@ class TestFeatureGateExhaustive:
     ])
     def test_clean_state_all_allowed(self, feature):
         """In clean state, ALL features must be allowed."""
-        from crp.license_guard import is_feature_allowed, _state
+        from crp.license_guard import _state, is_feature_allowed
         _state.features_degraded = False
         assert is_feature_allowed(feature) is True
 

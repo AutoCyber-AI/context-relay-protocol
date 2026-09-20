@@ -11,7 +11,14 @@ Strategy:
 This is the CLEAN DIFFERENTIATOR that shows CRP's real value.
 """
 
-import sys, os, time, re, json, io, logging, functools
+import functools
+import io
+import json
+import logging
+import os
+import re
+import sys
+import time
 
 # Force UTF-8 on Windows
 if sys.stdout.encoding != "utf-8":
@@ -188,9 +195,9 @@ def run_direct():
 # TEST B: CRP-Orchestrated — same max_tokens, but with continuation
 # ═══════════════════════════════════════════════════════════════════
 def run_crp():
-    from crp.providers.openai import OpenAIAdapter
-    from crp.core.orchestrator import CRPOrchestrator
     from crp.core.config import CRPConfig
+    from crp.core.orchestrator import CRPOrchestrator
+    from crp.providers.openai import OpenAIAdapter
 
     print("\n" + "=" * 70)
     print(f"TEST B: CRP DISPATCH — max_output_tokens={MAX_OUTPUT_TOKENS} (CRP HANDLES CONTINUATION)")
@@ -218,7 +225,7 @@ def run_crp():
 
     print(f"Model: {MODEL}")
     print(f"Max output tokens per window: {MAX_OUTPUT_TOKENS}")
-    print(f"Max continuation windows: 10")
+    print("Max continuation windows: 10")
     print("Dispatching via CRP...")
 
     t0 = time.time()
@@ -324,20 +331,20 @@ def write_report(direct, crp):
 
         if direct["truncated"] and c_secs > d_secs:
             word_ratio = c_words / d_words if d_words > 0 else float("inf")
-            f.write(f"*** CRP WINS — CLEAR DIFFERENTIATOR ***\n\n")
+            f.write("*** CRP WINS — CLEAR DIFFERENTIATOR ***\n\n")
             f.write(f"Direct LLM was TRUNCATED at {MAX_OUTPUT_TOKENS} tokens.\n")
             f.write(f"  - Only produced {d_secs}/30 sections ({d_words} words)\n")
-            f.write(f"  - Output cut off mid-generation\n")
+            f.write("  - Output cut off mid-generation\n")
             f.write(f"  - Missing sections: {sorted(set(range(1,31)) - set(direct['sections_found']))}\n\n")
             f.write(f"CRP used {crp['continuation_windows']} continuation windows to complete the task.\n")
             f.write(f"  - Produced {c_secs}/30 sections ({c_words} words)\n")
             f.write(f"  - {word_ratio:.1f}x more content than direct LLM\n")
             f.write(f"  - Extracted {crp['facts_extracted']} facts for context-carrying\n")
             f.write(f"  - Quality tier: {crp.get('quality_tier', 'N/A')}\n\n")
-            f.write(f"CRP's continuation engine detected the wall hit (finish_reason=length),\n")
-            f.write(f"analysed the gap (missing sections), carried extracted facts forward\n")
-            f.write(f"in the envelope, and dispatched continuation windows until the task\n")
-            f.write(f"was complete. This is impossible with a raw LLM call.\n")
+            f.write("CRP's continuation engine detected the wall hit (finish_reason=length),\n")
+            f.write("analysed the gap (missing sections), carried extracted facts forward\n")
+            f.write("in the envelope, and dispatched continuation windows until the task\n")
+            f.write("was complete. This is impossible with a raw LLM call.\n")
         elif not direct["truncated"]:
             f.write("Direct LLM was NOT truncated — token cap was sufficient.\n")
             f.write("Try reducing MAX_OUTPUT_TOKENS further.\n")
@@ -437,8 +444,8 @@ if __name__ == "__main__":
     print("=" * 70)
     print("  CRP KILLER DIFFERENTIATOR TEST")
     print(f"  Model: {MODEL}  |  max_tokens: {MAX_OUTPUT_TOKENS}")
-    print(f"  Task: 30-section document (requires ~20000+ tokens)")
-    print(f"  Direct LLM WILL be truncated. CRP WILL continue.")
+    print("  Task: 30-section document (requires ~20000+ tokens)")
+    print("  Direct LLM WILL be truncated. CRP WILL continue.")
     print("=" * 70)
     print()
 
@@ -446,7 +453,8 @@ if __name__ == "__main__":
         direct = run_direct()
     except Exception as e:
         print(f"TEST A FAILED: {e}")
-        import traceback; traceback.print_exc()
+        import traceback
+        traceback.print_exc()
         direct = {"method": "FAILED", "elapsed": 0, "finish_reason": "error",
                   "truncated": False, "clean_chars": 0, "words": 0,
                   "sections_found": [], "sections_count": 0,
@@ -457,7 +465,8 @@ if __name__ == "__main__":
         crp_result = run_crp()
     except Exception as e:
         print(f"TEST B FAILED: {e}")
-        import traceback; traceback.print_exc()
+        import traceback
+        traceback.print_exc()
         crp_result = {"method": "FAILED", "elapsed": 0, "clean_chars": 0,
                       "words": 0, "sections_found": [], "sections_count": 0,
                       "has_conclusion": False, "paragraphs": 0,

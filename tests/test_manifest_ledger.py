@@ -22,7 +22,6 @@ from crp import (
     TrustLevel,
 )
 
-
 SECRET = b"a" * 32
 SECRET2 = b"b" * 32
 

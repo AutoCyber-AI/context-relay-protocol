@@ -80,11 +80,10 @@ import logging
 import secrets
 import threading
 import time
-import uuid
 from collections import defaultdict, deque
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 logger = logging.getLogger("crp.sidecar")
 
@@ -280,9 +279,7 @@ class CRPSidecarHandler(BaseHTTPRequestHandler):
             _json_response(self, 429, {"error": "Too Many Requests",
                                        "detail": f"Rate limit: {_rate_max_requests} req/{_rate_window_seconds}s"})
             return False
-        if not _check_auth(self):
-            return False
-        return True
+        return _check_auth(self)
 
     def _get_session(self, session_id: str) -> Any | None:
         """Look up session with ownership check.  Returns orchestrator or None (after sending error)."""
@@ -396,12 +393,12 @@ class CRPSidecarHandler(BaseHTTPRequestHandler):
     def _handle_metrics(self) -> None:
         """Expose Prometheus-compatible metrics (§audit M14)."""
         try:
-            from crp.observability.metrics import MetricsExporter, ExportFormat
+            from crp.observability.metrics import ExportFormat, MetricsExporter
             exporter = MetricsExporter()
             # Collect live session metrics
             with _sessions_lock:
                 exporter.gauge("sidecar.active_sessions", len(_active_sessions))
-                for sid, orch in _active_sessions.items():
+                for orch in _active_sessions.values():
                     try:
                         st = orch.session_status()
                         exporter.gauge("sidecar.facts_in_warm_store", st.facts_in_warm_state)
@@ -452,8 +449,8 @@ class CRPSidecarHandler(BaseHTTPRequestHandler):
             _json_response(self, 413, {"error": _sanitize_error(exc)})
             return
         try:
-            from crp.providers.custom import CustomProvider
             from crp.core.orchestrator import CRPOrchestrator
+            from crp.providers.custom import CustomProvider
 
             context_window = body.get("context_window", 128_000)
             model_name = body.get("model", "sidecar-custom")

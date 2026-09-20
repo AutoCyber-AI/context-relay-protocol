@@ -148,14 +148,14 @@ def enforce_policy(policy: SafetyPolicy, signals: SafetySignals) -> PolicyDecisi
 
     def add(directive: str, vtype: ViolationType, action: EnforcementAction, detail: str = "", status: int | None = None) -> None:
         """Execute add and return the result.
-        
+
             Args:
                 directive (str): The directive value.
                 vtype (ViolationType): The vtype value.
                 action (EnforcementAction): The action value.
                 detail (str): The detail value.
                 status (int | None): The status value.
-        
+
             Returns:
                 ``None``.
         """

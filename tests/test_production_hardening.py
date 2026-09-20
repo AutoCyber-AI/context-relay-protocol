@@ -13,7 +13,6 @@ import time
 
 import pytest
 
-
 # ── H2: Key rotation ────────────────────────────────────────────────
 
 class TestKeyRotation:
@@ -256,6 +255,7 @@ class TestStructuredLogging:
 
     def test_structured_formatter_output(self):
         import logging
+
         from crp.observability.structured_logging import StructuredFormatter
 
         formatter = StructuredFormatter()
@@ -358,6 +358,7 @@ class TestConvenienceImports:
 class TestKwargsValidation:
     def test_unknown_kwargs_logged(self, caplog):
         import logging
+
         from crp.core.config import ConfigurationResolver
 
         resolver = ConfigurationResolver()
@@ -421,10 +422,10 @@ class TestFactGraphEdgeIndex:
 class TestTypeAliases:
     def test_typing_module_has_aliases(self):
         from crp._typing import (
+            JSON,
             EmbeddingFn,
             EmbeddingVector,
             FactID,
-            JSON,
             SessionID,
             TokenCount,
             WindowID,

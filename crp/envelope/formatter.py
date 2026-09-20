@@ -118,7 +118,7 @@ def format_facts_section(packed_facts: list[PackedFact]) -> str:
 
 
 def format_context_sources_section(
-    sources: list["ContextSource"],
+    sources: list[ContextSource],
     *,
     include_benign: bool = False,
 ) -> str:

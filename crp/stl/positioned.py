@@ -22,6 +22,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from crp.cognition.phase_machine import PhasePlan
+from crp.cognition.safeguard import SafeguardEngine
 from crp.security.clarify import (
     ClarificationAction,
     ClarificationHandler,
@@ -49,6 +51,44 @@ logger = logging.getLogger("crp.stl.positioned")
 
 # (prompt, optional output schema for constrained decoding) -> model text.
 ModelCall = Callable[[str, "dict[str, Any] | None"], str]
+
+
+def _depth_level_from_name(name: str) -> Any | None:
+    """Map a preset depth name (or D-token) to a DepthLevel.
+
+    CognitivePreset reasoning phases use qualitative names; the STL uses D1–D5.
+    Returns None for unknown/empty names so the caller keeps its negotiated depth.
+    """
+    from crp.stl.depth_model import DepthLevel
+
+    token = (name or "").strip().lower()
+    mapping = {
+        "quick": DepthLevel.D1,
+        "lookup": DepthLevel.D1,
+        "standard": DepthLevel.D3,
+        "thorough": DepthLevel.D4,
+        "exhaustive": DepthLevel.D5,
+        "d1": DepthLevel.D1,
+        "d2": DepthLevel.D2,
+        "d3": DepthLevel.D3,
+        "d4": DepthLevel.D4,
+        "d5": DepthLevel.D5,
+    }
+    return mapping.get(token)
+
+
+def _continuation_budget_for(depth: Any, default_max: int) -> int:
+    """How many continuation windows a generative operation may use at this depth."""
+    from crp.stl.depth_model import DepthLevel
+
+    table = {
+        DepthLevel.D1: 1,
+        DepthLevel.D2: 1,
+        DepthLevel.D3: max(1, default_max),
+        DepthLevel.D4: max(2, default_max),
+        DepthLevel.D5: max(3, default_max),
+    }
+    return table.get(depth, default_max)
 
 
 class ModelCallError(RuntimeError):
@@ -477,7 +517,9 @@ def run_positioned(
     prior_cso: CognitiveStateObject | None = None,
     max_continuation_windows: int = 1,
     event_callback: Callable[[dict[str, Any]], None] | None = None,
+    phase_plan: PhasePlan | None = None,
     final_synthesis: bool = True,
+    safeguard_engine: SafeguardEngine | None = None,
 ) -> PositionedResult:
     """Run the positioned-tool-loop for a request (CRP-SPEC-049/050).
 
@@ -494,8 +536,14 @@ def run_positioned(
         prior_cso: Optional prior-turn CSO to relay forward (multi-turn workflows).
         final_synthesis: If True and tool observations were made, run a final SYNTHESISE
             step so raw payloads become natural-language prose.
+        safeguard_engine: Optional preset safeguard engine; evaluates user input,
+            tool selections, and generated output for declarative safeguard rules.
     """
-    operations = classify_operations(user_request)
+    phase_sm = phase_plan.copy() if phase_plan is not None else None
+    if phase_sm is not None and phase_sm.phases:
+        operations = phase_sm.to_operations()
+    else:
+        operations = classify_operations(user_request)
     depth, _ = negotiate_depth(user_request, operations)
 
     governor_reason = ""
@@ -528,17 +576,89 @@ def run_positioned(
     continuation_windows_total = 0
 
     for op in operations[:max_operations]:
+        phase = phase_sm.current_phase if phase_sm else None
         sm.position()
+        # ``phase is not None`` implies ``phase_sm is not None`` (line above);
+        # the extra check only narrows the type for mypy.
+        if phase is not None and phase_sm is not None and not phase.allows_operation(op):
+            # Widened to Optional: reassigned from _preventive_check (Optional)
+            # further below in the tool-call branch.
+            halt: dict[str, Any] | None = phase_sm.violation_frame(operation=op)
+            assert halt is not None  # violation_frame always returns a frame
+            cso.record_preventive_halt(halt)
+            sm.halt(f"phase_plan:{phase.name}:operation_not_allowed:{op.name}")
+            outputs.append(f"[halted: phase '{phase.name}' does not allow {op.name}]")
+            break
+
+        # Per-phase reasoning controls (hard, not prompt-level): a phase's depth
+        # overrides the globally negotiated depth for ITS operations, and its
+        # guidance text is injected into this step's frame so the model reasons
+        # with the current phase's instructions.
+        eff_depth = depth
+        phase_guidance = ""
+        if phase is not None:
+            if phase.depth:
+                eff_depth = _depth_level_from_name(phase.depth) or depth
+            phase_guidance = phase.prompt or ""
+
         compass = build_goal_compass(op.value, user_request, prior_ops)
-        frame = build_operation_frame(op, user_request, context_facts, depth, compass)
+        frame = build_operation_frame(
+            op, user_request, context_facts, eff_depth, compass,
+            reasoning_guidance=phase_guidance,
+        )
         frame_tokens += frame.estimated_tokens
         state_ctx = cso.to_prompt_context(max_facts=8, max_decisions=3)
 
         tpf = None
         if fabric is not None:
+            phase_tools = phase.tools if phase is not None else None
+            if phase_tools is not None:
+                policy = policy or PolicyContext()
+                if policy.allowlist is None:
+                    policy = PolicyContext(
+                        blocked_safety_classes=policy.blocked_safety_classes,
+                        data_residency=policy.data_residency,
+                        policy_domains=policy.policy_domains,
+                        allowlist=set(phase_tools),
+                        blocklist=policy.blocklist,
+                        authorised_scope=policy.authorised_scope,
+                        approved_sinks=policy.approved_sinks,
+                    )
+                else:
+                    policy = PolicyContext(
+                        blocked_safety_classes=policy.blocked_safety_classes,
+                        data_residency=policy.data_residency,
+                        policy_domains=policy.policy_domains,
+                        allowlist=policy.allowlist & set(phase_tools),
+                        blocklist=policy.blocklist,
+                        authorised_scope=policy.authorised_scope,
+                        approved_sinks=policy.approved_sinks,
+                    )
+            if phase is not None and phase.tools:
+                policy = policy or PolicyContext()
+                if policy.allowlist is None:
+                    policy = PolicyContext(
+                        blocked_safety_classes=policy.blocked_safety_classes,
+                        data_residency=policy.data_residency,
+                        policy_domains=policy.policy_domains,
+                        allowlist=set(phase.tools),
+                        blocklist=policy.blocklist,
+                        authorised_scope=policy.authorised_scope,
+                        approved_sinks=policy.approved_sinks,
+                    )
+                else:
+                    policy = PolicyContext(
+                        blocked_safety_classes=policy.blocked_safety_classes,
+                        data_residency=policy.data_residency,
+                        policy_domains=policy.policy_domains,
+                        allowlist=policy.allowlist & set(phase.tools),
+                        blocklist=policy.blocklist,
+                        authorised_scope=policy.authorised_scope,
+                        approved_sinks=policy.approved_sinks,
+                    )
             selection = fabric.select(op, query_text=user_request, profile=profile, policy=policy)
             if selection.selected:
-                tpf = build_tool_positioning_frame(frame, selection, profile=profile, depth=depth)
+                tpf = build_tool_positioning_frame(frame, selection, profile=profile, depth=eff_depth)
 
         try:
             if op is STLOperation.CLARIFY and clarify_handler is not None:
@@ -574,6 +694,27 @@ def run_positioned(
                     halt = _preventive_check(descriptor, call, policy, op, oversight_required)
                     if halt is not None and _seek_oversight_approval(halt, call, op, clarify_handler):
                         halt = None  # user approved the gated capability
+                    # Judge on the model's true intent: a snap-to-capability remap may
+                    # have made capability_id allowed while the requested tool is not.
+                    requested = call.requested_id or call.capability_id or ""
+                    # ``phase is not None`` implies ``phase_sm is not None``;
+                    # the extra check only narrows the type for mypy.
+                    if phase is not None and phase_sm is not None and (
+                        not phase.allows_tool(call.capability_id or "")
+                        or not phase.allows_tool(requested)
+                    ):
+                        halt = phase_sm.violation_frame(
+                            operation=op, capability_id=requested
+                        )
+                        cso.record_preventive_halt(halt)
+                        sm.halt(
+                            f"phase_plan:{phase.name}:tool_not_allowed:{requested}"
+                        )
+                        outputs.append(
+                            f"[halted: phase '{phase.name}' does not allow tool {requested}]"
+                        )
+                        break
+
                     if halt is not None:
                         cso.record_preventive_halt(halt)
                         sm.halt(halt["problematic_frame"]["violation"])
@@ -581,9 +722,34 @@ def run_positioned(
                         break
 
                     sm.select_tool(call.capability_id or "")
+
+                    # Preset safeguard check before executing the selected tool.
+                    if safeguard_engine is not None:
+                        triggered = safeguard_engine.evaluate(
+                            user_input=user_request,
+                            tool_id=call.capability_id or "",
+                            tool_args=call.arguments or {},
+                        )
+                        halt_results = [t for t in triggered if t.action == "halt"]
+                        if halt_results:
+                            reasons = ", ".join(f"{t.rule} ({t.matched})" for t in halt_results)
+                            halt_frame = {
+                                "crp_halt_reason": "PRESET_SAFEGUARD_VIOLATION",
+                                "halt_point": "TOOL_SELECTED",
+                                "problematic_frame": {
+                                    "operation_type": op.name,
+                                    "capability_id": call.capability_id,
+                                    "violation": reasons,
+                                },
+                            }
+                            cso.record_preventive_halt(halt_frame)
+                            sm.halt(reasons)
+                            outputs.append(f"[halted by safeguard: {reasons}]")
+                            break
+
                     if executor is not None and descriptor is not None and executor.has_impl(call.capability_id or ""):
                         res = executor.execute(descriptor, call.arguments, op, window_id=cso.cso_id)
-                        sm.execute_tool(call.capability_id or "")
+                        sm.execute_tool(call.capability_id or "", arguments=call.arguments)
                         if res.ok and res.observation is not None:
                             cso.add_tool_observation(res.observation)
                             output = _summarise_payload(res.observation.payload)
@@ -606,7 +772,7 @@ def run_positioned(
                             sm.verify(detail="tool-failed")
                     else:
                         # Selection-only mode: no implementation registered; record the call.
-                        sm.execute_tool(call.capability_id or "")
+                        sm.execute_tool(call.capability_id or "", arguments=call.arguments)
                         output = json.dumps(
                             {"capability_id": call.capability_id, "arguments": call.arguments}
                         )
@@ -616,9 +782,12 @@ def run_positioned(
                     sm.verify(detail="direct-answer")
             else:
                 prompt = f"{state_ctx}\n\n{frame.to_prompt()}"
-                if max_continuation_windows > 1 and op in _GENERATIVE_OPS:
+                # Depth controls the continuation budget for generative ops: a
+                # shallow phase writes one window, a deep phase may continue.
+                op_window_budget = _continuation_budget_for(eff_depth, max_continuation_windows)
+                if op_window_budget > 1 and op in _GENERATIVE_OPS:
                     output, win = _generate_with_continuation(
-                        op, prompt, state_ctx, model_call, sm, max_continuation_windows
+                        op, prompt, state_ctx, model_call, sm, op_window_budget
                     )
                     continuation_windows_total += win
                     sm.verify(detail=f"direct-generation ({win} window{'s' if win != 1 else ''})")
@@ -646,6 +815,9 @@ def run_positioned(
         cso.goal_state.completion = min(done / max(len(operations), 1), 1.0)
         cso.goal_state.remaining = [o.name for o in operations[done:]]
         sm.integrate(detail=f"output_len={len(output)}")
+        if phase_sm is not None:
+            phase_sm.advance()
+        continue
 
     if not sm.is_halted:
         sm.complete()

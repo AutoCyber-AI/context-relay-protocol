@@ -13,7 +13,7 @@ import logging
 import os
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 
 from crp.comply.billing.constants import PLAN_FEATURES, PLAN_QUOTAS, PRICE_TO_PLAN
 

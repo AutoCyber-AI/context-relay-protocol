@@ -31,9 +31,9 @@ zero runtime dependency on ``openai``, ``anthropic``, or ``langchain``.
 
 from __future__ import annotations
 
-from .openai_hook import wrap_openai
 from .anthropic_hook import wrap_anthropic
 from .langchain_hook import CRPContextCallback
+from .openai_hook import wrap_openai
 
 __all__ = [
     "wrap_openai",

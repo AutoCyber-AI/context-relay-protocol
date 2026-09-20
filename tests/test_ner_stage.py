@@ -116,6 +116,7 @@ def test_bert_pipeline_called_with_default_model_and_aggregation(monkeypatch) ->
 
     fake_tf.pipeline.assert_called_once_with(
         "ner", model="dslim/bert-base-NER", aggregation_strategy="simple",
+        device=-1,
     )
 
 
@@ -256,6 +257,7 @@ def test_env_override_uses_custom_transformers_model(monkeypatch) -> None:
 
     fake_tf.pipeline.assert_called_once_with(
         "ner", model="custom/ner-9b", aggregation_strategy="simple",
+        device=-1,
     )
 
 

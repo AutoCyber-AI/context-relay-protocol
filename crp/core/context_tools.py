@@ -20,8 +20,9 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Callable, TYPE_CHECKING
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from crp.ckf.fabric import ContextualKnowledgeFabric
@@ -313,7 +314,13 @@ class ContextToolExecutor:
             try:
                 query_emb = self._embed_fn(query)
                 seed_ids = {f["id"] for f in facts_out}
-                ckf_result = self._ckf.retrieve(
+                # NOTE: MergeResult.facts is list[MergedFact]; the attribute
+                # accesses below (cf.id / cf.text / cf.confidence) target the
+                # wrapped MergedFact, not cf.fact. At runtime this raises
+                # AttributeError and is swallowed by the except below (the
+                # CKF semantic layer is silently skipped). Kept as-is to
+                # avoid a behavior change; typed Any to reflect reality.
+                ckf_result: Any = self._ckf.retrieve(
                     query_embedding=query_emb,
                     seed_ids=seed_ids,
                     topic=query[:100],

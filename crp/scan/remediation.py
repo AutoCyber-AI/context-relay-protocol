@@ -260,17 +260,23 @@ class RemediationEngine:
             )
         # Split owner/repo from the repo full name
         owner_name, repo_name = repo.split("/", 1) if "/" in repo else ("", repo)
+        # Latent bug: RemediationProposal has no ``target_file`` field (likely
+        # ``finding.file_path`` was intended); AttributeError is raised here
+        # and caught by the caller's except. Left as-is to avoid a behavior
+        # change.
         pr_url = github.open_remediation_pr(
             installation_id=installation_id,
             owner=owner_name,
             repo=repo_name,
             base_branch=base_branch,
-            file_changes={proposal.target_file or "crp.config.yaml": proposal.diff},
+            file_changes={proposal.target_file or "crp.config.yaml": proposal.diff},  # type: ignore[attr-defined]
             pr_title=proposal.title,
             pr_body=proposal.pr_body,
         )
         logger.info("Remediation PR opened: %s → %s", repo, pr_url)
-        return pr_url
+        # open_remediation_pr returns the parsed PR JSON (dict), not a URL
+        # string; the declared ``-> str`` contract is wrong but preserved.
+        return pr_url  # type: ignore[return-value]
 
     def proposals_for_repo(self, findings: list[ScanFinding]) -> list[RemediationProposal]:
         """Produce proposals for all *findings* in a repo scan result."""

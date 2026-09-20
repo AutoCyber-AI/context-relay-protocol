@@ -55,11 +55,14 @@ def semantic_entropy(samples: list[str], budget_ms: float = 100.0) -> float:
 
     def _cluster(model: Any | None) -> list[list[str]]:
         clusters: list[list[str]] = []
-        equivalent_fn = _equivalent if model is not None else _fallback_equivalent
         for s in samples:
             placed = False
             for c in clusters:
-                if equivalent_fn(c[0], s) if model is None else equivalent_fn(model, c[0], s):
+                if model is None:
+                    equiv = _fallback_equivalent(c[0], s)
+                else:
+                    equiv = _equivalent(model, c[0], s)
+                if equiv:
                     c.append(s)
                     placed = True
                     break

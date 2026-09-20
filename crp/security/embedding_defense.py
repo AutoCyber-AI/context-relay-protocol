@@ -39,10 +39,10 @@ class ProtectedEmbedding:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ProtectedEmbedding:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
-        
+
             Returns:
                 ``ProtectedEmbedding``.
         """

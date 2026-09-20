@@ -159,6 +159,10 @@ class CapabilityExecutor:
         """Return whether an implementation is registered for the capability."""
         return capability_id in self._impls
 
+    def get_impl(self, capability_id: str) -> Callable[[dict[str, Any]], Any] | None:
+        """Return the registered implementation for a capability, or None."""
+        return self._impls.get(capability_id)
+
     def execute(
         self,
         descriptor: CapabilityDescriptor,

@@ -31,23 +31,22 @@ from __future__ import annotations
 import pytest
 
 from crp.resources.adaptive_allocator import (
+    THROUGHPUT_CONSTRAINED,
+    THROUGHPUT_NORMAL,
+    THROUGHPUT_THROTTLED,
     AdaptiveAllocator,
     EnvelopeProfile,
     ExtractionProfile,
     PromptEfficiency,
     WindowOverheadRecord,
     detect_hardware,
-    THROUGHPUT_NORMAL,
-    THROUGHPUT_THROTTLED,
-    THROUGHPUT_CONSTRAINED,
 )
 from crp.resources.overhead_manager import (
-    OverheadBudgetManager,
     PROTECTED_INTELLIGENCE,
     SHEDDING_CASCADE,
+    OverheadBudgetManager,
 )
 from crp.resources.resource_manager import ResourceManager
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Fixtures

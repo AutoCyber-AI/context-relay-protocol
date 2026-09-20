@@ -264,6 +264,7 @@ class NERExtractor:
 
             ner = pipeline(  # type: ignore[call-overload]
                 "ner", model=self._model_id, aggregation_strategy="simple",
+                device=-1,
             )
             if sys.platform == "win32":
                 # The OpenMP race the single-thread cap guards against is a

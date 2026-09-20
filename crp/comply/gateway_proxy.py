@@ -18,7 +18,7 @@ import logging
 import os
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 
 from crp.comply.header_mapping import map_request_headers, map_response_headers
 from crp.comply.quota_gate import QuotaGate

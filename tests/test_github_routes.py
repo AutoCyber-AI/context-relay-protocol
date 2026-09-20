@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from crp.comply.github_routes import (
+    comply_apply_config,
     github_callback,
     github_connect,
     github_installed,
@@ -17,7 +18,6 @@ from crp.comply.github_routes import (
     scan_anonymous,
     scan_claim,
     scan_ingest_sarif,
-    comply_apply_config,
 )
 
 
@@ -48,7 +48,9 @@ class TestGithubConnect:
 class TestGithubWebhook:
     @patch.dict("os.environ", {"GITHUB_APP_WEBHOOK_SECRET": "testsecret"}, clear=False)
     def test_verifies_and_routes_push(self) -> None:
-        import json, hmac, hashlib
+        import hashlib
+        import hmac
+        import json
         body = json.dumps({"repository": {"owner": {"login": "acme"}, "name": "repo1"}}).encode()
         sig = "sha256=" + hmac.new(b"testsecret", body, hashlib.sha256).hexdigest()
         result = github_webhook(body, {"X-Hub-Signature-256": sig, "X-GitHub-Event": "push"})

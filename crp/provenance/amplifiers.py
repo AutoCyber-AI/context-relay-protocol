@@ -86,11 +86,11 @@ def apply_amplifiers(
 
     def fire(name: str, factor: float) -> None:
         """Execute fire and return the result.
-        
+
             Args:
                 name (str): The name value.
                 factor (float): The factor value.
-        
+
             Returns:
                 ``None``.
         """

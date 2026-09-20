@@ -20,7 +20,6 @@ from crp_mcp.connectors.fcm import FCMConnector
 from crp_mcp.connectors.gmail import GmailConnector
 from crp_mcp.connectors.webhook import WebhookConnector
 
-
 # Test-only RSA key generated at import time. Never a real secret.
 _TEST_RSA_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 _TEST_PRIVATE_KEY = _TEST_RSA_KEY.private_bytes(

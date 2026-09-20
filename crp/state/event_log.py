@@ -64,10 +64,10 @@ class FactEvent:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FactEvent:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
-        
+
             Returns:
                 ``FactEvent``.
         """

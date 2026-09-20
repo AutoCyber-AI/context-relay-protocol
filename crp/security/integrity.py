@@ -258,11 +258,11 @@ class FactIntegrityChain:
     @classmethod
     def from_dict(cls, data: dict[str, Any], session_key: bytes | None = None) -> FactIntegrityChain:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
                 session_key (bytes | None): The session key value.
-        
+
             Returns:
                 ``FactIntegrityChain``.
         """

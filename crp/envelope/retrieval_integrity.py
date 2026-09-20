@@ -37,7 +37,9 @@ def apply_recency_decay(
     if fact_timestamp.tzinfo is None:
         fact_timestamp = fact_timestamp.replace(tzinfo=timezone.utc)
     age_days = max(0.0, (session_time - fact_timestamp).total_seconds() / 86400.0)
-    decay = floor + (1.0 - floor) * math.exp2(-age_days / half_life_days)
+    # math.exp2 was added in Python 3.11 and is absent from the py310
+    # typeshed; the runtime env is 3.11+.
+    decay = floor + (1.0 - floor) * math.exp2(-age_days / half_life_days)  # type: ignore[attr-defined]
     return round(decay, 4)
 
 

@@ -21,19 +21,6 @@ from crp.continuation.flow import (
     ResidualTaskAnchor,
     should_terminate,
 )
-# CSO relay — imported from state to avoid circular deps, re-exported here
-# for convenience so callers can: from crp.continuation import relay_cso
-from crp.state.cso import (
-    CognitiveStateObject,
-    EstablishedFact,
-    Decision,
-    GoalState,
-    GoalMode,
-    ProvenanceKind,
-    relay_cso,
-    extract_cso,
-    preservation_report,
-)
 from crp.continuation.gap import (
     GapResult,
     Requirement,
@@ -67,6 +54,20 @@ from crp.continuation.trigger import (
     evaluate_continuation,
 )
 from crp.continuation.voice import VoiceProfile, extract_voice_profile
+
+# CSO relay — imported from state to avoid circular deps, re-exported here
+# for convenience so callers can: from crp.continuation import relay_cso
+from crp.state.cso import (
+    CognitiveStateObject,
+    Decision,
+    EstablishedFact,
+    GoalMode,
+    GoalState,
+    ProvenanceKind,
+    extract_cso,
+    preservation_report,
+    relay_cso,
+)
 
 __all__ = [
     # Trigger

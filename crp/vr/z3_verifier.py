@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import logging
+from collections.abc import Generator
 from typing import Any
 
 from crp.vr.interface import Claim, Verdict, VerificationResult
@@ -147,7 +148,7 @@ class Z3Verifier:
         )
 
 
-def _product_range(names: list[str], bound: int):
+def _product_range(names: list[str], bound: int) -> Generator[list[tuple[str, int]], None, None]:
     """Yield every assignment of ``names`` to integers in ``[-bound, bound]``."""
     import itertools
 

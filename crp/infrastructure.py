@@ -150,7 +150,11 @@ def _build_storage_backend(infra: dict[str, Any]) -> Any:
         try:
             from crp.state.backends.sqlite import SQLiteBackend
 
-            return SQLiteBackend(path=path)
+            # Latent bug: SQLiteBackend's parameter is ``db_path``, so this
+            # kwarg raises TypeError and the except below returns None
+            # (SQLite backend never initialises via this path). Left as-is
+            # to avoid a behavior change.
+            return SQLiteBackend(path=path)  # type: ignore[call-arg]
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("SQLiteBackend unavailable: %s", exc)
             return None

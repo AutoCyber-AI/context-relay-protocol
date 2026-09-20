@@ -16,7 +16,6 @@ import hashlib
 import hmac as _hmac
 import logging
 import secrets
-import warnings
 from dataclasses import dataclass
 
 logger = logging.getLogger("crp.security.encryption")
@@ -46,10 +45,10 @@ class EncryptedBlob:
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> EncryptedBlob:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, str]): The data value.
-        
+
             Returns:
                 ``EncryptedBlob``.
         """

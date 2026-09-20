@@ -14,7 +14,7 @@ import logging
 import os
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 import stripe
 
 from crp.comply.billing.constants import (
@@ -77,7 +77,7 @@ def _org_id_from_customer(customer_id: str) -> str | None:
     """Resolve Clerk org ID from Stripe customer metadata."""
     try:
         customer = stripe.Customer.retrieve(customer_id)
-        return customer.metadata.get("clerkOrgId") if customer.metadata else None  # type: ignore[union-attr]
+        return customer.metadata.get("clerkOrgId") if customer.metadata else None  # type: ignore[operator]  # stripe stubs: UntypedStripeObject exposes attrs as str, hiding the dict-like ``get``
     except Exception:
         logger.warning("Could not retrieve Stripe customer %s", customer_id)
         return None
@@ -147,7 +147,7 @@ class StripeWebhookHandler:
                 logger.warning("checkout.session.completed missing subscription id")
                 return
             try:
-                sub = stripe.Subscription.retrieve(sub_id)
+                sub: Any = stripe.Subscription.retrieve(sub_id)
                 price_id = sub["items"]["data"][0]["price"]["id"]
                 plan = plan_from_price_id(price_id)
                 metadata = {

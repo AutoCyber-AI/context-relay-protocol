@@ -9,7 +9,9 @@ through the positioned loop, emitting a transparency event stream.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import inspect
 import logging
 import queue
 import threading
@@ -19,6 +21,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+from crp.agent.autonomy import AutonomyGovernor, AutonomyMetrics
 from crp.agent_sdk.events import AgentEvent, AgentEventKind
 from crp.agent_sdk.intent_compiler import compile_tools
 from crp.agent_sdk.model_call import build_model_call
@@ -26,6 +29,9 @@ from crp.agent_sdk.policy import Policy
 from crp.agent_sdk.tool_manifest import CompiledTool
 from crp.clr import build_clarification, header_value, should_clarify
 from crp.clr.response import Interpretation
+from crp.cognition import PresetCompiler
+from crp.cognition.loader import resolve_preset_id
+from crp.cognition.preset import CognitivePreset
 from crp.isa import (
     CoreferenceResolver,
     IntentClassifier,
@@ -33,13 +39,19 @@ from crp.isa import (
     build_intent_section,
 )
 from crp.sdk.response import CRPResponseMeta
+from crp.security.checkpoint import Checkpoint, CheckpointResolutionAction
 from crp.security.clarify import ClarificationHandler
+from crp.security.control_plane import SafetyControlPlane, get_default_control_plane
+from crp.security.kill_switch import KillSwitch
+from crp.security.trust_monitor import TrustActions, TrustDecision, TrustMonitor
 from crp.state.cso import CognitiveStateObject
 from crp.stl.classifier import classify_operations
 from crp.stl.positioned import PositionedResult, run_positioned
 from crp.tools.capability_fabric import CapabilityProfile, PolicyContext, ToolCapabilityFabric
 from crp.tools.descriptor import SafetyClass
 from crp.tools.executor import CapabilityExecutor
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -128,6 +140,12 @@ class Agent:
         intent_classifier: IntentClassifier | None = None,
         oversight_required: set[SafetyClass] | None = None,
         clarify_handler: ClarificationHandler | None = None,
+        checkpoint: Checkpoint | None = None,
+        trust_monitor: TrustMonitor | None = None,
+        kill_switch: KillSwitch | None = None,
+        control_plane: SafetyControlPlane | None = None,
+        autonomy_metrics: AutonomyMetrics | None = None,
+        preset: str | CognitivePreset | dict[str, Any] | None = None,
     ) -> None:
         """Create an Agent.
 
@@ -141,7 +159,8 @@ class Agent:
                 ``cost_profile={"safety_class": "destructive"}`` entry to attach
                 both a real implementation and a non-default safety class.
             policy: ``Policy`` or ``PolicyContext`` governing capability selection.
-            system: Default system instruction.
+            system: Default system instruction.  If ``preset`` is provided, the
+                preset's system prompt is appended to this value.
             profile: Capability profile (``frontier``, ``capable-local``, ``small-local``).
             depth: Default query depth (``auto``, ``quick``, ``standard``, ``thorough``).
             max_operations: Hard cap on operations per run.
@@ -157,6 +176,20 @@ class Agent:
                 gated capability is selected and no handler (or a non-approving
                 one) is supplied, the run halts rather than executing it —
                 fail-safe default deny.
+            checkpoint: Optional async human-in-the-loop checkpoint. If provided,
+                DESTRUCTIVE tool selections wait for checkpoint resolution instead
+                of the synchronous clarify_handler.
+            trust_monitor: Optional runtime trust monitor. If omitted, one is
+                created automatically and observes user input, tool calls, and output.
+            kill_switch: Optional emergency kill switch. If omitted, one is created
+                automatically and is fired when trust collapses.
+            control_plane: Optional SafetyControlPlane. If omitted, a default plane
+                is created and tuned by the ``safety`` profile.
+            autonomy_metrics: Optional measured evidence for autonomy tier assignment.
+            preset: A cognitive preset — a built-in id (e.g. ``"socratic_tutor"``),
+                a path to a YAML/JSON file, a dict, or a :class:`CognitivePreset`.
+                The preset defines the agent's persona, reasoning scaffold,
+                safeguards, emotions, and output profile.
         """
         self.model = model
         self._provider = provider
@@ -170,6 +203,24 @@ class Agent:
         self.safety = safety or "balanced"
         self.oversight_required = oversight_required or set()
         self.clarify_handler = clarify_handler
+        self.checkpoint = checkpoint
+        self._preset: CognitivePreset | None = None
+        self._compiled_preset: Any | None = None
+
+        # Safety surface wiring (SPEC-033).
+        self._session_id = f"agent-{uuid.uuid4().hex[:8]}"
+        self._kill_switch = kill_switch or KillSwitch()
+        self._trust_monitor = trust_monitor or TrustMonitor(
+            session_id=self._session_id,
+            kill_switch=self._kill_switch,
+        )
+        self._control_plane = control_plane or self._build_control_plane(self.safety)
+        self._autonomy_governor = AutonomyGovernor()
+        self._autonomy_metrics = autonomy_metrics or AutonomyMetrics()
+
+        if preset is not None:
+            loaded = self._resolve_preset(preset)
+            self._apply_preset(loaded)
 
         if isinstance(profile, str):
             self.profile = CapabilityProfile(profile)
@@ -195,6 +246,130 @@ class Agent:
         self._turn_index: int = 0
 
     # ------------------------------------------------------------------
+    # Preset handling (CRP-SPEC-046)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _resolve_preset(preset: str | CognitivePreset | dict[str, Any]) -> CognitivePreset:
+        """Resolve a preset argument into a CognitivePreset."""
+        if isinstance(preset, CognitivePreset):
+            return preset
+        if isinstance(preset, dict):
+            return CognitivePreset.from_dict(preset)
+        return resolve_preset_id(preset)
+
+    def _apply_preset(self, preset: CognitivePreset) -> None:
+        """Apply a compiled preset to this agent's configuration."""
+        self._preset = preset
+        compiled = PresetCompiler(preset).compile()
+        self._compiled_preset = compiled
+
+        # Enrich the system prompt with persona, reasoning, safeguards, output profile.
+        if compiled.system:
+            self.system = f"{self.system}\n\n{compiled.system}".strip()
+
+        # Preset depth only overrides the default when the user did not supply one.
+        if self.depth == "auto" and compiled.depth != "auto":
+            self.depth = compiled.depth
+
+        # Merge safeguard-driven oversight requirements.
+        if compiled.safety_classes:
+            self.oversight_required = set(self.oversight_required) | compiled.safety_classes
+
+    @classmethod
+    def presets(cls) -> list[dict[str, str]]:
+        """Return metadata for all built-in cognitive presets."""
+        from crp.cognition.loader import list_builtin_presets
+
+        return list_builtin_presets()
+
+    # ------------------------------------------------------------------
+    # Safety surface helpers (SPEC-033)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_control_plane(safety: str | dict[str, Any] | None) -> SafetyControlPlane:
+        """Create and tune a SafetyControlPlane from a safety profile name."""
+        scp = get_default_control_plane()
+        if isinstance(safety, str):
+            profile = safety.lower()
+            if profile == "strict":
+                scp.tune("grounding_verification", 0.90)
+                scp.tune("prompt_injection_shield", True)
+                scp.tune("pii_detection", "block")
+                scp.tune("human_oversight", "automatic")
+            elif profile == "balanced":
+                scp.tune("grounding_verification", 0.70)
+                scp.tune("prompt_injection_shield", True)
+                scp.tune("pii_detection", "flag")
+                scp.tune("human_oversight", "manual")
+            elif profile == "permissive":
+                scp.tune("grounding_verification", 0.50)
+                scp.tune("prompt_injection_shield", False)
+                scp.tune("pii_detection", "flag")
+                scp.tune("human_oversight", "manual")
+        elif isinstance(safety, dict):
+            for key, value in safety.items():
+                scp.tune(key, value)
+        return scp
+
+    def _check_trust(
+        self,
+        observation: dict[str, Any],
+        events: list[AgentEvent],
+        event_callback: Callable[[AgentEvent], None] | None,
+    ) -> TrustDecision | None:
+        """Observe an event through the trust monitor and emit a trust event."""
+        decision = self._trust_monitor.observe(observation)
+        trust_event = AgentEvent(
+            kind=AgentEventKind.TRUST_DECISION,
+            detail=decision.action,
+            data=decision.to_dict(),
+        )
+        events.append(trust_event)
+        if event_callback is not None:
+            event_callback(trust_event)
+        return decision
+
+    def _halt_for_trust(
+        self,
+        decision: Any,
+        events: list[AgentEvent],
+        event_callback: Callable[[AgentEvent], None] | None,
+    ) -> AgentResponse:
+        """Build a halted response because trust collapsed."""
+        if not self._kill_switch.is_fired:
+            self._kill_switch.fire(
+                session_id=self._session_id,
+                reason="trust_threshold_crossed",
+                triggered_by="crp.agent_sdk.agent",
+                snapshot=decision.to_dict(),
+            )
+        kill_event = AgentEvent(
+            kind=AgentEventKind.KILL_SWITCH_FIRED,
+            detail=decision.action,
+            data={"trust_score": decision.trust_score, "reason": decision.reason},
+        )
+        events.append(kill_event)
+        if event_callback is not None:
+            event_callback(kill_event)
+        meta = CRPResponseMeta(
+            risk="CRITICAL",
+            grounded=False,
+            fabrications=0,
+            chain_valid=True,
+            session_id=self._session_id,
+            trust_score=decision.trust_score,
+            kill_switch_fired=True,
+        )
+        return AgentResponse(
+            text=f"Run halted by safety surface ({decision.action}): {decision.reason}",
+            halted=True,
+            crp=meta,
+            headers={"CRP-Agent-Halt-Reason": f"TRUST_{decision.action.upper()}"},
+        )
+
+    # ------------------------------------------------------------------
     # Tool registration
     # ------------------------------------------------------------------
 
@@ -213,14 +388,54 @@ class Agent:
                 fabric.register(compiled.descriptor)
                 if compiled.impl is not None:
                     fn = compiled.impl
+                    sig = inspect.signature(fn)
+                    boundable = {
+                        p.name
+                        for p in sig.parameters.values()
+                        if p.kind
+                        in (
+                            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            inspect.Parameter.KEYWORD_ONLY,
+                        )
+                    }
+                    has_var_kw = any(
+                        p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in sig.parameters.values()
+                    )
 
-                    def _wrapped(args: dict[str, Any], _fn: Any = fn) -> Any:
-                        return _fn(**args)
+                    def _wrapped(
+                        args: dict[str, Any],
+                        _fn: Any = fn,
+                        _boundable: set[str] = boundable,
+                        _has_var_kw: bool = has_var_kw,
+                    ) -> Any:
+                        # Only pass arguments the function actually accepts.
+                        # This prevents small models from hallucinating extra
+                        # parameters for parameterless tools (e.g. get_time()).
+                        if _has_var_kw:
+                            return _fn(**args)
+                        filtered = {k: v for k, v in args.items() if k in _boundable}
+                        return _fn(**filtered)
 
                     executor.register_impl(
                         compiled.descriptor.capability_id,
                         _wrapped,
                     )
+
+            # If a preset declares an explicit tool allowlist, restrict the fabric.
+            if self._compiled_preset is not None and self._compiled_preset.tool_ids:
+                allowed_ids = set(self._compiled_preset.tool_ids)
+                filtered_fabric = ToolCapabilityFabric()
+                filtered_executor = CapabilityExecutor()
+                for desc in fabric.all():
+                    if desc.capability_id in allowed_ids:
+                        filtered_fabric.register(desc)
+                        impl = executor.get_impl(desc.capability_id)
+                        if impl is not None:
+                            filtered_executor.register_impl(desc.capability_id, impl)
+                fabric = filtered_fabric
+                executor = filtered_executor
+
             self._fabric = fabric
             self._executor = executor
         return self._fabric, self._executor
@@ -259,18 +474,255 @@ class Agent:
             )
 
     # ------------------------------------------------------------------
+    # Safeguard helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _halt_message(results: list[Any], scope: str) -> str:
+        """Build a graceful, human-readable halt message from safeguard results."""
+        reasons = "; ".join(f"{r.rule} ({r.matched})" for r in results)
+        return f"Request halted by preset safeguard ({scope}): {reasons}."
+
+    @staticmethod
+    def _ask_message(results: list[Any], scope: str, preset_name: str = "") -> str:
+        """Build a graceful ask-back message from safeguard results.
+
+        The message is phrased as a pause/request for clarification rather than
+        a permanent refusal.  Invariant 10: checkpoints never leave the user with
+        a raw error.
+        """
+        reasons = "; ".join(f"{r.rule}" for r in results)
+        prefix = f"[{preset_name}] " if preset_name else ""
+        return (
+            f"{prefix}This request triggered a safeguard ({scope}): {reasons}. "
+            "I want to make sure I help you the right way. Could you tell me more "
+            "about what you need?"
+        )
+
+    def _emit_warning_event(
+        self,
+        results: list[Any],
+        scope: str,
+        events: list[AgentEvent],
+        event_callback: Callable[[AgentEvent], None] | None,
+    ) -> None:
+        """Emit a warning event for triggered advisory safeguards and continue."""
+        data = {
+            "scope": scope,
+            "rules": [r.to_dict() for r in results],
+        }
+        event = AgentEvent(
+            kind=AgentEventKind.WARNING,
+            detail=f"preset_safeguard_{scope}",
+            data=data,
+        )
+        events.append(event)
+        if event_callback is not None:
+            event_callback(event)
+
+    def _handle_preset_safeguards(
+        self,
+        results: list[Any],
+        scope: str,
+        user_request: str,
+        events: list[AgentEvent],
+        event_callback: Callable[[AgentEvent], None] | None,
+    ) -> AgentResponse | None:
+        """Handle triggered preset safeguards: halt, ask, or warn.
+
+        Returns a response only when the action requires stopping/asking.
+        Returns ``None`` for warnings so the caller can continue the run.
+        """
+        halt_results = [r for r in results if r.action == "halt"]
+        if halt_results:
+            halt_reason = "; ".join(f"{r.rule} ({r.matched})" for r in halt_results)
+            meta = CRPResponseMeta(
+                risk="CRITICAL",
+                grounded=False,
+                fabrications=0,
+                chain_valid=True,
+                session_id="",
+            )
+            response = AgentResponse(
+                text=self._halt_message(halt_results, scope),
+                halted=True,
+                crp=meta,
+                headers={"CRP-Agent-Halt-Reason": "PRESET_SAFEGUARD_VIOLATION"},
+            )
+            halt_event = AgentEvent(
+                kind=AgentEventKind.HALT,
+                detail="PRESET_SAFEGUARD_VIOLATION",
+                data={"halted": True, "reason": halt_reason, "scope": scope},
+            )
+            response.events.append(halt_event)
+            if event_callback is not None:
+                event_callback(halt_event)
+            return response
+
+        ask_results = [r for r in results if r.action == "ask"]
+        if ask_results:
+            preset_name = self._preset.name if self._preset else ""
+            ask_text = self._ask_message(ask_results, scope, preset_name)
+            # If emotions are enabled, append the trigger instruction for the
+            # matched affect so the response is compassionate/appropriate.
+            emotion: dict[str, Any] | None = None
+            if (
+                self._compiled_preset is not None
+                and self._compiled_preset.emotion_detector is not None
+                and self._preset is not None
+                and self._preset.emotions.enabled
+            ):
+                emotion = self._compiled_preset.emotion_detector(user_request)
+                scores = emotion.get("scores", {}) if emotion else {}
+                # Use the first detected affect that has a configured trigger.
+                for affect in scores:
+                    trigger = self._preset.emotions.triggers.get(affect, "")
+                    if trigger:
+                        ask_text = f"{ask_text}\n\n{trigger}"
+                        break
+            meta = CRPResponseMeta(
+                risk="MEDIUM",
+                grounded=False,
+                fabrications=0,
+                chain_valid=True,
+                session_id="",
+            )
+            response = AgentResponse(
+                text=ask_text,
+                halted=True,
+                crp=meta,
+                headers={"CRP-Agent-Halt-Reason": "PRESET_SAFEGUARD_ASK", "X-CRP-Clarification": "required"},
+            )
+            ask_event = AgentEvent(
+                kind=AgentEventKind.HALT,
+                detail="PRESET_SAFEGUARD_ASK",
+                data={
+                    "halted": True,
+                    "rules": [r.to_dict() for r in ask_results],
+                    "scope": scope,
+                    "emotion": emotion,
+                },
+            )
+            response.events.append(ask_event)
+            if event_callback is not None:
+                event_callback(ask_event)
+            return response
+
+        warn_results = [r for r in results if r.action == "warn"]
+        if warn_results:
+            self._emit_warning_event(warn_results, scope, events, event_callback)
+
+        return None
+
+    def _resolve_clarify_handler(
+        self,
+        events: list[AgentEvent],
+        event_callback: Callable[[AgentEvent], None] | None,
+    ) -> ClarificationHandler | None:
+        """Return the active clarification handler, bridging an async Checkpoint if provided.
+
+        If the user supplied a ``Checkpoint`` instance, convert it into the
+        synchronous ``ClarificationHandler`` interface that ``run_positioned``
+        expects. The checkpoint is created externally, resolved by a reviewer or
+        webhook, and applies graceful fallback on timeout/reject (Invariant 10).
+        """
+        if self.checkpoint is None:
+            return self.clarify_handler
+        if self.clarify_handler is not None:
+            return self.clarify_handler
+
+        checkpoint = self.checkpoint
+        assert checkpoint is not None  # guarded by the outer condition
+
+        def _notify_checkpoint_connectors(request: Any) -> None:
+            """Fire-and-forget notification to configured review channels."""
+            try:
+                from crp_mcp.connectors import get_configured_connectors
+
+                async def _notify() -> None:
+                    connectors = get_configured_connectors()
+                    payload = {
+                        "checkpoint_id": request.request_id,
+                        "trigger": "OVERSIGHT_REQUIRED",
+                        "message": request.question,
+                        "status": "waiting_for_human",
+                        "context": request.to_dict(),
+                    }
+                    for connector in connectors:
+                        try:
+                            await connector.notify(payload)
+                        except Exception as exc:  # noqa: BLE001
+                            logger.debug(
+                                "Checkpoint connector %s failed: %s",
+                                getattr(connector, "name", "unknown"),
+                                exc,
+                            )
+
+                # Run in a fresh event loop; checkpoints are rare so the overhead
+                # is acceptable and it never blocks the agent loop.
+                asyncio.run(_notify())
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Checkpoint connector notification failed: %s", exc)
+
+        def _checkpoint_handler(request: Any) -> Any:
+            from crp.security.clarify import (
+                ClarificationAction,
+                ClarificationResolution,
+            )
+
+            checkpoint_event = AgentEvent(
+                kind=AgentEventKind.CHECKPOINT_REQUESTED,
+                detail=request.request_id,
+                data={"request": request.to_dict()},
+            )
+            events.append(checkpoint_event)
+            _notify_checkpoint_connectors(request)
+            if event_callback is not None:
+                event_callback(checkpoint_event)
+            resolution = asyncio.run(checkpoint.wait_for_resolution())
+            resolved_event = AgentEvent(
+                kind=AgentEventKind.CHECKPOINT_RESOLVED,
+                detail=resolution.action.value,
+                data={"request_id": request.request_id, "reviewer": resolution.reviewer},
+            )
+            events.append(resolved_event)
+            if event_callback is not None:
+                event_callback(resolved_event)
+            if resolution.action == CheckpointResolutionAction.APPROVE:
+                return ClarificationResolution(
+                    ClarificationAction.ANSWER,
+                    answer="approve",
+                    reviewer=resolution.reviewer,
+                )
+            return ClarificationResolution(
+                ClarificationAction.ABORT,
+                answer="denied",
+                reviewer=resolution.reviewer,
+            )
+
+        return _checkpoint_handler
+
+    # ------------------------------------------------------------------
     # Run execution
     # ------------------------------------------------------------------
 
     def _build_response(self, result: PositionedResult, events: list[AgentEvent]) -> AgentResponse:
         """Build an ``AgentResponse`` from a positioned result."""
         cso = result.cso
+        autonomy_decision = self._autonomy_governor.enforce(
+            self._autonomy_metrics,
+            "tool" if result.observation_count > 0 else "read",
+            kill_switch=self._kill_switch,
+        )
         meta = CRPResponseMeta(
             risk="LOW" if not result.halted else "CRITICAL",
             grounded=not result.halted,
             fabrications=0,
             chain_valid=True,
-            session_id=getattr(cso, "cso_id", ""),
+            session_id=self._session_id,
+            trust_score=self._trust_monitor.trust_score,
+            kill_switch_fired=self._kill_switch.is_fired,
+            autonomy_tier=autonomy_decision.tier.value,
         )
         return AgentResponse(
             text=result.text,
@@ -313,8 +765,9 @@ class Agent:
             "INTEGRATED": AgentEventKind.INTEGRATED,
             "COMPLETE": AgentEventKind.FINAL,
             "HALTED": AgentEventKind.HALT,
+            "GOVERNANCE": AgentEventKind.GOVERNANCE,
         }
-        kind = kind_map[state] if state in kind_map else AgentEventKind.FINAL
+        kind = kind_map.get(state, AgentEventKind.FINAL)
         return AgentEvent(
             kind=kind,
             operation=op_event.get("operation"),
@@ -404,6 +857,27 @@ class Agent:
         **kwargs: Any,
     ) -> AgentResponse:
         """Internal synchronous run with optional event callback."""
+        events: list[AgentEvent] = []
+
+        # Preset input safeguard check (SPEC-046 §2.4).
+        if (
+            self._compiled_preset is not None
+            and self._compiled_preset.safeguard_engine is not None
+        ):
+            input_results = self._compiled_preset.safeguard_engine.evaluate(
+                user_input=user_request
+            )
+            if input_results:
+                handled = self._handle_preset_safeguards(
+                    input_results,
+                    "input",
+                    user_request,
+                    events,
+                    event_callback,
+                )
+                if handled is not None:
+                    return handled
+
         resolve_coref = kwargs.pop("resolve_coreferences", True)
 
         # SPEC-052 — intent + speech-act positioning, cross-session coreference.
@@ -426,13 +900,28 @@ class Agent:
         if clarification_response is not None:
             return clarification_response
 
+        # Observe user input through the trust monitor (SPEC-033 §3.5).
+        input_trust = self._check_trust(
+            {"input": resolved, "action": "user_request"},
+            events,
+            event_callback,
+        )
+        if input_trust and input_trust.action == TrustActions.KILL:
+            return self._halt_for_trust(input_trust, events, event_callback)
+        if input_trust and input_trust.action == TrustActions.GATE:
+            if self.clarify_handler is None and self.checkpoint is None:
+                return self._halt_for_trust(input_trust, events, event_callback)
+            # Otherwise continue but mark as gated; destructive actions will still
+            # hit clarify_handler/checkpoint below.
+
         provider = self._resolve_provider()
         model_call = build_model_call(provider, temperature=self.temperature, max_tokens=self.max_tokens)
         fabric, executor = self._ensure_fabric_and_executor()
 
-        events: list[AgentEvent] = []
+        trust_kill_decision: Any | None = None
 
         def _op_event_callback(op_event: dict[str, Any]) -> None:
+            nonlocal trust_kill_decision
             # The state machine's own COMPLETE event is superseded by the
             # explicit run-level final event appended below (which carries
             # the full operations list and the correct halted/halt-reason
@@ -444,7 +933,21 @@ class Agent:
             events.append(event)
             if event_callback is not None:
                 event_callback(event)
+            # Observe tool calls through the trust monitor.
+            if event.kind == AgentEventKind.TOOL_CALLED and not trust_kill_decision:
+                decision = self._check_trust(
+                    {
+                        "tool": op_event.get("capability_id", ""),
+                        "arguments": str(op_event.get("arguments", {})),
+                        "action": "tool_call",
+                    },
+                    events,
+                    event_callback,
+                )
+                if decision and decision.action == TrustActions.KILL:
+                    trust_kill_decision = decision
 
+        clarify_handler = self._resolve_clarify_handler(events, event_callback)
         result = run_positioned(
             resolved,
             model_call,
@@ -456,13 +959,55 @@ class Agent:
             max_operations=self.max_operations,
             oversight_required=self.oversight_required or None,
             governor=None,
-            clarify_handler=self.clarify_handler,
+            clarify_handler=clarify_handler,
             hmac_key=None,
             prior_cso=prior_cso,
             max_continuation_windows=self.max_continuation_windows,
             event_callback=_op_event_callback,
+            phase_plan=(
+                self._compiled_preset.phase_plan.copy() if self._compiled_preset and self._compiled_preset.phase_plan else None
+            ),
             final_synthesis=True,
+            safeguard_engine=(
+                self._compiled_preset.safeguard_engine if self._compiled_preset else None
+            ),
         )
+
+        # If trust monitor ordered a kill during the positioned loop, halt now.
+        if trust_kill_decision and not result.halted:
+            return self._halt_for_trust(trust_kill_decision, events, event_callback)
+
+        # Preset safeguard check on the generated output.
+        if (
+            not result.halted
+            and self._compiled_preset is not None
+            and self._compiled_preset.safeguard_engine is not None
+            and result.text
+        ):
+            output_results = self._compiled_preset.safeguard_engine.evaluate(
+                user_input=user_request,
+                output=result.text,
+            )
+            if output_results:
+                handled = self._handle_preset_safeguards(
+                    output_results,
+                    "output",
+                    user_request,
+                    events,
+                    event_callback,
+                )
+                if handled is not None:
+                    return handled
+
+        # Observe final output through the trust monitor.
+        if not result.halted and result.text:
+            output_trust = self._check_trust(
+                {"output": result.text, "action": "generate"},
+                events,
+                event_callback,
+            )
+            if output_trust and output_trust.action == TrustActions.KILL:
+                return self._halt_for_trust(output_trust, events, event_callback)
 
         self._last_cso = result.cso
         response = self._build_response(result, events)
@@ -476,14 +1021,59 @@ class Agent:
         events.append(final_event)
         if event_callback is not None:
             event_callback(final_event)
+
+        # Emit a governance summary so transparency streams show the same
+        # risk, grounding, provenance, and source count that the response object carries.
+        autonomy_decision = self._autonomy_governor.enforce(
+            self._autonomy_metrics,
+            "tool" if result.observation_count > 0 else "read",
+            kill_switch=self._kill_switch,
+        )
+        governance_event = AgentEvent(
+            kind=AgentEventKind.GOVERNANCE,
+            detail="governance_summary",
+            data={
+                "risk": response.crp.risk,
+                "grounded": response.crp.grounded,
+                "chain_valid": response.crp.chain_valid,
+                "fabrications": response.crp.fabrications,
+                "sources": len(response.sources),
+                "tier": getattr(response.crp, "tier", ""),
+                "confidence": getattr(response.crp, "confidence", 0.0),
+                "semantic_entropy": getattr(response.crp, "semantic_entropy", None),
+                "observation_count": response.observation_count,
+                "halted": response.halted,
+                "trust_score": self._trust_monitor.trust_score,
+                "kill_switch_fired": self._kill_switch.is_fired,
+                "autonomy_tier": autonomy_decision.tier.value,
+                "control_plane_hash": self._control_plane.manifest.compute_hash(),
+            },
+        )
+        events.append(governance_event)
+        if event_callback is not None:
+            event_callback(governance_event)
         return response
 
-    def run(self, user_request: str, **kwargs: Any) -> AgentResponse:
-        """Run the agent on ``user_request`` and return the full response."""
+    def run(
+        self,
+        user_request: str,
+        *,
+        event_callback: Callable[[AgentEvent], None] | None = None,
+        **kwargs: Any,
+    ) -> AgentResponse:
+        """Run the agent on ``user_request`` and return the full response.
+
+        Args:
+            event_callback: Optional callback receiving each agent lifecycle
+                event as it is emitted.  Useful for building a transparency
+                stream while still getting the synchronous response.
+        """
         prior_cso = kwargs.pop("prior_cso", self._last_cso)
         verify = kwargs.pop("verify", None)
 
-        response = self._run(user_request, prior_cso=prior_cso, **kwargs)
+        response = self._run(
+            user_request, prior_cso=prior_cso, event_callback=event_callback, **kwargs
+        )
 
         # SPEC-049 — Verification Relay (depth-gated; override with verify=...)
         run_vr = verify if verify is not None else self.depth in {"thorough", "exhaustive"}
@@ -587,6 +1177,15 @@ class Agent:
                     tier="A" if not response.halted else "D",
                     confidence=0.91 if not response.halted else 0.3,
                 )
+                # Surface verification + retrieval results in the transparency stream.
+                if response.verification:
+                    crp_emitter.verification(
+                        ratio=response.verification.get("verification_ratio", 0.0),
+                        invalid=response.verification.get("invalid", 0),
+                        repairs=response.verification.get("repairs", 0),
+                    )
+                if response.sources:
+                    crp_emitter.retrieval(response.sources)
                 # Provenance link into the real HMAC window chain (SPEC-011 §2.3).
                 # The chain tip persists on the agent so consecutive runs form
                 # a verifiable, tamper-evident sequence.
@@ -608,6 +1207,12 @@ class Agent:
                 crp_emitter.provenance(
                     prev_hash=prev_tip or "genesis", this_hash=this_hash, op="agent_run"
                 )
+                # Surface the final answer in the transparency stream so consoles
+                # and narratives render the response text, not just governance.
+                if response.text:
+                    emitter(tel_events.text_start(messageId="final"))
+                    emitter(tel_events.text_delta(messageId="final", delta=response.text))
+                    emitter(tel_events.text_end(messageId="final"))
                 crp_emitter.run_finished()
             except Exception as exc:  # noqa: BLE001
                 error_container.append(exc)

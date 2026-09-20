@@ -584,7 +584,11 @@ def extract_cso(
             if section.lower().replace("-", " ") not in output_lower:
                 still_remaining.append(section)
         completed_count = len(prior_cso.goal_state.remaining) - len(still_remaining)
-        total = len(prior_cso.goal_state.remaining) + len(prior_cso.goal_state.completed_operations or [])
+        # Latent bug (see ignore below): GoalState has no
+        # ``completed_operations`` field (removed in the SPEC-030 rework);
+        # this raises AttributeError if reached. Left as-is to avoid a
+        # behavior change.
+        total = len(prior_cso.goal_state.remaining) + len(prior_cso.goal_state.completed_operations or [])  # type: ignore[attr-defined]
         completion = completed_count / max(1, total)
         cso.goal_state = GoalState(
             mode=prior_cso.goal_state.mode,

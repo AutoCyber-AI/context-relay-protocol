@@ -18,7 +18,6 @@ from typing import Any
 
 from . import names as H
 
-
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
@@ -104,11 +103,11 @@ def emit_headers(
 
     def put(name: str, value: str | None) -> None:
         """Execute put and return the result.
-        
+
             Args:
                 name (str): The name value.
                 value (str | None): The value value.
-        
+
             Returns:
                 ``None``.
         """

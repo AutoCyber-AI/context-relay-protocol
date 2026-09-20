@@ -34,10 +34,7 @@ _SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 _NUM_RE = re.compile(r"-?\$?\d[\d,]*(?:\.\d+)?%?")
 
 _STOPWORDS = frozenset(
-    """a an the of to in on for and or but with without as at by from into is are was were be been
-    being this that these those it its their his her our your my we you they he she i them us
-    which who whom whose what when where why how than then so such not no nor can could will would
-    shall should may might must do does did done have has had having about over under between""".split()
+    ["a", "an", "the", "of", "to", "in", "on", "for", "and", "or", "but", "with", "without", "as", "at", "by", "from", "into", "is", "are", "was", "were", "be", "been", "being", "this", "that", "these", "those", "it", "its", "their", "his", "her", "our", "your", "my", "we", "you", "they", "he", "she", "i", "them", "us", "which", "who", "whom", "whose", "what", "when", "where", "why", "how", "than", "then", "so", "such", "not", "no", "nor", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "do", "does", "did", "done", "have", "has", "had", "having", "about", "over", "under", "between"]
 )
 
 _TRANSITION_MARKERS = (

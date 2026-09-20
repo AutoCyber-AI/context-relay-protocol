@@ -21,6 +21,7 @@ import logging
 import os
 import random
 import time
+from collections.abc import Generator
 from typing import Any
 
 from crp.providers.base import LLMProvider
@@ -120,9 +121,7 @@ class AnthropicAdapter(LLMProvider):
         if exc_type in ("RateLimitError", "APIConnectionError", "APITimeoutError",
                         "OverloadedError", "InternalServerError"):
             return True
-        if isinstance(exc, (ConnectionError, TimeoutError)):
-            return True
-        return False
+        return isinstance(exc, (ConnectionError, TimeoutError))
 
     def generate_chat(
         self, messages: list[dict[str, str]], **kwargs: Any
@@ -206,7 +205,7 @@ class AnthropicAdapter(LLMProvider):
 
     def context_window_size(self) -> int:
         """Return the current context window count.
-        
+
             Returns:
                 ``int``.
         """
@@ -238,7 +237,7 @@ class AnthropicAdapter(LLMProvider):
         self,
         messages: list[dict[str, str]],
         **kwargs: object,
-    ):
+    ) -> Generator[str, None, str]:
         """Stream token chunks from Anthropic.
 
         Yields individual text deltas. Return value is finish_reason.
@@ -265,8 +264,7 @@ class AnthropicAdapter(LLMProvider):
         finish_reason = "stop"
         try:
             with self._client.messages.stream(**params) as stream:
-                for text in stream.text_stream:
-                    yield text
+                yield from stream.text_stream
                 response = stream.get_final_message()
                 if response.stop_reason == "max_tokens":
                     finish_reason = "length"

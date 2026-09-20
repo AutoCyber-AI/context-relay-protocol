@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from crp.providers.discovery import DetectedModel, RuntimeKind, ModelState
+from crp.providers.discovery import DetectedModel, ModelState, RuntimeKind
 
 
 class TestDetectedModelToProvider:

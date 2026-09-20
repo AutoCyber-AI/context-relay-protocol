@@ -1,0 +1,746 @@
+{
+  "generated_at": "2026-09-03T05:18:48.345750+00:00",
+  "question": "What is the weather in London?",
+  "model": "meta-llama-3.1-8b-instruct",
+  "endpoint": "http://localhost:1234/v1/",
+  "raw_llm": {
+    "mode": "RAW LLM",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is the weather in London?",
+    "response": "{\"name\": \"get_weather\", \"parameters\": {\"city\": \"London\"}}",
+    "finish_reason": "stop",
+    "elapsed_s": 5.75
+  },
+  "crp_agent_no_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is the weather in London?",
+    "response": "The temperature in London is currently 19 degrees Celsius. The wind speed is moderate at approximately 16.2 kilometers per hour. According to the weather code, it appears to be a clear or sunny day.",
+    "operations": "retrieve",
+    "preset": null,
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 1
+    },
+    "elapsed_s": 33.35,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['RETRIEVE'] \u2192 planned operations: RETRIEVE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: RETRIEVE\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"London\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 0, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"London\", \"temperature_c\": 19.0, \"windspeed_kmh\": 16.2, \"weather_code\": 3}}\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['RETRIEVE']Selected get_weather\n\n## Final answer\n*answer* \u2014 The temperature in London is currently 19 degrees Celsius. The wind speed is moderate at approximately 16.2 kilometers per hour. According to the weather code, it appears to be a clear or sunny day.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 1\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 1\n- **halted**: False\n- **trust_score**: 1.0\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "3e603f712df8",
+        "ts": 1788412646.801952,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "f08a58483ddd",
+        "ts": 1788412646.8036346,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['RETRIEVE']",
+          "plan": [
+            "RETRIEVE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "629d00f3e384",
+        "ts": 1788412646.8036535,
+        "messageId": "reasoning",
+        "delta": "plan=['RETRIEVE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "23f4e528dadf",
+        "ts": 1788412646.8037336,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "27ad46709d55",
+        "ts": 1788412646.8037474,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "f299e6763ffd",
+        "ts": 1788412657.118829,
+        "toolCallId": "RETRIEVE_0",
+        "toolCallName": "get_weather",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "f0e613f0b13b",
+        "ts": 1788412657.1188436,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "0d1ba9f4af08",
+        "ts": 1788412660.0418408,
+        "toolCallId": "RETRIEVE_0",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"London\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "7396ed16704f",
+        "ts": 1788412660.0418525,
+        "toolCallId": "RETRIEVE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "85e34bdb28fb",
+        "ts": 1788412660.0419993,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "e2266c3a1125",
+        "ts": 1788412660.0421321,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "143eb9bccfea",
+        "ts": 1788412660.0421422,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "6c5dac5ce0d3",
+        "ts": 1788412660.0421686,
+        "toolCallId": "RETRIEVE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 0,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "London",
+            "temperature_c": 19.0,
+            "windspeed_kmh": 16.2,
+            "weather_code": 3
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "8273ebfadc5b",
+        "ts": 1788412660.0422146,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "6eebfcd9b4a8",
+        "ts": 1788412676.5535185,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "be466d2a8e39",
+        "ts": 1788412676.5536425,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "34ae83995384",
+        "ts": 1788412676.5538058,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 1,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 1,
+          "halted": false,
+          "trust_score": 1.0,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "c30c0f1d0ca0",
+        "ts": 1788412676.5538368,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "b3c916f01bfe",
+        "ts": 1788412676.553848,
+        "messageId": "final",
+        "delta": "The temperature in London is currently 19 degrees Celsius. The wind speed is moderate at approximately 16.2 kilometers per hour. According to the weather code, it appears to be a clear or sunny day."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "df4a0ded3a76",
+        "ts": 1788412676.553857,
+        "messageId": "final"
+      }
+    ]
+  },
+  "crp_agent_with_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "What is the weather in London?",
+    "response": "The current weather in London is mild with a temperature of around 19 degrees Celsius and a gentle breeze of approximately 16.2 kilometers per hour.",
+    "operations": "retrieve \u2192 retrieve \u2192 verify \u2192 synthesise",
+    "preset": "research_assistant",
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 3
+    },
+    "elapsed_s": 51.72,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE'] \u2192 planned operations: RETRIEVE, RETRIEVE, VERIFY, SYNTHESISE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: RETRIEVE\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"London\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 0, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"London\", \"temperature_c\": 19.0, \"windspeed_kmh\": 16.2, \"weather_code\": 3}}\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: RETRIEVE\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"London\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 1, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"London\", \"temperature_c\": 19.0, \"windspeed_kmh\": 16.2, \"weather_code\": 3}}\n\n## Operation: VERIFY\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: VERIFY\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"London\"\n  }\n}\n\n## Operation completed: VERIFY\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"VERIFY\", \"operation_index\": 2, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"London\", \"temperature_c\": 19.0, \"windspeed_kmh\": 16.2, \"weather_code\": 3}}\n\n## Operation: SYNTHESISE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Operation completed: SYNTHESISE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']Selected get_weatherSelected get_weatherSelected get_weather\n\n## Final answer\n*answer* \u2014 The current weather in London is mild with a temperature of around 19 degrees Celsius and a gentle breeze of approximately 16.2 kilometers per hour.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 3\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 3\n- **halted**: False\n- **trust_score**: 1.0\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "c0bf66697824",
+        "ts": 1788412680.2011318,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "425c5e22b480",
+        "ts": 1788412680.2018204,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']",
+          "plan": [
+            "RETRIEVE",
+            "RETRIEVE",
+            "VERIFY",
+            "SYNTHESISE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "ea154265f900",
+        "ts": 1788412680.20183,
+        "messageId": "reasoning",
+        "delta": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "64c61ec2a86b",
+        "ts": 1788412680.2018695,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "949e52fd1ae4",
+        "ts": 1788412680.2018783,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "378101ec2f36",
+        "ts": 1788412690.1356862,
+        "toolCallId": "RETRIEVE_0",
+        "toolCallName": "get_weather",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "b38f4ac368b0",
+        "ts": 1788412690.1357057,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "c15fc9edc2b5",
+        "ts": 1788412692.7919338,
+        "toolCallId": "RETRIEVE_0",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"London\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "2bb5747dea65",
+        "ts": 1788412692.7919433,
+        "toolCallId": "RETRIEVE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "636b8f52c5cb",
+        "ts": 1788412692.792076,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "f8c1b8bf45f3",
+        "ts": 1788412692.7922227,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "fdff383d721b",
+        "ts": 1788412692.792233,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "049f1eda7a8b",
+        "ts": 1788412692.7922633,
+        "toolCallId": "RETRIEVE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 0,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "London",
+            "temperature_c": 19.0,
+            "windspeed_kmh": 16.2,
+            "weather_code": 3
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "3a54a35d8da3",
+        "ts": 1788412692.7923148,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "60874923eb4e",
+        "ts": 1788412692.7923589,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "c4dd561cf311",
+        "ts": 1788412692.7923684,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "3fca902d2f48",
+        "ts": 1788412698.7704291,
+        "toolCallId": "RETRIEVE_1",
+        "toolCallName": "get_weather",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "8e8c200de189",
+        "ts": 1788412698.7704394,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "22ce35e5edc3",
+        "ts": 1788412701.387996,
+        "toolCallId": "RETRIEVE_1",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"London\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "0cb3315877fe",
+        "ts": 1788412701.3880126,
+        "toolCallId": "RETRIEVE_1"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "bee4bc809b21",
+        "ts": 1788412701.388155,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "05ec1c2dfc36",
+        "ts": 1788412701.388289,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "cebb2c7f7405",
+        "ts": 1788412701.388299,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "54d9d58d4add",
+        "ts": 1788412701.388334,
+        "toolCallId": "RETRIEVE_1",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 1,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "London",
+            "temperature_c": 19.0,
+            "windspeed_kmh": 16.2,
+            "weather_code": 3
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "c3d950d3a0c7",
+        "ts": 1788412701.388381,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "61b85c3d9cc1",
+        "ts": 1788412701.3884242,
+        "step": "VERIFY"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "aeeb59ce9c19",
+        "ts": 1788412701.388435,
+        "messageId": "narrative",
+        "delta": "Positioning VERIFY... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "b97ac1ff5517",
+        "ts": 1788412708.3262882,
+        "toolCallId": "VERIFY_2",
+        "toolCallName": "get_weather",
+        "reason": "VERIFY"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "3d682d17ad19",
+        "ts": 1788412708.3263032,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "bdd57259b79d",
+        "ts": 1788412711.1408913,
+        "toolCallId": "VERIFY_2",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"London\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "e4d98df9d479",
+        "ts": 1788412711.1409175,
+        "toolCallId": "VERIFY_2"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "909d49ad1f4b",
+        "ts": 1788412711.1410549,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "c9acbc9a736d",
+        "ts": 1788412711.141213,
+        "step": "VERIFY"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "69036bf3117a",
+        "ts": 1788412711.1412237,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "74f2ff374505",
+        "ts": 1788412711.141257,
+        "toolCallId": "VERIFY_2",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "VERIFY",
+          "operation_index": 2,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "London",
+            "temperature_c": 19.0,
+            "windspeed_kmh": 16.2,
+            "weather_code": 3
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "3653d5a6b128",
+        "ts": 1788412711.1412945,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "VERIFY"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "1042fd230593",
+        "ts": 1788412711.1413243,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "d77fda35b838",
+        "ts": 1788412711.1413317,
+        "messageId": "narrative",
+        "delta": "Positioning SYNTHESISE... "
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "21127c2e9e25",
+        "ts": 1788412722.0171204,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "78af7940b2c9",
+        "ts": 1788412722.017139,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "ce1504d3ea13",
+        "ts": 1788412722.0171962,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "SYNTHESISE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "189f28d2396d",
+        "ts": 1788412728.3442595,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "d0b7d38664b1",
+        "ts": 1788412728.3444066,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "c5807ce89635",
+        "ts": 1788412728.3445778,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 3,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 3,
+          "halted": false,
+          "trust_score": 1.0,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "72b6a16ff01f",
+        "ts": 1788412728.3446562,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "75e2a0bc41cd",
+        "ts": 1788412728.344675,
+        "messageId": "final",
+        "delta": "The current weather in London is mild with a temperature of around 19 degrees Celsius and a gentle breeze of approximately 16.2 kilometers per hour."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "d8e269d2878a",
+        "ts": 1788412728.344686,
+        "messageId": "final"
+      }
+    ]
+  }
+}

@@ -181,7 +181,7 @@ def comply_apply_config(body: dict[str, Any]) -> dict[str, Any]:
 
     Body: ``{"intent": {...}}`` — forwarded to No-Code Translator.
     """
-    from crp.comply.no_code import generate_config, NoCodeTranslatorError
+    from crp.comply.no_code import NoCodeTranslatorError, generate_config
 
     intent = body.get("intent", {})
     try:

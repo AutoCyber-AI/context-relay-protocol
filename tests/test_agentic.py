@@ -19,15 +19,13 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # Facilitator unit tests
 # ═══════════════════════════════════════════════════════════════════════
-
 from crp.core.facilitator import (
     CRPFacilitator,
     CurationDecision,
@@ -46,7 +44,6 @@ from crp.core.facilitator import (
     _parse_synthesis,
     _parse_task_analysis,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -754,8 +751,8 @@ class TestWarmStoreCurationOps:
     """Test boost_confidence and reduce_confidence for §22 curation."""
 
     def test_boost_confidence(self):
-        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
 
         store = WarmStateStore(WarmStoreConfig(max_facts=100))
         fact = Fact(text="Test fact", confidence=0.7, source_window_id="w1")
@@ -767,8 +764,8 @@ class TestWarmStoreCurationOps:
         assert sf.confidence == pytest.approx(0.9)
 
     def test_boost_confidence_capped_at_1(self):
-        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
 
         store = WarmStateStore(WarmStoreConfig(max_facts=100))
         fact = Fact(text="High conf fact", confidence=0.95, source_window_id="w1")
@@ -779,8 +776,8 @@ class TestWarmStoreCurationOps:
         assert sf.confidence == 1.0
 
     def test_reduce_confidence(self):
-        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
 
         store = WarmStateStore(WarmStoreConfig(max_facts=100))
         fact = Fact(text="Test fact", confidence=0.7, source_window_id="w1")
@@ -792,8 +789,8 @@ class TestWarmStoreCurationOps:
         assert sf.confidence == pytest.approx(0.4)
 
     def test_reduce_confidence_floored_at_0(self):
-        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
 
         store = WarmStateStore(WarmStoreConfig(max_facts=100))
         fact = Fact(text="Low conf fact", confidence=0.1, source_window_id="w1")
@@ -826,11 +823,12 @@ class TestDispatchAgenticIntegration:
     def test_dispatch_agentic_exists(self):
         from crp.core.orchestrator import CRPOrchestrator
         assert hasattr(CRPOrchestrator, "dispatch_agentic")
-        assert callable(getattr(CRPOrchestrator, "dispatch_agentic"))
+        assert callable(CRPOrchestrator.dispatch_agentic)
 
     def test_dispatch_agentic_signature(self):
         """Verify dispatch_agentic has the expected parameters."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
         sig = inspect.signature(CRPOrchestrator.dispatch_agentic)
         params = list(sig.parameters.keys())
@@ -844,6 +842,7 @@ class TestDispatchAgenticIntegration:
     def test_dispatch_agentic_returns_tuple(self):
         """Verify return type annotation is (str, QualityReport)."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
         sig = inspect.signature(CRPOrchestrator.dispatch_agentic)
         # Return annotation exists
@@ -855,8 +854,8 @@ class TestDispatchAgenticContinuation:
 
     def test_agentic_continues_when_inner_strategy_returns_length(self):
         from crp.core.orchestrator import CRPOrchestrator
-        from crp.providers.custom import CustomProvider
         from crp.core.session import QualityReport
+        from crp.providers.custom import CustomProvider
 
         calls: list[list[dict[str, str]]] = []
 
@@ -1238,8 +1237,8 @@ class TestPostRevisionCuration:
     def test_intermediate_curation_uses_smaller_delta(self):
         """Post-revision curation should use smaller confidence delta (0.05)
         compared to final curation (0.1)."""
-        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore, WarmStoreConfig
 
         store = WarmStateStore(WarmStoreConfig(max_facts=100))
         fact = Fact(text="Test fact", confidence=0.5, source_window_id="w1")

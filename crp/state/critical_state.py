@@ -57,10 +57,10 @@ class CriticalState:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CriticalState:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
-        
+
             Returns:
                 ``CriticalState``.
         """
@@ -104,10 +104,10 @@ class StructuralState:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> StructuralState:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, Any]): The data value.
-        
+
             Returns:
                 ``StructuralState``.
         """

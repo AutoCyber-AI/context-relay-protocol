@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -22,7 +23,6 @@ from crp import (
     check_attestation,
     detect_source_kind,
 )
-
 
 # ---------------------------------------------------------------------------
 # SourceKind / ContextSource basics
@@ -45,7 +45,7 @@ class TestContextSource:
 
     def test_is_frozen(self) -> None:
         src = ContextSource(source_id="x")
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             src.source_id = "y"  # type: ignore[misc]
 
     def test_source_id_length_limit(self) -> None:

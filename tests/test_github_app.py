@@ -13,14 +13,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crp.scan.github_app import GithubAppClient
-
-
 # Test RSA key pair (PEM) — generated at import time for testing only.
 # This avoids committing any real-looking private key to the repository.
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+
+from crp.scan.github_app import GithubAppClient
 
 _TEST_RSA_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 _TEST_PRIVATE_KEY = _TEST_RSA_KEY.private_bytes(
@@ -102,7 +101,8 @@ class TestWebhookVerification:
     def test_verify_valid_signature(self) -> None:
         body = b'{"action":"push"}'
         secret = "testsecret"
-        import hmac, hashlib
+        import hashlib
+        import hmac
         sig = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         assert GithubAppClient.verify_webhook(body, sig, secret) is True
 

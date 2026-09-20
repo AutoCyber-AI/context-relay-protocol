@@ -137,10 +137,10 @@ class DocumentMap:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> DocumentMap:
         """Create a new instance from a dictionary.
-        
+
             Args:
                 data (dict[str, object]): The data value.
-        
+
             Returns:
                 ``DocumentMap``.
         """

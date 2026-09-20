@@ -34,6 +34,7 @@ def _get_session(session_id: str) -> dict:
     """Retrieve a live session or exit with error."""
     if session_id not in _sessions:
         sys.stderr.write(f"Error: unknown session '{session_id}'\n")
+        sys.stderr.flush()  # ensure the message survives an immediate SystemExit
         raise SystemExit(1)
     return _sessions[session_id]
 

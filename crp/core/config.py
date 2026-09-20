@@ -272,19 +272,19 @@ def _validate_config(values: dict[str, Any]) -> None:
         if hi is not None and val > hi:
             errors.append(f"{key}: {val} > maximum {hi}")
 
-    for key, (lo, hi) in _FLOAT_BOUNDS.items():
-        val = values.get(key)
-        if val is None:
+    for key, (flo, fhi) in _FLOAT_BOUNDS.items():
+        fval = values.get(key)
+        if fval is None:
             continue
         try:
-            val = float(val)
+            fval = float(fval)
         except (TypeError, ValueError):
-            errors.append(f"{key}: expected number, got {type(val).__name__}")
+            errors.append(f"{key}: expected number, got {type(fval).__name__}")
             continue
-        if lo is not None and val < lo:
-            errors.append(f"{key}: {val} < minimum {lo}")
-        if hi is not None and val > hi:
-            errors.append(f"{key}: {val} > maximum {hi}")
+        if flo is not None and fval < flo:
+            errors.append(f"{key}: {fval} < minimum {flo}")
+        if fhi is not None and fval > fhi:
+            errors.append(f"{key}: {fval} > maximum {fhi}")
 
     pp = values.get("process_priority")
     if pp is not None and pp not in _VALID_PROCESS_PRIORITIES:

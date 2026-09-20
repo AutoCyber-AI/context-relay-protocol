@@ -270,7 +270,7 @@ def _dedup_sections(text: str) -> tuple[str, int]:
 
     # Find sections with duplicates — remove all but last occurrence
     ranges_to_remove: list[tuple[int, int]] = []
-    for sec_num, spans in section_spans.items():
+    for spans in section_spans.values():
         if len(spans) > 1:
             # Keep last, remove earlier ones
             for start, end in spans[:-1]:

@@ -1,0 +1,19 @@
+# Dependabot version updates.
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/" # pyproject.toml
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend/agent-console" # package-lock.json
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/" # .github/workflows
+    schedule:
+      interval: "monthly"

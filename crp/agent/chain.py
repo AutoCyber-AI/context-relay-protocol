@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -173,8 +174,8 @@ def aggregate_sub_agent_quality(
     parent_query: str,
     sub_agent_responses: list[str],
     *,
-    embedder: object | None = None,
-    nli: object | None = None,
+    embedder: Callable[[str], Sequence[float]] | None = None,
+    nli: Callable[[str, str], float] | None = None,
 ) -> FanInQualityResult:
     """Run cross-agent coherence + completeness over fan-in responses (§8.3).
 

@@ -10,7 +10,6 @@ request parsing, Axiom-4 stripping, and response middleware.
 from __future__ import annotations
 
 from . import names
-from .emit import emit_headers
 from .conditional import (
     CacheDirectives,
     ConditionalResult,
@@ -18,6 +17,7 @@ from .conditional import (
     evaluate_conditional,
     parse_cache_directives,
 )
+from .emit import emit_headers
 from .halt import HaltReason, HaltResponse, build_halt_response
 from .middleware import (
     CRPHeaderMiddleware,

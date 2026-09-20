@@ -1,0 +1,208 @@
+{
+  "sqb_version": "4.0.0b1",
+  "run_timestamp": "2026-09-02T20:36:21.101155+00:00",
+  "meta": {
+    "mode": "full",
+    "model": "kimi-k2.6"
+  },
+  "all_cases_pass": false,
+  "multihop_connector_recall_delta": 0.0,
+  "elapsed_total_s": 188.07,
+  "cases": [
+    {
+      "case_id": "sqb-001",
+      "domain": "technical",
+      "gates": {
+        "rep_wlast": true,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": true
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 40,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.9,
+          "factual_precision": 1.0,
+          "factual_f1": 0.9473684210526316,
+          "topic_coverage": 0.6666666666666666,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 12.75
+        },
+        {
+          "window_number": 2,
+          "word_count": 83,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.9,
+          "factual_precision": 1.0,
+          "factual_f1": 0.9473684210526316,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 13.81
+        },
+        {
+          "window_number": 3,
+          "word_count": 90,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.9,
+          "factual_precision": 1.0,
+          "factual_f1": 0.9473684210526316,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 4.59
+        },
+        {
+          "window_number": 4,
+          "word_count": 109,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.9,
+          "factual_precision": 1.0,
+          "factual_f1": 0.9473684210526316,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.6,
+          "elapsed_s": 10.07
+        },
+        {
+          "window_number": 5,
+          "word_count": 135,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.9,
+          "factual_precision": 1.0,
+          "factual_f1": 0.9473684210526316,
+          "topic_coverage": 0.8333333333333334,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.75,
+          "elapsed_s": 12.39
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-002",
+      "domain": "regulatory",
+      "gates": {
+        "rep_wlast": false,
+        "f1_holds": true,
+        "coverage_wlast": true,
+        "no_forbidden": true,
+        "all_pass": false
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 401,
+          "repetition_rate": 0.0452,
+          "factual_recall": 0.75,
+          "factual_precision": 0.16666666666666666,
+          "factual_f1": 0.27272727272727276,
+          "topic_coverage": 0.2,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 52.95
+        },
+        {
+          "window_number": 2,
+          "word_count": 412,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.75,
+          "factual_precision": 1.0,
+          "factual_f1": 0.8571428571428571,
+          "topic_coverage": 0.6,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 7.03
+        },
+        {
+          "window_number": 3,
+          "word_count": 423,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.75,
+          "factual_precision": 1.0,
+          "factual_f1": 0.8571428571428571,
+          "topic_coverage": 0.6,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 6.51
+        },
+        {
+          "window_number": 4,
+          "word_count": 445,
+          "repetition_rate": 0.4211,
+          "factual_recall": 0.75,
+          "factual_precision": 1.0,
+          "factual_f1": 0.8571428571428571,
+          "topic_coverage": 0.6,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.6,
+          "elapsed_s": 10.7
+        }
+      ]
+    },
+    {
+      "case_id": "sqb-003",
+      "domain": "multihop",
+      "gates": {
+        "rep_wlast": false,
+        "f1_holds": true,
+        "coverage_wlast": false,
+        "no_forbidden": true,
+        "all_pass": false
+      },
+      "judge_score": {},
+      "semantic_coverage_overlap": {},
+      "full_output_chars": 0,
+      "full_output": "",
+      "windows": [
+        {
+          "window_number": 1,
+          "word_count": 15,
+          "repetition_rate": 0.0,
+          "factual_recall": 0.0,
+          "factual_precision": 0.0,
+          "factual_f1": 0.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.15,
+          "elapsed_s": 7.5
+        },
+        {
+          "window_number": 2,
+          "word_count": 80,
+          "repetition_rate": 0.0645,
+          "factual_recall": 0.0,
+          "factual_precision": 0.5,
+          "factual_f1": 0.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.3,
+          "elapsed_s": 27.69
+        },
+        {
+          "window_number": 3,
+          "word_count": 130,
+          "repetition_rate": 0.0851,
+          "factual_recall": 0.0,
+          "factual_precision": 0.5,
+          "factual_f1": 0.0,
+          "topic_coverage": 0.0,
+          "forbidden_violations": 0,
+          "ckf_coverage_score": 0.44999999999999996,
+          "elapsed_s": 21.92
+        }
+      ]
+    }
+  ]
+}

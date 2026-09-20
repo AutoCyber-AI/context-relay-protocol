@@ -37,6 +37,7 @@ def _safety_loader() -> Any:
 
     model_id = os.getenv("CRP_SAFETY_MODEL", model_location("crp.security.safety"))
     pipe = pipeline(
+        device=-1,
         task="text-classification",
         model=model_id,
         truncation=True,

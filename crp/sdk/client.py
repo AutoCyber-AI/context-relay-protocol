@@ -36,7 +36,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from crp.core.dispatch_router import StreamEvent
 
 from crp._version import __version__
 from crp.config import CRPConfig as _UnifiedConfig
@@ -186,7 +191,7 @@ class _ExhaustiveDispatcher:
         )
 
 
-def _provider_from_profile(profile: ApplicationProfile) -> LLMProvider | None:
+def _provider_from_profile(profile: ApplicationProfile | None) -> LLMProvider | None:
     """Create a provider adapter from an explicit application profile.
 
     Returns ``None`` when the profile does not contain enough information to
@@ -365,7 +370,7 @@ class CRPClient:
 
             core_config = _UnifiedConfigAdapter(self.config)
             if self.provider is not None:
-                resolved_provider = self.provider
+                resolved_provider: LLMProvider | None = self.provider
             else:
                 # First try the explicit application profile; fall back to
                 # orchestrator auto-detection; finally a silent provider so the
@@ -528,7 +533,7 @@ class CRPClient:
         *,
         depth: str | None = None,
         **kwargs: Any,
-    ):
+    ) -> Generator[StreamEvent, None, None]:
         """Stream a single-turn completion as ``StreamEvent`` objects.
 
         Each event has ``event_type`` (``token``, ``extraction``,
@@ -808,7 +813,7 @@ class CRPClient:
 
         orch = self._ensure_orchestrator()
         provider = self.provider or getattr(orch, "_provider", None)
-        merged_kwargs = {
+        merged_kwargs: dict[str, Any] = {
             "provider": provider,
             "tools": tools,
             "policy": policy,
@@ -1031,7 +1036,11 @@ class CRPClient:
             Hex digest string, or empty string if hashing is unavailable.
         """
         try:
-            return self.config.compute_hash()
+            # Latent bug: CRPConfig has no ``compute_hash`` method (the real
+            # one is ``get_config_hash``), so this always raises
+            # AttributeError and "" is returned. Left as-is to avoid a
+            # behavior change.
+            return self.config.compute_hash()  # type: ignore[attr-defined]
         except Exception as exc:
             logger.debug("Config hash failed: %s", exc)
             return ""

@@ -42,6 +42,14 @@ Auto-generated reference for the ``crp.tel`` subpackage.
       filters:
         - "!^_"
 
+## `tel.narrative`
+
+::: crp.tel.narrative
+    options:
+      show_source: false
+      filters:
+        - "!^_"
+
 ## `tel.report`
 
 ::: crp.tel.report

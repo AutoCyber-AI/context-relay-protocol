@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from .grammar import parse_policy
 from .model import (
-    EnforcementAction,
     OversightMode,
     RepetitionLevel,
     RiskLevel,

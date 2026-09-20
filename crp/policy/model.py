@@ -27,22 +27,22 @@ class RiskLevel(str, Enum):
         """Return the rank."""
         return _RISK_RANK[self]
 
-    def __ge__(self, other: "RiskLevel") -> bool:  # type: ignore[override]
+    def __ge__(self, other: RiskLevel) -> bool:  # type: ignore[override]
         if isinstance(other, RiskLevel):
             return self.rank >= other.rank
         return NotImplemented
 
-    def __gt__(self, other: "RiskLevel") -> bool:  # type: ignore[override]
+    def __gt__(self, other: RiskLevel) -> bool:  # type: ignore[override]
         if isinstance(other, RiskLevel):
             return self.rank > other.rank
         return NotImplemented
 
-    def __le__(self, other: "RiskLevel") -> bool:  # type: ignore[override]
+    def __le__(self, other: RiskLevel) -> bool:  # type: ignore[override]
         if isinstance(other, RiskLevel):
             return self.rank <= other.rank
         return NotImplemented
 
-    def __lt__(self, other: "RiskLevel") -> bool:  # type: ignore[override]
+    def __lt__(self, other: RiskLevel) -> bool:  # type: ignore[override]
         if isinstance(other, RiskLevel):
             return self.rank < other.rank
         return NotImplemented

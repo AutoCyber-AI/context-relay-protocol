@@ -10,33 +10,47 @@ hide:
 
 ![CRP protocol logo](assets/logo-full.png){ .hero-logo width="400" height="400" loading="eager" }
 
-<div class="hero-kicker">🎯 The Agentic Positioning Layer for SLM-first AI</div>
+<div class="hero-kicker">🎯 The Governed Agentic Protocol for SLM-first AI</div>
 
 <h1 class="hero-headline" markdown>
-Position every agent on the right task,<br/>with the right context and tools.
+Build governed agents that think, act, and prove every step.
 </h1>
 
 <p class="hero-sub">
-<strong>MCP exposes tools. A2A connects agents. Context Relay Protocol™ positions every agent.</strong>
-One <code>base_url</code> change or a few lines of <code>crp.Agent</code> code turns small local models into capable, governed agents: CRP selects
-operations, loads only the 1–3 tools each call needs, carries state forward, streams AG-UI transparency events, and emits
-HMAC-signed proof that safety, grounding, and policy controls ran. The evidence the
-<strong>EU AI Act</strong>, <strong>AIUC-1</strong>, <strong>ISO 42001</strong>, and
-<strong>NIST AI RMF</strong> all demand, generated from live runtime data.
+<strong>MCP exposes tools. A2A connects agents. Context Relay Protocol™ positions every agent and proves it.</strong>
+With <code>crp.Agent</code>, you declare <code>tools + policy + model</code> once and the protocol runs the loop: intent classification,
+operation positioning, tool selection, safety scanning, human-in-the-loop checkpoints, verification, and cross-turn memory.
+Every response carries a risk score, grounding verdict, source attribution, and an HMAC-signed audit link — the live evidence
+that <strong>EU AI Act</strong>, <strong>AIUC-1</strong>, <strong>ISO 42001</strong>, and <strong>NIST AI RMF</strong> demand.
 </p>
 
 <div class="hero-buttons">
-<a href="/getting-started/quickstart/" class="md-button md-button--primary">Position your agents free in 60 seconds</a>
-<a href="/control-evidence/" class="md-button">See the control-evidence mapping</a>
+<a href="/getting-started/quickstart/" class="md-button md-button--primary">Build a governed agent in 5 lines</a>
+<a href="/sdk/agent-sdk/" class="md-button">Read the Agent SDK guide</a>
 </div>
 
 <div class="hero-stats">
-<div class="hero-stat"><span class="num">13-stage</span><span class="label">Safety on every call</span></div>
-<div class="hero-stat"><span class="num">&lt;50ms</span><span class="label">Overhead</span></div>
+<div class="hero-stat"><span class="num">crp.Agent</span><span class="label">Declarative agent SDK</span></div>
+<div class="hero-stat"><span class="num">&lt;50ms</span><span class="label">Governance overhead</span></div>
 <div class="hero-stat"><span class="num">HMAC</span><span class="label">Signed audit chain</span></div>
-<div class="hero-stat"><span class="num">AG-UI</span><span class="label">Transparency stream</span></div>
-<div class="hero-stat"><span class="num">crp.Agent</span><span class="label">Declarative SDK</span></div>
+<div class="hero-stat"><span class="num">AG-UI</span><span class="label">Live transparency stream</span></div>
+<div class="hero-stat"><span class="num">3 models</span><span class="label">Open-source SLM defaults</span></div>
 </div>
+
+---
+
+## What's new in CRP v6
+
+CRP v6 is the first release that ships a complete, self-contained agentic protocol you can install today:
+
+- **Declarative `crp.Agent`** — define tools, policy, and model; the protocol owns the loop.
+- **Three open-source SLM models** — intent, PRM, and safety classifiers published on Hugging Face under `AutoCyberAI/`.
+- **AG-UI-compatible transparency stream** — see intent, operations, tool calls, safety scans, verification, and provenance in real time.
+- **Verification Relay** — PRM-style step judge plus symbolic verifiers for grounded answers.
+- **Human-in-the-loop checkpoints** — destructive or ambiguous actions pause for approval before they run.
+- **Bi-temporal CKF memory** — facts carry valid-time and transaction-time so agents reason over history, not just the latest snapshot.
+
+The managed-cloud Gateway and Comply products are on the Wave 3 roadmap; the library and self-hosted protocol are production-ready today.
 
 </div>
 

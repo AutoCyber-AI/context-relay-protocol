@@ -648,7 +648,7 @@ class DataLineageTracker:
 
     def to_dict(self) -> dict[str, Any]:
         """Export lineage state for audit/compliance reporting."""
-        by_class = {}
+        by_class: dict[str, int] = {}
         for entry in self._entries.values():
             name = entry.classification.name
             by_class[name] = by_class.get(name, 0) + 1

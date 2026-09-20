@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from crp.stl.classifier import STLOperation, operation_to_token
+from crp.stl.classifier import STLOperation, operation_from_token, operation_to_token
 from crp.stl.depth_model import DepthLevel
 from crp.stl.frame_builder import OperationFrame
 from crp.tools.capability_fabric import CapabilityProfile, CapabilitySelection
@@ -33,6 +33,7 @@ class CapabilitySlot:
     input_schema: dict[str, Any]
     example_call: dict[str, Any] = field(default_factory=dict)
     output_contract: str = ""
+    operation_types: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -132,6 +133,7 @@ def build_tool_positioning_frame(
             input_schema=d.input_schema,
             example_call=_example_from_schema(d.input_schema),
             output_contract="Return the tool's JSON output only.",
+            operation_types=[operation_to_token(op) for op in d.operation_types] if d.operation_types else [],
         ))
     # small-local models get one call per operation; larger profiles may chain a couple
     max_calls = 1 if profile is CapabilityProfile.SMALL_LOCAL else min(2, len(slots) or 1)
@@ -153,6 +155,10 @@ class ParsedToolCall:
     capability_id: str | None
     arguments: dict[str, Any] = field(default_factory=dict)
     answer: str = ""
+    # The tool id the model actually requested, before any snap-to-offered-capability
+    # remapping. Enforcement layers (e.g. phase tool allowlists) must judge intent
+    # on this value, not on the snapped capability_id.
+    requested_id: str | None = None
 
     @property
     def is_tool_call(self) -> bool:
@@ -220,11 +226,34 @@ def parse_tool_call(raw_output: str, frame: ToolPositioningFrame) -> ParsedToolC
     cid = obj.get("capability_id")
     if cid in (None, "", "null"):
         return ParsedToolCall(capability_id=None, answer=str(obj.get("answer", "")).strip())
+    raw_cid = str(cid)
 
     if cid not in valid_ids:
+        # Small local models sometimes echo the operation token ("RETRIEVE",
+        # "CALCULATE") instead of the capability_id. If the token maps to an
+        # operation and exactly one offered capability advertises that operation,
+        # snap to it instead of silently discarding the call.
+        op = operation_from_token(str(cid).upper()) if isinstance(cid, str) else None
+        if op is not None:
+            matching = [s for s in frame.capabilities if op.name in s.operation_types]
+            if len(matching) == 1:
+                cid = matching[0].capability_id
+                args = obj.get("arguments", {})
+                if not isinstance(args, dict):
+                    args = {}
+                return ParsedToolCall(
+                    capability_id=cid, arguments=args, requested_id=raw_cid
+                )
+
         # Hallucinated id — if a single tool was offered, snap to it; else reject.
         if len(valid_ids) == 1:
             cid = next(iter(valid_ids))
+            args = obj.get("arguments", {})
+            if not isinstance(args, dict):
+                args = {}
+            return ParsedToolCall(
+                capability_id=cid, arguments=args, requested_id=raw_cid
+            )
         else:
             logger.warning("Model selected unknown capability %r; offered=%s", cid, valid_ids)
             return ParsedToolCall(capability_id=None, answer=str(obj.get("answer", "")).strip())

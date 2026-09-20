@@ -1,0 +1,683 @@
+{
+  "generated_at": "2026-09-03T05:22:55.069396+00:00",
+  "question": "Compare the weather in Tokyo and New York using real data.",
+  "model": "meta-llama-3.1-8b-instruct",
+  "endpoint": "http://localhost:1234/v1/",
+  "raw_llm": {
+    "mode": "RAW LLM",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "Compare the weather in Tokyo and New York using real data.",
+    "response": "{\"name\": \"get_weather\", \"parameters\": {\"city1\": \"Tokyo\", \"city2\": \"New York\"}}",
+    "finish_reason": "stop",
+    "elapsed_s": 7.41
+  },
+  "crp_agent_no_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "Compare the weather in Tokyo and New York using real data.",
+    "response": "In Tokyo, the current temperature is a warm 28.2 degrees Celsius and the wind speed is relatively low at 4.3 kilometers per hour. The weather in Tokyo is currently clear or partly cloudy, indicated by a weather code of 2. In contrast to Tokyo's pleasant weather, we do not have any information about the current weather conditions in New York.",
+    "operations": "compare",
+    "preset": null,
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 1
+    },
+    "elapsed_s": 40.2,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['COMPARE'] \u2192 planned operations: COMPARE\n\n## Operation: COMPARE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: COMPARE\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Tokyo\"\n  }\n}\n\n## Operation completed: COMPARE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"COMPARE\", \"operation_index\": 0, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"Tokyo\", \"temperature_c\": 28.2, \"windspeed_kmh\": 4.3, \"weather_code\": 2}}\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['COMPARE']Selected get_weather\n\n## Final answer\n*answer* \u2014 In Tokyo, the current temperature is a warm 28.2 degrees Celsius and the wind speed is relatively low at 4.3 kilometers per hour. The weather in Tokyo is currently clear or partly cloudy, indicated by a weather code of 2. In contrast to Tokyo's pleasant weather, we do not have any information about the current weather conditions in New York.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 1\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 1\n- **halted**: False\n- **trust_score**: 1.0\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "9e7634596e7b",
+        "ts": 1788412847.9844265,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "02412e456535",
+        "ts": 1788412847.9854217,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['COMPARE']",
+          "plan": [
+            "COMPARE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "ca96db6c995c",
+        "ts": 1788412847.9854355,
+        "messageId": "reasoning",
+        "delta": "plan=['COMPARE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "18e59bd564aa",
+        "ts": 1788412847.9854863,
+        "step": "COMPARE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "cd753cbd4d7c",
+        "ts": 1788412847.9854949,
+        "messageId": "narrative",
+        "delta": "Positioning COMPARE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "fcaf4a8a11c8",
+        "ts": 1788412858.4098792,
+        "toolCallId": "COMPARE_0",
+        "toolCallName": "get_weather",
+        "reason": "COMPARE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "f503ad18e8d3",
+        "ts": 1788412858.4098928,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "da8231011bfc",
+        "ts": 1788412861.3049736,
+        "toolCallId": "COMPARE_0",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "4288ce4c8787",
+        "ts": 1788412861.3049855,
+        "toolCallId": "COMPARE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "6ec3afa7d3f0",
+        "ts": 1788412861.3051465,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "999a60b8a17c",
+        "ts": 1788412861.3052804,
+        "step": "COMPARE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "e36e355b5d17",
+        "ts": 1788412861.3052938,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "a672cdc6b43f",
+        "ts": 1788412861.305322,
+        "toolCallId": "COMPARE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "COMPARE",
+          "operation_index": 0,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "Tokyo",
+            "temperature_c": 28.2,
+            "windspeed_kmh": 4.3,
+            "weather_code": 2
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "9d6d875bd726",
+        "ts": 1788412861.3053696,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "COMPARE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "6f969a734112",
+        "ts": 1788412884.5930822,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "cd4a0cbdd399",
+        "ts": 1788412884.5931976,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "6ce31fddd01b",
+        "ts": 1788412884.5933514,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 1,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 1,
+          "halted": false,
+          "trust_score": 1.0,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "44002db1e9ed",
+        "ts": 1788412884.5933807,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "3b06bc72a282",
+        "ts": 1788412884.59339,
+        "messageId": "final",
+        "delta": "In Tokyo, the current temperature is a warm 28.2 degrees Celsius and the wind speed is relatively low at 4.3 kilometers per hour. The weather in Tokyo is currently clear or partly cloudy, indicated by a weather code of 2. In contrast to Tokyo's pleasant weather, we do not have any information about the current weather conditions in New York."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "c48dbad9097b",
+        "ts": 1788412884.5933976,
+        "messageId": "final"
+      }
+    ]
+  },
+  "crp_agent_with_preset": {
+    "mode": "CRPv6 AGENT",
+    "model": "meta-llama-3.1-8b-instruct",
+    "endpoint": "http://localhost:1234/v1/",
+    "question": "Compare the weather in Tokyo and New York using real data.",
+    "response": "Tokyo is currently experiencing a warm and calm day with a temperature of 28.2 degrees Celsius and a wind speed of 4.3 km/h, corresponding to a weather code of 2. In contrast, New York is having a cooler and slightly breezier day with a temperature of 20.3 degrees Celsius and a wind speed of 3.5 km/h, corresponding to a weather code of 61.",
+    "operations": "retrieve \u2192 retrieve \u2192 verify \u2192 synthesise",
+    "preset": "research_assistant",
+    "governance": {
+      "risk": "LOW",
+      "grounded": true,
+      "chain_valid": true,
+      "tier": "",
+      "sources": 2
+    },
+    "elapsed_s": 90.4,
+    "narrative_md": "# CRP Run Narrative\n\n## Intent classified\n*intent* \u2014 Detected intent: plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE'] \u2192 planned operations: RETRIEVE, RETRIEVE, VERIFY, SYNTHESISE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: RETRIEVE\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Tokyo\"\n  }\n}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"RETRIEVE\", \"operation_index\": 0, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"Tokyo\", \"temperature_c\": 28.2, \"windspeed_kmh\": 4.3, \"weather_code\": 2}}\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Operation: VERIFY\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Tool selected \u2014 get_weather\n*tool-select* \u2014 Selected tool: get_weather for operation: VERIFY\n\n## Calling get_weather\n*tool-call* \u2014 {\n  \"capability\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"New York\"\n  }\n}\n\n## Operation completed: VERIFY\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Tool result received\n*tool-result* \u2014 {\"event_type\": \"observation_received\", \"operation\": \"VERIFY\", \"operation_index\": 2, \"capability_id\": \"get_weather\", \"payload\": {\"city\": \"New York\", \"temperature_c\": 20.3, \"windspeed_kmh\": 3.5, \"weather_code\": 61}}\n\n## Operation: SYNTHESISE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Operation completed: SYNTHESISE\n*operation-done* \u2014 \n\n## Quality tier: A\n*quality* \u2014 Confidence: 1.00\n\n## Positioned loop complete\n*run-complete* \u2014 run_complete\n\n## Governance summary\n*governance* \u2014 risk=LOW, grounded=True, chain_valid=True\n\n## Thinking\n*reasoning* \u2014 plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']Selected get_weatherSelected get_weather\n\n## Final answer\n*answer* \u2014 Tokyo is currently experiencing a warm and calm day with a temperature of 28.2 degrees Celsius and a wind speed of 4.3 km/h, corresponding to a weather code of 2. In contrast, New York is having a cooler and slightly breezier day with a temperature of 20.3 degrees Celsius and a wind speed of 3.5 km/h, corresponding to a weather code of 61.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: True\n- **chain_valid**: True\n- **tier**: \n- **confidence**: 0.0\n- **semantic_entropy**: None\n- **fabrications**: 0\n- **sources**: 2\n- **invalid_steps**: 0\n- **safety_scans**: []\n- **observation_count**: 2\n- **halted**: False\n- **trust_score**: 1.0\n- **kill_switch_fired**: False\n- **autonomy_tier**: T0_supervised\n- **control_plane_hash**: 8c28437987ba74ab678b8ebd2dbf101d",
+    "provenance_chain": [],
+    "events": [
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "a2520587fad5",
+        "ts": 1788412888.2394218,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "d726be6f34db",
+        "ts": 1788412888.2407079,
+        "name": "crp.intent",
+        "value": {
+          "operation": "",
+          "detail": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']",
+          "plan": [
+            "RETRIEVE",
+            "RETRIEVE",
+            "VERIFY",
+            "SYNTHESISE"
+          ]
+        }
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "470f0b281e97",
+        "ts": 1788412888.2407303,
+        "messageId": "reasoning",
+        "delta": "plan=['RETRIEVE', 'RETRIEVE', 'VERIFY', 'SYNTHESISE']"
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "4ed492296127",
+        "ts": 1788412888.2408273,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "33fd8fd3b08c",
+        "ts": 1788412888.240837,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "44c14ff44455",
+        "ts": 1788412897.7944238,
+        "toolCallId": "RETRIEVE_0",
+        "toolCallName": "get_weather",
+        "reason": "RETRIEVE"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "1c151a04c8cc",
+        "ts": 1788412897.7944424,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "1dac63a69bb5",
+        "ts": 1788412900.4501245,
+        "toolCallId": "RETRIEVE_0",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "1bf6c636aedf",
+        "ts": 1788412900.4501383,
+        "toolCallId": "RETRIEVE_0"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "00d138c1ecaf",
+        "ts": 1788412900.4502811,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "b1ab21644b9e",
+        "ts": 1788412900.4504192,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "f30acb034a2e",
+        "ts": 1788412900.4504318,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "ed755e05cccd",
+        "ts": 1788412900.4504566,
+        "toolCallId": "RETRIEVE_0",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "RETRIEVE",
+          "operation_index": 0,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "Tokyo",
+            "temperature_c": 28.2,
+            "windspeed_kmh": 4.3,
+            "weather_code": 2
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "c36e8849dca4",
+        "ts": 1788412900.4505045,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "79f9651dc55c",
+        "ts": 1788412900.4505413,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "e996e3acf21b",
+        "ts": 1788412900.4505498,
+        "messageId": "narrative",
+        "delta": "Positioning RETRIEVE... "
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "7654c47f7202",
+        "ts": 1788412910.0277545,
+        "step": "RETRIEVE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "8b4ba6628126",
+        "ts": 1788412910.027774,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "cf89073d4512",
+        "ts": 1788412910.0278528,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "RETRIEVE"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "efdb1f55d12e",
+        "ts": 1788412910.0278895,
+        "step": "VERIFY"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "7833edab18fa",
+        "ts": 1788412910.0278978,
+        "messageId": "narrative",
+        "delta": "Positioning VERIFY... "
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "seq": 0,
+        "id": "6e6c15db31e3",
+        "ts": 1788412917.2122116,
+        "toolCallId": "VERIFY_2",
+        "toolCallName": "get_weather",
+        "reason": "VERIFY"
+      },
+      {
+        "type": "REASONING_CONTENT",
+        "seq": 0,
+        "id": "4a08ecf25afb",
+        "ts": 1788412917.2122233,
+        "messageId": "reasoning",
+        "delta": "Selected get_weather"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "seq": 0,
+        "id": "9d431b5d8fdc",
+        "ts": 1788412920.0309515,
+        "toolCallId": "VERIFY_2",
+        "delta": "{\"capability\": \"get_weather\", \"arguments\": {\"city\": \"New York\"}}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "seq": 0,
+        "id": "f410cd7fe7b5",
+        "ts": 1788412920.0309618,
+        "toolCallId": "VERIFY_2"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "e62ac929dfaa",
+        "ts": 1788412920.0310626,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "1fdb6c5a0fd4",
+        "ts": 1788412920.031154,
+        "step": "VERIFY"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "facb2ac21785",
+        "ts": 1788412920.031161,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "seq": 0,
+        "id": "b6be42adef56",
+        "ts": 1788412920.0311806,
+        "toolCallId": "VERIFY_2",
+        "content": {
+          "event_type": "observation_received",
+          "operation": "VERIFY",
+          "operation_index": 2,
+          "capability_id": "get_weather",
+          "payload": {
+            "city": "New York",
+            "temperature_c": 20.3,
+            "windspeed_kmh": 3.5,
+            "weather_code": 61
+          }
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "7c83420a69d6",
+        "ts": 1788412920.0312133,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "VERIFY"
+          }
+        ]
+      },
+      {
+        "type": "STEP_STARTED",
+        "seq": 0,
+        "id": "ac833ebaa7f7",
+        "ts": 1788412920.0312417,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "3987e094a019",
+        "ts": 1788412920.0312488,
+        "messageId": "narrative",
+        "delta": "Positioning SYNTHESISE... "
+      },
+      {
+        "type": "STEP_FINISHED",
+        "seq": 0,
+        "id": "d207c6fab825",
+        "ts": 1788412939.3761058,
+        "step": "SYNTHESISE"
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "46f0c7f53ab3",
+        "ts": 1788412939.3761218,
+        "name": "crp.quality",
+        "value": {
+          "tier": "A",
+          "confidence": 1.0
+        }
+      },
+      {
+        "type": "STATE_DELTA",
+        "seq": 0,
+        "id": "df49cc54c209",
+        "ts": 1788412939.3761842,
+        "delta": [
+          {
+            "op": "replace",
+            "path": "/last_integrated",
+            "value": "SYNTHESISE"
+          }
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "3cc3a30450c7",
+        "ts": 1788412975.0680475,
+        "name": "crp.trust",
+        "value": {
+          "score": 1.0,
+          "action": "allow",
+          "reason": "no anomalies observed"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "6aa99dc7f8c4",
+        "ts": 1788412975.0682063,
+        "name": "crp.run_complete",
+        "value": {
+          "operation": "",
+          "detail": "run_complete"
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "seq": 0,
+        "id": "b75773c778fc",
+        "ts": 1788412975.0683868,
+        "name": "crp.governance",
+        "value": {
+          "risk": "LOW",
+          "grounded": true,
+          "chain_valid": true,
+          "fabrications": 0,
+          "sources": 2,
+          "tier": "",
+          "confidence": 0.0,
+          "semantic_entropy": null,
+          "observation_count": 2,
+          "halted": false,
+          "trust_score": 1.0,
+          "kill_switch_fired": false,
+          "autonomy_tier": "T0_supervised",
+          "control_plane_hash": "8c28437987ba74ab678b8ebd2dbf101d"
+        }
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "seq": 0,
+        "id": "1ba146ca5b41",
+        "ts": 1788412975.0684366,
+        "messageId": "final"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "seq": 0,
+        "id": "39b023b9c02b",
+        "ts": 1788412975.0684545,
+        "messageId": "final",
+        "delta": "Tokyo is currently experiencing a warm and calm day with a temperature of 28.2 degrees Celsius and a wind speed of 4.3 km/h, corresponding to a weather code of 2. In contrast, New York is having a cooler and slightly breezier day with a temperature of 20.3 degrees Celsius and a wind speed of 3.5 km/h, corresponding to a weather code of 61."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "seq": 0,
+        "id": "05385dc96150",
+        "ts": 1788412975.0684679,
+        "messageId": "final"
+      }
+    ]
+  }
+}

@@ -34,6 +34,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 # Fixed JOSE-style header (typ=CRP distinguishes from JWT) — SPEC-007 §3.2.
 _HEADER_OBJ = {"alg": "HS256", "typ": "CRP"}
@@ -139,12 +140,12 @@ class SessionTokenPayload:
         return obj
 
     @classmethod
-    def from_json_obj(cls, obj: dict[str, object]) -> SessionTokenPayload:
+    def from_json_obj(cls, obj: dict[str, Any]) -> SessionTokenPayload:
         """Create a new instance from a JSON-compatible object.
-        
+
             Args:
                 obj (dict[str, object]): The obj value.
-        
+
             Returns:
                 ``SessionTokenPayload``.
         """

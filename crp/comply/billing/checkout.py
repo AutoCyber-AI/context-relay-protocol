@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
-import requests
+import requests  # type: ignore[import-untyped]  # requests ships no PEP 561 stubs
 import stripe
 
 logger = logging.getLogger(__name__)
@@ -68,11 +68,15 @@ def get_or_create_stripe_customer(org_id: str, org_name: str = "", email: str = 
         return customer_id  # type: ignore[no-any-return]
 
     # Create new Stripe customer linked to this Clerk org
-    customer = stripe.Customer.create(
-        name=org_name or org_id,
-        email=email or None,
-        metadata={"clerkOrgId": org_id},
-    )
+    # (stripe-python omits None params, so only passing email when set
+    # produces the same request as ``email=email or None``)
+    create_kwargs: dict[str, Any] = {
+        "name": org_name or org_id,
+        "metadata": {"clerkOrgId": org_id},
+    }
+    if email:
+        create_kwargs["email"] = email
+    customer = stripe.Customer.create(**create_kwargs)
     customer_id = customer["id"]  # type: ignore[index]
 
     # Write back to Clerk
@@ -95,7 +99,7 @@ def get_or_create_stripe_customer(org_id: str, org_name: str = "", email: str = 
 def create_checkout_session(
     org_id: str,
     price_id: str,
-    mode: str = "subscription",
+    mode: Literal["payment", "setup", "subscription"] = "subscription",
     return_url: str = "",
     org_name: str = "",
     email: str = "",
@@ -120,7 +124,9 @@ def create_checkout_session(
     success = f"{base_url}/dashboard/billing?upgraded=1&cs={{CHECKOUT_SESSION_ID}}"
     cancel = f"{base_url}/dashboard/billing?canceled=1"
 
-    session = stripe.checkout.Session.create(
+    # StripeObject is dict-like at runtime but not modelled as a Mapping
+    # in the stripe stubs; annotate Any to keep the existing access patterns.
+    session: Any = stripe.checkout.Session.create(
         customer=customer_id,
         mode=mode,
         line_items=[{"price": price_id, "quantity": 1}],
@@ -131,8 +137,8 @@ def create_checkout_session(
         allow_promotion_codes=True,
         automatic_tax={"enabled": True},
     )
-    logger.info("Created checkout session %s for org %s (mode=%s)", session["id"], org_id, mode)  # type: ignore[index]
-    return dict(session)  # type: ignore[no-any-return]
+    logger.info("Created checkout session %s for org %s (mode=%s)", session["id"], org_id, mode)
+    return dict(session)
 
 
 def create_portal_session(org_id: str, return_url: str = "") -> dict[str, Any]:

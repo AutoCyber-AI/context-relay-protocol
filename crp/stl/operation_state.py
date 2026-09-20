@@ -17,6 +17,7 @@ introspectable: which operation, which state, how much of the checklist remains.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import Callable
@@ -76,6 +77,7 @@ class OperationEvent:
     operation_index: int = 0
     detail: str = ""
     timestamp: float = field(default_factory=time.time)
+    data: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, object]:
         """Render the event for streaming / audit."""
@@ -85,6 +87,7 @@ class OperationEvent:
             "operation_index": self.operation_index,
             "detail": self.detail,
             "timestamp": self.timestamp,
+            "data": self.data,
         }
 
 
@@ -104,6 +107,7 @@ class OperationStateMachine:
         event = OperationEvent(
             state=OperationState.INTENT_CLASSIFIED,
             detail=f"plan={[op.name for op in self.plan]}",
+            data={"plan": [op.name for op in self.plan]},
         )
         self.events.append(event)
         if self.event_callback is not None:
@@ -154,7 +158,12 @@ class OperationStateMachine:
         return to_state in _ALLOWED.get(self.state, set())
 
     def _transition(
-        self, to_state: OperationState, *, operation: STLOperation | None = None, detail: str = ""
+        self,
+        to_state: OperationState,
+        *,
+        operation: STLOperation | None = None,
+        detail: str = "",
+        data: dict[str, Any] | None = None,
     ) -> OperationEvent:
         if not self.can_transition(to_state):
             raise InvalidTransition(f"{self.state.value} → {to_state.value} is not allowed")
@@ -164,6 +173,7 @@ class OperationStateMachine:
             operation=operation or self.current_operation,
             operation_index=max(self.current_index, 0),
             detail=detail,
+            data=data or {},
         )
         self.events.append(event)
         if self.event_callback is not None:
@@ -186,9 +196,18 @@ class OperationStateMachine:
         """Mark that the model emitted a valid tool selection."""
         return self._transition(OperationState.TOOL_SELECTED, detail=f"capability={capability_id}")
 
-    def execute_tool(self, capability_id: str) -> OperationEvent:
+    def execute_tool(
+        self, capability_id: str, arguments: dict[str, Any] | None = None
+    ) -> OperationEvent:
         """Mark that the selected capability executed."""
-        return self._transition(OperationState.TOOL_EXECUTED, detail=f"capability={capability_id}")
+        detail = f"capability={capability_id}"
+        if arguments:
+            detail += f", args={json.dumps(arguments, default=str)}"
+        return self._transition(
+            OperationState.TOOL_EXECUTED,
+            detail=detail,
+            data={"capability_id": capability_id, "arguments": arguments or {}} if arguments else {},
+        )
 
     def verify(self, *, detail: str = "") -> OperationEvent:
         """Mark the operation output verified (DPE / safety check)."""

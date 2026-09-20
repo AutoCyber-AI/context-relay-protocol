@@ -67,12 +67,25 @@ class OperationFrame:
         return total
 
 
+# Max context facts surfaced per operation, by depth (SPEC-031 §4.2). Deeper
+# reasoning sees more evidence; shallow lookups see only the minimum. This is a
+# real protocol control — depth changes the positioned frame, not just a label.
+_DEPTH_FACT_BUDGET: dict[DepthLevel, int] = {
+    DepthLevel.D1: 2,
+    DepthLevel.D2: 3,
+    DepthLevel.D3: 6,   # matches the previous per-op maximum → default behaviour unchanged
+    DepthLevel.D4: 8,
+    DepthLevel.D5: 10,  # effectively unbounded; per-op limits apply
+}
+
+
 def build_operation_frame(
     operation: STLOperation,
     user_request: str,
     context_facts: list[str] | None = None,
     depth: DepthLevel = DepthLevel.D3,
     goal_compass: GoalCompass | None = None,
+    reasoning_guidance: str = "",
 ) -> OperationFrame:
     """Build a minimal Operation Frame for the given operation (SPEC-031 §5.2).
 
@@ -80,14 +93,22 @@ def build_operation_frame(
         operation: The cognitive operation to position on.
         user_request: The original user request.
         context_facts: Retrieved facts relevant to THIS operation only.
-        depth: Depth level D1–D5.
+        depth: Depth level D1–D5 — controls the evidence budget, not just a label.
         goal_compass: Pre-built compass, or None to build default.
+        reasoning_guidance: Optional per-phase guidance (from a CognitivePreset
+            reasoning phase) injected into this step's frame so the model reasons
+            with the current phase's instructions, not just a global system prompt.
     """
     facts = context_facts or []
     compass = goal_compass or GoalCompass()
 
     assignment = _build_assignment(operation, user_request, depth)
-    frame_content = _build_frame_content(operation, facts)
+    if reasoning_guidance:
+        # Anchor the phase's guidance to THIS step so each reasoning phase is
+        # active in the frame the model actually sees, not only listed in the
+        # preset-wide system prompt.
+        assignment = f"{reasoning_guidance.rstrip()}\n\n{assignment}"
+    frame_content = _build_frame_content(operation, facts, depth)
     success_test = _build_success_test(operation)
     output_contract = _build_output_contract(operation)
 
@@ -130,43 +151,49 @@ def _build_assignment(op: STLOperation, request: str, depth: DepthLevel) -> str:
     return f"Execute the {op.value} operation for: {request[:120]}"
 
 
-def _build_frame_content(op: STLOperation, facts: list[str]) -> str:
-    """Assemble ONLY the context this operation needs."""
+def _build_frame_content(op: STLOperation, facts: list[str], depth: DepthLevel = DepthLevel.D3) -> str:
+    """Assemble ONLY the context this operation needs, bounded by depth.
+
+    Depth is an enforced evidence budget (``_DEPTH_FACT_BUDGET``): a D1 lookup
+    positions the model on at most 2 candidate facts, D5 deep synthesis on up to
+    8. This makes depth a real protocol control over the positioned frame.
+    """
     if not facts:
         return ""
+    budget = _DEPTH_FACT_BUDGET.get(depth, 5)
 
     if op == STLOperation.RETRIEVE:
         # RETRIEVE gets candidate facts to select from
-        return "Candidate facts:\n" + "\n".join(f"- {f[:200]}" for f in facts[:5])
+        return "Candidate facts:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(5, budget)])
 
     if op == STLOperation.COMPARE:
-        return "Items to compare:\n" + "\n".join(f"- {f[:200]}" for f in facts[:4])
+        return "Items to compare:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(4, budget)])
 
     if op == STLOperation.ANALYSE:
-        return "Evidence to analyse:\n" + "\n".join(f"- {f[:200]}" for f in facts[:6])
+        return "Evidence to analyse:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(6, budget)])
 
     if op == STLOperation.SYNTHESISE:
-        return "Facts to synthesise:\n" + "\n".join(f"- {f[:200]}" for f in facts[:6])
+        return "Facts to synthesise:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(6, budget)])
 
     if op == STLOperation.GENERATE:
-        return "Relevant background:\n" + "\n".join(f"- {f[:150]}" for f in facts[:4])
+        return "Relevant background:\n" + "\n".join(f"- {f[:150]}" for f in facts[:min(4, budget)])
 
     if op == STLOperation.VERIFY:
-        return "Claims and evidence:\n" + "\n".join(f"- {f[:200]}" for f in facts[:6])
+        return "Claims and evidence:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(6, budget)])
 
     if op == STLOperation.CLARIFY:
-        return "Context:\n" + "\n".join(f"- {f[:200]}" for f in facts[:3])
+        return "Context:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(3, budget)])
 
     if op == STLOperation.REVISE:
-        return "Prior output and corrections:\n" + "\n".join(f"- {f[:200]}" for f in facts[:4])
+        return "Prior output and corrections:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(4, budget)])
 
     if op == STLOperation.TRANSFORM:
-        return "Data to transform:\n" + "\n".join(f"- {f[:200]}" for f in facts[:4])
+        return "Data to transform:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(4, budget)])
 
     if op == STLOperation.PLAN:
-        return "Goals and constraints to plan around:\n" + "\n".join(f"- {f[:200]}" for f in facts[:6])
+        return "Goals and constraints to plan around:\n" + "\n".join(f"- {f[:200]}" for f in facts[:min(6, budget)])
 
-    return "\n".join(f"- {f[:200]}" for f in facts[:5])
+    return "\n".join(f"- {f[:200]}" for f in facts[:min(5, budget)])
 
 
 def _build_success_test(op: STLOperation) -> str:

@@ -39,17 +39,14 @@ Risk levels:
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
 
 from ._types import (
     AttributionType,
     ClaimAttribution,
     ClaimRiskAssessment,
     ClaimType,
-    DistortionResult,
     EntailmentLabel,
     EntailmentResult,
-    FabricationResult,
     FidelityReport,
     HallucinationRisk,
     HallucinationRiskReport,

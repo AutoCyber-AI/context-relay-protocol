@@ -36,12 +36,21 @@ SKIP_MODULES = {
 
 
 def _has_public_members(module) -> bool:
-    """Return True if a module exposes any public class or function."""
+    """Return True if a module exposes any public class or function.
+
+    Only symbols defined in the module itself or re-exported from elsewhere
+    in ``crp`` count. Imported stdlib/typing artifacts (e.g. ``typing.Any``,
+    which ``inspect.isclass`` reports True for) are not public API, and
+    relying on them makes generation drift between environments.
+    """
     for name in dir(module):
         if name.startswith("_"):
             continue
         obj = getattr(module, name)
-        if inspect.isclass(obj) or inspect.isfunction(obj):
+        if not (inspect.isclass(obj) or inspect.isfunction(obj)):
+            continue
+        obj_module = getattr(obj, "__module__", "") or ""
+        if obj_module == module.__name__ or obj_module.startswith(PACKAGE):
             return True
     return False
 
@@ -51,7 +60,7 @@ def _walk_modules() -> dict[str, list[str]]:
     import crp  # noqa: F401
 
     modules_by_pkg: dict[str, list[str]] = {}
-    for importer, modname, ispkg in pkgutil.walk_packages(
+    for _importer, modname, _ispkg in pkgutil.walk_packages(
         sys.modules[PACKAGE].__path__, PACKAGE + "."
     ):
         if modname in SKIP_MODULES:
@@ -80,7 +89,10 @@ def _page_content(top: str, modules: list[str]) -> str:
     for modname in modules:
         try:
             mod = importlib.import_module(modname)
-        except Exception:
+        except Exception as exc:
+            # Environment-dependent import failures change page content; make
+            # them visible in CI logs instead of silently altering the docs.
+            print(f"warning: skipping {modname}: {type(exc).__name__}: {exc}")
             continue
         if not _has_public_members(mod):
             continue
@@ -113,6 +125,18 @@ def _generate_pages(check: bool = False) -> list[Path]:
             existing = page_path.read_text(encoding="utf-8") if page_path.exists() else ""
             if existing != content:
                 changed.append(page_path)
+                # Print a compact diff so CI logs show exactly what drifted.
+                import difflib
+
+                diff = difflib.unified_diff(
+                    existing.splitlines(),
+                    content.splitlines(),
+                    fromfile=f"committed/{page_path.name}",
+                    tofile=f"generated/{page_path.name}",
+                    lineterm="",
+                )
+                for line in list(diff)[:40]:
+                    print(f"  {line}")
         else:
             page_path.write_text(content, encoding="utf-8")
             changed.append(page_path)
@@ -224,6 +248,10 @@ def main() -> int:
         if changed or not nav_ok:
             print("API reference is out of sync. Run:")
             print("    python scripts/generate_api_reference.py")
+            for path in changed:
+                print(f"  out-of-sync page: {path.name}")
+            if not nav_ok:
+                print("  out-of-sync nav: mkdocs.yml Full Module Reference block")
             return 1
         print("API reference is up to date.")
         return 0

@@ -586,6 +586,71 @@ or replay the decision.
 | `.open_questions` | `list[str]` | Carried in the CSO |
 | `.complete` | `bool` | Finished without halting and goal fully integrated |
 
+### 5.10 User-defined cognition presets
+
+**Elevator pitch:** define *who* the agent is, *how* it thinks, *what* it
+values, and *how* it responds — in a simple YAML file or a Python dict — and
+apply it to `crp.Agent` with one argument.  This is the "movie-like coding"
+surface: two lines of natural language (`"do not harm humans"`, `"show
+compassion"`) plus a reasoning scaffold become enforceable, observable behavior.
+
+```python
+import crp
+
+agent = crp.Agent(
+    model="local/llama3.1",
+    preset="socratic_tutor",   # built-in: persona + reasoning scaffold + safeguards
+)
+result = agent.run("Why is the sky blue?")
+```
+
+Built-in presets (more in `crp/cognition/presets/`):
+
+| Preset | Best for |
+|---|---|
+| `"socratic_tutor"` | Guiding learners through questions instead of giving answers |
+| `"security_analyst"` | Investigate before acting; gate destructive actions |
+| `"research_assistant"` | Search, verify, synthesise with citations |
+| `"compassionate_companion"` | Emotion-aware, gentle responses with crisis safeguards |
+
+A preset is just a dict or YAML file with these sections:
+
+```python
+preset = {
+    "id": "compassionate_robot",
+    "name": "Compassionate Robot",
+    "persona": "You are a helpful household robot...",
+    "voice": "gentle and concise",
+    "reasoning": {
+        "phases": [
+            {"name": "Understand", "operations": ["ANALYSE"], "depth": "quick"},
+            {"name": "Check safeguards", "operations": ["VERIFY"], "depth": "standard"},
+            {"name": "Act or refuse", "operations": ["GENERATE"]},
+        ]
+    },
+    "safeguards": [
+        {
+            "name": "Do not harm humans",
+            "scope": "global",
+            "condition": "harm; hurt; injure; hit; push",
+            "action": "halt",
+            "rationale": "A robot must never harm a human being.",
+        }
+    ],
+    "emotions": {"enabled": True, "recognizer": "rule"},
+    "output": {"length": "short", "format": "paragraph", "tone": "compassionate"},
+}
+
+agent = crp.Agent(model="local/llama3.1", tools=[move, rotate], preset=preset)
+```
+
+The preset is compiled into the agent's system prompt, policy/safety hints,
+depth, and an optional runtime safeguard engine.  You can still override any
+field with explicit `Agent(...)` arguments; the preset is additive.
+
+See `examples/templates/robot_safeguard_agent.py` and
+`examples/templates/socratic_tutor_agent.py` for full, runnable examples.
+
 ---
 
 ## 6. Providers — point at any LLM

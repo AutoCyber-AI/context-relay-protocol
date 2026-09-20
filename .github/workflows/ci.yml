@@ -20,7 +20,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -41,6 +41,10 @@ jobs:
       - name: Run tests with coverage
         env:
           CRP_GLINER_DISABLED: 1
+          # Perf thresholds are calibrated for quiet, dedicated Linux hosts.
+          # GitHub-hosted runners are shared and the suite runs under coverage
+          # instrumentation, so allow the same 1.5x margin Windows takes.
+          CRP_PERF_SCALE: 1.5
         run: >
           pytest tests/ -v --tb=short --cov=crp --cov-report=term-missing --cov-fail-under=80
           --ignore=tests/test_gap_fixes_live.py

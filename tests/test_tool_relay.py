@@ -223,7 +223,7 @@ class TestContextToolExecutor:
         assert data["status"] == "initial"
 
     def test_get_continuation_state_with_data(self):
-        from crp.core.context_tools import ToolCall, ContextToolExecutor
+        from crp.core.context_tools import ContextToolExecutor, ToolCall
         executor = self._make_executor()
         executor.update_continuation_state({
             "gap_score": 0.4,

@@ -321,16 +321,16 @@ class TestCLICommands:
     def _invoke_cli(self, args: list[str]):
         """Invoke the CLI group programmatically via click's test runner."""
         click = pytest.importorskip("click")
+        # Remove stale stream handlers left by prior CliRunner invocations
+        # (e.g. after dispatch loads GLiNER and attaches structured loggers).
+        import logging as _logging
+
         from click.testing import CliRunner
 
         # We need to build the click group to invoke it
         # The cli() function builds and runs the group in standalone mode.
         # We replicate the group construction for testing:
         from crp.cli import main as cli_mod
-
-        # Remove stale stream handlers left by prior CliRunner invocations
-        # (e.g. after dispatch loads GLiNER and attaches structured loggers).
-        import logging as _logging
         for _name in (None, "crp", "crp.startup"):
             _lg = _logging.getLogger(_name)
             for _h in _lg.handlers[:]:

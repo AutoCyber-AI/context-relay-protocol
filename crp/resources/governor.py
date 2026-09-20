@@ -135,7 +135,11 @@ class ResourceGovernor:
             f"cpu={self.device.cpu_count}, ram={self.device.ram_gb:.0f}GB, "
             f"target<={self.target_utilisation:.0%}) → profile={profile.value}, "
             f"ops<={op_cap}, concurrency={concurrency}"
-            + (f"; capped from {requested_profile.value}" if capped else "")
+            + (
+                f"; capped from {requested_profile.value}"
+                if capped and requested_profile is not None
+                else ""
+            )
         )
         logger.debug("ResourceGovernor plan: %s", reason)
         return ResourcePlan(

@@ -538,10 +538,10 @@ class WindowDAG:
 
         def visit(wid: str) -> bool:
             """Execute visit and return the result.
-            
+
                 Args:
                     wid (str): The wid value.
-            
+
                 Returns:
                     ``bool``.
             """

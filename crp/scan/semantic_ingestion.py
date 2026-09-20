@@ -28,7 +28,6 @@ from __future__ import annotations
 import ast
 import dataclasses
 import logging
-import os
 import pathlib
 import re
 from typing import Any
@@ -66,8 +65,6 @@ _AI_CLIENT_PATTERNS: frozenset[str] = frozenset(
         "OllamaClient",
         "ollama.chat",
         "ollama.generate",
-        # LlamaIndex
-        "OpenAI",  # duplicate intentional — in llama_index namespace
     }
 )
 
@@ -153,7 +150,7 @@ class AICallSite:
     call_chain: list[str] = dataclasses.field(default_factory=list)  # full call path to root
     wrapper_function: str | None = None  # if wrapped, the wrapping function name
     # CDGR trace result
-    traced_sites: list["AICallSite"] = dataclasses.field(default_factory=list)
+    traced_sites: list[AICallSite] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
@@ -576,7 +573,6 @@ class SemanticCodeIngestion:
         ai_import_pattern = re.compile(
             r"""(import|require|from)\s+['"]?(\w[\w./]*openai[\w./]*|[\w./]*anthropic[\w./]*)"""
         )
-        fn_pattern = re.compile(r"""(?:function|const|def)\s+(\w+)\s*[\(=]""")
         call_pattern = re.compile(
             r"""\b(""" + "|".join(re.escape(p) for p in _AI_CLIENT_PATTERNS) + r""")\s*[.(]"""
         )
@@ -589,7 +585,6 @@ class SemanticCodeIngestion:
             graph.ai_imports.setdefault(rel_path, []).append(ext)
 
         for lineno, line in enumerate(lines, start=1):
-            fn_match = fn_pattern.search(line)
             call_match = call_pattern.search(line)
 
             if call_match:
@@ -630,10 +625,9 @@ class SemanticCodeIngestion:
         if fact.is_governed:
             return True
         # Check if any import in the same file is a CRP governance import
-        for imp in fact.imports:
-            if any(g in imp for g in _CRP_GOVERNANCE_PATTERNS):
-                return True
-        return False
+        return any(
+            any(g in imp for g in _CRP_GOVERNANCE_PATTERNS) for imp in fact.imports
+        )
 
     def _classify_provider(
         self, name: str, content: str, imports: list[str]

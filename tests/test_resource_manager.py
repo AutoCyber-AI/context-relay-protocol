@@ -12,20 +12,19 @@ from __future__ import annotations
 
 import pytest
 
+from crp.extraction.pipeline import (
+    _CALIBRATION_WINDOW_COUNT,
+    _DRIFT_THRESHOLD,
+    _RECALIBRATION_INTERVAL,
+    CalibrationState,
+)
+from crp.extraction.types import ExtractionResult, Fact
 from crp.resources.resource_manager import (
     DEFAULT_MEMORY_BUDGET_MB,
     MODEL_ESTIMATES,
     ResourceManager,
     ResourceSnapshot,
 )
-from crp.extraction.pipeline import (
-    CalibrationState,
-    _CALIBRATION_WINDOW_COUNT,
-    _DRIFT_THRESHOLD,
-    _RECALIBRATION_INTERVAL,
-)
-from crp.extraction.types import ExtractionResult, Fact
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Helpers
@@ -370,8 +369,9 @@ class TestMarginalFields:
 
     def _make_orch(self, initial_facts: int = 0):
         """Build a minimal mock orchestrator with a warm store."""
-        from crp.core.orchestrator import CRPOrchestrator
         from unittest.mock import MagicMock
+
+        from crp.core.orchestrator import CRPOrchestrator
 
         orch = CRPOrchestrator.__new__(CRPOrchestrator)
         orch._warm_store = MagicMock()

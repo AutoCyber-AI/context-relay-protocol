@@ -134,7 +134,7 @@ def score_claim_against_facts(
     dense_embeddings = encode_texts(texts_to_encode, _model_override=_embedder_override)
     use_dense = dense_embeddings is not None and len(dense_embeddings) == len(texts_to_encode)
 
-    if use_dense:
+    if use_dense and dense_embeddings is not None:
         claim_emb = dense_embeddings[0]
         fact_embs = dense_embeddings[1:]
     else:

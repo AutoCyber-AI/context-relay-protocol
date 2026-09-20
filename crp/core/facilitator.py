@@ -48,13 +48,12 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from crp.extraction.types import Fact
     from crp.providers.base import LLMProvider
-    from crp.state.warm_store import WarmStateStore
 
 logger = logging.getLogger("crp.facilitator")
 
@@ -615,7 +614,7 @@ def _extract_json(raw: str) -> dict[str, Any]:
     if text.startswith("```"):
         # Strip markdown code fence
         lines = text.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
+        lines = [line for line in lines if not line.strip().startswith("```")]
         text = "\n".join(lines).strip()
 
     try:

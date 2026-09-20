@@ -46,11 +46,11 @@ class _ChatCompletionsProxy:
 
     def create(self, *args: Any, **kwargs: Any) -> Any:
         """Execute create and return the result.
-        
+
             Args:
                 *args: Variable positional arguments.
                 **kwargs: Variable keyword arguments.
-        
+
             Returns:
                 ``Any``.
         """
@@ -65,11 +65,11 @@ class _ChatCompletionsProxy:
 
     async def acreate(self, *args: Any, **kwargs: Any) -> Any:  # pragma: no cover
         """Execute acreate and return the result.
-        
+
             Args:
                 *args: Variable positional arguments.
                 **kwargs: Variable keyword arguments.
-        
+
             Returns:
                 ``Any``.
         """
@@ -123,11 +123,11 @@ class _ResponsesProxy:
 
     def create(self, *args: Any, **kwargs: Any) -> Any:
         """Execute create and return the result.
-        
+
             Args:
                 *args: Variable positional arguments.
                 **kwargs: Variable keyword arguments.
-        
+
             Returns:
                 ``Any``.
         """

@@ -29,7 +29,7 @@ import re
 import threading
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 from concurrent.futures import ThreadPoolExecutor
 
 # Deferred imports to avoid circular dependency chains.
@@ -63,8 +63,10 @@ from crp.providers.base import LLMProvider
 
 if TYPE_CHECKING:
     from crp.ckf.fabric import ContextualKnowledgeFabric
+    from crp.continuation.gap import Requirement
     from crp.extraction.pipeline import ExtractionPipeline
     from crp.extraction.types import ExtractionResult as PipelineExtractionResult
+    from crp.observability.events import Listener
     from crp.security.audit_trail import ComplianceAuditTrail
     from crp.security.compliance import ComplianceReporter, RiskClassifier
     from crp.security.consent import (
@@ -409,7 +411,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         # dispatch. This avoids race conditions and stale provider references.
         from crp.advanced.curator import CurationConfig, LLMContextCurator
 
-        def _curator_dispatch(sys_prompt: str, task: str, **kw):
+        def _curator_dispatch(sys_prompt: str, task: str, **kw: Any) -> tuple[str, Any]:
             try:
                 output, _ = self._provider.generate_chat(
                     [
@@ -477,7 +479,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         # CrossWindowValidator — consistency validation across windows (§cross-window)
         from crp.advanced.cross_window import CrossWindowValidator
 
-        def _cross_window_dispatch(sys_prompt: str, task: str, **kw) -> tuple[str, Any]:
+        def _cross_window_dispatch(sys_prompt: str, task: str, **kw: Any) -> tuple[str, Any]:
             try:
                 output, _ = self._provider.generate_chat(
                     [{"role": "system", "content": sys_prompt},
@@ -500,7 +502,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         # ParallelFanOut — parallel multi-task dispatch (§parallel)
         from crp.advanced.parallel import ParallelFanOut
 
-        def _fanout_dispatch(sys_prompt: str, task: str, **kw) -> tuple[str, Any]:
+        def _fanout_dispatch(sys_prompt: str, task: str, **kw: Any) -> tuple[str, Any]:
             try:
                 output, _ = self._provider.generate_chat(
                     [{"role": "system", "content": sys_prompt},
@@ -511,7 +513,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
             except Exception:
                 return "", {}
 
-        def _fanout_extract(text) -> list[dict[str, Any]]:
+        def _fanout_extract(text: str) -> list[dict[str, Any]]:
             result = self._extraction.extract(text, source_window_id="parallel-fanout")
             if not result.facts:
                 return []
@@ -651,7 +653,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         full envelope pipeline is unnecessary, but we enforce the budget
         formula and log the interaction.
         """
-        def _extract_via_llm(task_intent: str):
+        def _extract_via_llm(task_intent: str) -> list[Requirement]:
             from crp.continuation.gap import Requirement
 
             if self._provider is None:
@@ -710,7 +712,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         token cost, and stores extracted facts from meta-learning output
         back into the warm store so they're not ephemeral.
         """
-        def _meta_dispatch(system_prompt: str, user_prompt: str):
+        def _meta_dispatch(system_prompt: str, user_prompt: str) -> tuple[str, dict[str, Any]]:
             if self._provider is None:
                 return ("", {})
             try:
@@ -1056,7 +1058,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         """Protocol event bus for subscribing to events."""
         return self._emitter
 
-    def on(self, event_type: str, listener) -> None:
+    def on(self, event_type: str, listener: Listener) -> None:
         """Subscribe to a protocol event (convenience wrapper).
 
         Usage::
@@ -1604,7 +1606,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         system_prompt: str,
         task_input: str,
         **kwargs: Any,
-    ):
+    ) -> AsyncGenerator[StreamEvent, None]:
         """Async streaming dispatch — yields StreamEvent objects.
 
         Usage::

@@ -66,7 +66,7 @@ class SecurityManager:
             RetentionManager,
         )
         from crp.security.quarantine import IngestQuarantine
-        from crp.security.rbac import RBACEnforcer, RateLimitConfig, Role
+        from crp.security.rbac import RateLimitConfig, RBACEnforcer, Role
         from crp.security.validation import InputValidator
 
         # Layer 1 — input validation (§7.4)

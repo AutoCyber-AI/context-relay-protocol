@@ -91,3 +91,9 @@ kimi_moonshot_api_key.txt
 
 .coverage
 .env.hosted
+CRP_Comply_github_app_details.txt
+**/*.private-key.pem
+**/*private*.pem
+
+# Built console bundle (rebuild via frontend/agent-console: npm run build)
+crp/frontend/static/

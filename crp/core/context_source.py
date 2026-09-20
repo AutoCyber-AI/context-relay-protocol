@@ -56,10 +56,11 @@ import json
 import re
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Literal
 
 __all__ = [
     "SourceKind",
@@ -450,10 +451,10 @@ class ContextManifest:
     @classmethod
     def from_json(cls, blob: str | bytes) -> ContextManifest:
         """Create a new instance from a JSON string or object.
-        
+
             Args:
                 blob (str | bytes): The blob value.
-        
+
             Returns:
                 ``ContextManifest``.
         """
@@ -521,7 +522,7 @@ def _structural_hint(content: str) -> SourceKind | None:
         except (ValueError, TypeError):
             obj = None
         if isinstance(obj, dict):
-            keys = {k.lower() for k in obj.keys() if isinstance(k, str)}
+            keys = {k.lower() for k in obj if isinstance(k, str)}
             if {"function_name", "arguments"} <= keys or {"tool_name", "arguments"} <= keys:
                 return SourceKind.FUNCTION_CALL
             if "mcp" in keys or "mcp_server" in keys or "mcp_method" in keys:
@@ -531,7 +532,7 @@ def _structural_hint(content: str) -> SourceKind | None:
             if "embedding" in keys or "vector" in keys or "score" in keys and "chunk" in keys:
                 return SourceKind.VECTOR_DB
         elif isinstance(obj, list) and obj and isinstance(obj[0], dict):
-            first = {k.lower() for k in obj[0].keys() if isinstance(k, str)}
+            first = {k.lower() for k in obj[0] if isinstance(k, str)}
             if {"title", "link"} <= first or {"url", "snippet"} <= first:
                 return SourceKind.WEB_SEARCH
             if {"chunk", "score"} <= first or {"text", "score"} <= first:

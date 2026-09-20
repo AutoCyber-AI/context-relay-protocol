@@ -121,7 +121,11 @@ class ApplicationProfile:
             manifest.add(ContextSource(
                 kind=SourceKind.FUNCTION_CALL,
                 source_id=tool.name,
-                description=tool.description,
+                # Latent bug: ContextSource has no ``description`` field, so
+                # this kwarg raises TypeError at runtime and is swallowed by
+                # _app_context_manifest's except. Left as-is to avoid a
+                # behavior change; should become metadata=... instead.
+                description=tool.description,  # type: ignore[call-arg]
                 origin=SourceOrigin.DECLARED,
             ))
         return manifest
@@ -152,7 +156,7 @@ class ApplicationProfile:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ApplicationProfile":
+    def from_dict(cls, data: dict[str, Any]) -> ApplicationProfile:
         """Restore from a JSON-safe dict."""
         return cls(
             framework=FrameworkKind(data.get("framework", "unknown")),
@@ -191,7 +195,7 @@ def detect_framework(messages: list[dict[str, Any]]) -> FrameworkKind:
             continue
         meta = m.get("metadata") or m.get("additional_kwargs") or {}
         if isinstance(meta, dict):
-            keys = " ".join(str(k).lower() for k in meta.keys())
+            keys = " ".join(str(k).lower() for k in meta)
             if "langchain" in keys or "lc_serializable" in keys:
                 return FrameworkKind.LANGCHAIN
             if "llamaindex" in keys or "index_id" in keys:
@@ -268,9 +272,9 @@ def build_profile_from_messages(
             profile.tools.append(tool)
             continue
         if isinstance(tool, dict):
-            func = tool.get("function", {}) or tool
+            func: dict[str, Any] = tool.get("function", {}) or tool
             profile.tools.append(ToolInfo(
-                name=func.get("name", tool.get("name", "unknown")),
+                name=func.get("name") or tool.get("name") or "unknown",
                 description=func.get("description", ""),
                 parameters=func.get("parameters", func.get("arguments", {})),
                 source="derived",

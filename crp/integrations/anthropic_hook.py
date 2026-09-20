@@ -29,11 +29,11 @@ class _MessagesProxy:
 
     def create(self, *args: Any, **kwargs: Any) -> Any:
         """Execute create and return the result.
-        
+
             Args:
                 *args: Variable positional arguments.
                 **kwargs: Variable keyword arguments.
-        
+
             Returns:
                 ``Any``.
         """
@@ -49,11 +49,11 @@ class _MessagesProxy:
 
     def stream(self, *args: Any, **kwargs: Any) -> Any:
         """Execute stream and return the result.
-        
+
             Args:
                 *args: Variable positional arguments.
                 **kwargs: Variable keyword arguments.
-        
+
             Returns:
                 ``Any``.
         """

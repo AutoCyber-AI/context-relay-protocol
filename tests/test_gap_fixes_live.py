@@ -54,8 +54,8 @@ class TestGapAFixes:
 
     def test_embedding_function_wired(self):
         """set_embedding_function() should be called at orchestrator init."""
-        from crp.state.fact import _EMBED_FN, set_embedding_function
         from crp.envelope.decomposer import get_embedding_fn
+        from crp.state.fact import _EMBED_FN, set_embedding_function
 
         # get_embedding_fn should return a callable
         fn = get_embedding_fn()
@@ -73,8 +73,8 @@ class TestGapAFixes:
         defaults to False) to keep cold-start fast. This test explicitly opts
         into eager loading to verify the wiring path still works.
         """
-        from crp.providers.openai import OpenAIAdapter
         import crp
+        from crp.providers.openai import OpenAIAdapter
 
         provider = OpenAIAdapter(
             base_url=LM_STUDIO_URL,
@@ -93,9 +93,9 @@ class TestGapAFixes:
 
     def test_ckf_retriever_passes_params(self):
         """CKF retriever callback should pass query_embedding, seed_ids, topic."""
-        from crp.providers.openai import OpenAIAdapter
-        from crp.ckf.fabric import ContextualKnowledgeFabric
         import crp
+        from crp.ckf.fabric import ContextualKnowledgeFabric
+        from crp.providers.openai import OpenAIAdapter
 
         provider = OpenAIAdapter(
             base_url=LM_STUDIO_URL,
@@ -125,8 +125,8 @@ class TestGapBFixes:
         Note: embedding model loading is lazy by default (``eager_load_models``
         defaults to False). This test explicitly opts into eager loading.
         """
-        from crp.providers.openai import OpenAIAdapter
         import crp
+        from crp.providers.openai import OpenAIAdapter
 
         provider = OpenAIAdapter(
             base_url=LM_STUDIO_URL,
@@ -139,9 +139,9 @@ class TestGapBFixes:
 
     def test_gap_analysis_uses_cosine(self):
         """gap_analysis should use cosine similarity when embedding_fn provided."""
-        from crp.continuation.gap import gap_analysis, Requirement
-        from crp.extraction.types import Fact
+        from crp.continuation.gap import Requirement, gap_analysis
         from crp.envelope.decomposer import get_embedding_fn
+        from crp.extraction.types import Fact
 
         fn = get_embedding_fn()
         assert fn is not None
@@ -289,8 +289,8 @@ class TestEndToEnd:
         it run to completion (or increase patience/timeout) before concluding
         anything is broken.
         """
-        from crp.providers.openai import OpenAIAdapter
         import crp
+        from crp.providers.openai import OpenAIAdapter
 
         provider = OpenAIAdapter(
             base_url=LM_STUDIO_URL,
@@ -357,9 +357,9 @@ class TestIssueIFixes:
         continuation loop checks ``cont_state.finished or finish_reason ==
         "error"`` to exit gracefully instead of hanging or losing state.
         """
-        from crp.core.orchestrator import CRPOrchestrator
-
         import inspect
+
+        from crp.core.orchestrator import CRPOrchestrator
         source = inspect.getsource(CRPOrchestrator.dispatch_stream)
         assert 'finish_reason = "error"' in source, "Error finish_reason not set"
         assert 'finish_reason == "error"' in source, (
@@ -421,8 +421,8 @@ class TestIssueLFixes:
 
     def test_warm_store_content_dedup(self):
         """WarmStateStore should reject facts with identical text but different IDs."""
-        from crp.state.warm_store import WarmStateStore
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore
 
         store = WarmStateStore()
         added1 = store.add_facts([Fact(text="ML uses neural networks", category="key_sentence")])
@@ -434,8 +434,8 @@ class TestIssueLFixes:
 
     def test_warm_store_different_text_accepted(self):
         """Facts with different text should still be added."""
-        from crp.state.warm_store import WarmStateStore
         from crp.extraction.types import Fact
+        from crp.state.warm_store import WarmStateStore
 
         store = WarmStateStore()
         added = store.add_facts([
@@ -477,7 +477,7 @@ class TestGapHFixes:
 
     def test_gap_analysis_with_adaptive_discovery(self):
         """gap_analysis should include adaptive requirements in gap score."""
-        from crp.continuation.gap import gap_analysis, Requirement
+        from crp.continuation.gap import Requirement, gap_analysis
         from crp.extraction.types import Fact
 
         reqs = [Requirement(text="Section 1: Introduction", level=1, category="section_1")]
@@ -506,9 +506,10 @@ class TestV1CuratorPipelineIntegration:
 
     def test_curator_section_in_envelope_state(self):
         """When curator has a synthesis, it appears in envelope sections."""
-        from crp.advanced.curator import LLMContextCurator, CurationConfig, LLMSynthesis
-        from crp.envelope.builder import EnvelopeState, construct as construct_envelope
+        from crp.advanced.curator import CurationConfig, LLMContextCurator, LLMSynthesis
         from crp.core.task_intent import TaskIntent
+        from crp.envelope.builder import EnvelopeState
+        from crp.envelope.builder import construct as construct_envelope
         from crp.extraction.types import Fact
 
         # Simulate a curator with an existing synthesis
@@ -544,6 +545,7 @@ class TestV1CuratorPipelineIntegration:
     def test_curator_not_appended_post_pack(self):
         """Verify the orchestrator's _build_envelope no longer appends curator post-pack."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._build_envelope)
@@ -560,6 +562,7 @@ class TestV2MetaLearningPipelineIntegration:
     def test_scaffold_not_appended_post_pack(self):
         """Verify the orchestrator's _build_envelope no longer appends scaffold post-pack."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._build_envelope)
@@ -593,6 +596,7 @@ class TestV3ContinuationBudget:
         continuation logic lives in ``_dispatch_locked`` (crp/core/dispatch_router.py).
         """
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         # Read the real dispatch implementation's source (not the thin lock wrapper)
@@ -642,6 +646,7 @@ class TestV6CuratorInitAtConstruction:
     def test_no_lazy_init_in_dispatch(self):
         """The dispatch method should not contain lazy curator init."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._dispatch_locked)
@@ -656,6 +661,7 @@ class TestV7CKFRetrieverLogging:
     def test_ckf_retriever_logs_warning(self):
         """Verify CKF failure logging exists in source."""
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._build_envelope)
@@ -678,6 +684,7 @@ class TestV9AutoIngestDAGTracking:
         ``_dispatch_locked``.
         """
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._dispatch_locked)
@@ -702,6 +709,7 @@ class TestV10ContinuationBoundaryMarkers:
         the actual continuation logic lives in ``_dispatch_locked``.
         """
         import inspect
+
         from crp.core.orchestrator import CRPOrchestrator
 
         source = inspect.getsource(CRPOrchestrator._dispatch_locked)
@@ -722,6 +730,7 @@ class TestV11RequirementCacheDeterministic:
     def test_cache_uses_md5(self):
         """Verify requirement cache uses MD5, not Python's hash()."""
         import inspect
+
         from crp.continuation.gap import extract_task_requirements
 
         source = inspect.getsource(extract_task_requirements)

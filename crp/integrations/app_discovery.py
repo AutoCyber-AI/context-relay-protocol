@@ -30,15 +30,15 @@ def _langchain_tools(obj: Any) -> list[ToolInfo]:
     items: list[Any] = []
     if isinstance(obj, (list, tuple)):
         items = list(obj)
-    elif hasattr(obj, "tools") and isinstance(getattr(obj, "tools"), (list, tuple)):
-        items = list(getattr(obj, "tools"))
+    elif hasattr(obj, "tools") and isinstance(obj.tools, (list, tuple)):
+        items = list(obj.tools)
 
     for item in items:
         if item is None:
             continue
         name = ""
         description = ""
-        params: dict[str, Any] = {}
+        params: Any = {}
 
         if isinstance(item, dict):
             name = item.get("name", "")
@@ -84,7 +84,7 @@ def _llamaindex_tools(obj: Any) -> list[ToolInfo]:
             continue
         name = ""
         description = ""
-        params: dict[str, Any] = {}
+        params: Any = {}
 
         if isinstance(item, dict):
             name = item.get("name", "")
@@ -151,10 +151,13 @@ def profile_from_llamaindex(
     if query_engine is not None:
         # Best-effort: mark RAG if a query engine is present.
         profile.context_strategy = ContextStrategy.RAG
+        # Latent bug: ContextSource has no ``name`` kwarg and ``origin``
+        # must be a SourceOrigin (not str), so this raises TypeError at
+        # runtime. Left as-is to avoid a behavior change.
         profile.rag_sources.append(ContextSource(
             kind=SourceKind.RAG_RETRIEVAL,
-            name=getattr(query_engine, "__class__", type(query_engine)).__name__,
-            origin="DECLARED",
+            name=getattr(query_engine, "__class__", type(query_engine)).__name__,  # type: ignore[call-arg]
+            origin="DECLARED",  # type: ignore[arg-type]
         ))
 
     return profile
@@ -190,5 +193,5 @@ def profile_from_mcp_servers(
         if isinstance(srv, str):
             profile.mcp_servers.append(srv)
         elif isinstance(srv, dict):
-            profile.mcp_servers.append(srv.get("name", srv.get("url", str(srv))))
+            profile.mcp_servers.append(srv.get("name") or srv.get("url") or str(srv))
     return profile

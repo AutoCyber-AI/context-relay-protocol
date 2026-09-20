@@ -23,7 +23,8 @@ onto the outgoing response.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any
 
 try:  # pragma: no cover - exercised only when Starlette is installed
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -64,7 +65,11 @@ if _HAS_STARLETTE:
         onto the outgoing response headers.
         """
 
-        async def dispatch(self, request: Request, call_next):  # noqa: D401
+        async def dispatch(  # noqa: D401
+            self,
+            request: Request,
+            call_next: Callable[[Request], Awaitable[Response]],
+        ) -> Response:
             """Strip spoofed inbound headers and merge CRP headers onto the response.
 
             Args:
@@ -94,7 +99,7 @@ else:  # pragma: no cover - fallback when Starlette is absent
     class CRPHeaderMiddleware:  # type: ignore[no-redef]
         """Placeholder raised if used without Starlette installed."""
 
-        def __init__(self, *args, **kwargs) -> None:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             raise RuntimeError(
                 "CRPHeaderMiddleware requires Starlette/FastAPI. "
                 "Install with `pip install starlette` or use crp.headers.emit.emit_headers "

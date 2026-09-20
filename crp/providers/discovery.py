@@ -40,7 +40,10 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from crp.providers.base import LLMProvider
 
 logger = logging.getLogger("crp.providers.discovery")
 
@@ -156,7 +159,7 @@ class DetectedModel:
             return round(self.loaded_context_length / self.max_context_length, 4)
         return None
 
-    def to_provider(self) -> "LLMProvider | None":
+    def to_provider(self) -> LLMProvider | None:
         """Return a CRP provider adapter configured for this detected model.
 
         Returns ``None`` if the runtime kind is not recognised or the model

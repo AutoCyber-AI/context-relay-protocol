@@ -20,7 +20,6 @@ This module catches six distortion types:
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
 
 from crp.envelope.packer import PackedFact
 
@@ -32,7 +31,6 @@ from ._types import (
     DistortionResult,
     DistortionType,
 )
-
 
 # ---------------------------------------------------------------------------
 # Internal: entity extractors
@@ -58,7 +56,7 @@ _NEGATION_WORDS = frozenset({
 # Qualifier words that add hedging / precision / universality
 _HEDGE_QUALIFIERS = frozenset({
     "approximately", "roughly", "about", "around", "nearly",
-    "possibly", "possibly", "perhaps", "maybe", "likely",
+    "possibly", "perhaps", "maybe", "likely",
     "probably", "potentially", "estimated", "up to",
     "might", "could", "may", "suggest", "suggests",
 })
@@ -156,9 +154,8 @@ def detect_distortions(
 
         # Weakly-attributed claims are exactly where distortions are dangerous,
         # because a fabricated claim can score just high enough to be marked
-        # MIXED. Run the check for all grounded/mixed claims and scale severity
-        # by attribution strength instead of skipping.
-        attribution_strength = attr.attributed_facts[0].composite_score
+        # MIXED. Run the check for all grounded/mixed claims instead of
+        # skipping weakly-attributed ones.
 
         # Compare against top-scoring source fact
         top_fact = attr.attributed_facts[0]

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Any
 
 # ── Windows OpenMP duplicate-runtime crash mitigation ────────────────────
 # On Windows, numpy/scipy/scikit-learn/torch each bundle their own OpenMP
@@ -114,7 +115,7 @@ _license_startup_check()
 Client = CRPOrchestrator
 
 # Lazy imports for advanced types — avoids pulling heavy subsystems on ``import crp``
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     _ADVANCED = {
         "CKFConfig": "crp.ckf.fabric",
         "CKFHealth": "crp.ckf.fabric",
@@ -144,6 +145,8 @@ def __getattr__(name: str):
         "SafetyControlPlane": "crp.security.control_plane",
         "Checkpoint": "crp.security.checkpoint",
         "SafetyManifest": "crp.security.safety_manifest",
+        "CognitivePreset": "crp.cognition.preset",
+        "PresetCompiler": "crp.cognition.compiler",
         "ApplicationProfile": "crp.core.app_profile",
         "FrameworkKind": "crp.core.app_profile",
         "ProviderKind": "crp.core.app_profile",
@@ -252,4 +255,7 @@ __all__ = [
     "CRPAskResponse",
     "CRPResponseMeta",
     "SourceAttribution",
+    # User-defined cognition (CRP-SPEC-046)
+    "CognitivePreset",
+    "PresetCompiler",
 ]

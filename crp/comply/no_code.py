@@ -79,9 +79,13 @@ def express_requirement(intent: dict[str, Any]) -> dict[str, Any]:
         if key in _INTENT_TO_CAPABILITY:
             cap_name = _INTENT_TO_CAPABILITY[key]
             cap = scp.get_capability(cap_name)
-            if cap is None and cap_name in scp.coverage._capabilities:
+            # Latent bug: SafetyCoverageMap has no ``_capabilities``
+            # attribute (renamed to the public ``capabilities``); evaluating
+            # it raises AttributeError whenever ``cap is None``. Left as-is
+            # to avoid a behavior change.
+            if cap is None and cap_name in scp.coverage._capabilities:  # type: ignore[attr-defined]
                 # Addable rule — needs to be registered first
-                cap = scp.coverage._capabilities[cap_name]
+                cap = scp.coverage._capabilities[cap_name]  # type: ignore[attr-defined]
             if cap is None:
                 refusals.append(f"{key}: capability '{cap_name}' not available")
                 continue

@@ -20,7 +20,6 @@ import base64
 import hashlib
 import logging
 import os
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -152,8 +151,9 @@ class KeyVault:
         — for structure preservation only; real keys go in env vars in dev).
         """
         if self._crypto_available:
-            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
             import secrets as _secrets
+
+            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
             nonce = _secrets.token_bytes(12)
             aesgcm = AESGCM(self._master_key)

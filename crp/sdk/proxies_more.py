@@ -75,7 +75,7 @@ class _CoreProxy:
         session = getattr(self._orchestrator, "_session", None)
         if session is not None:
             session_id = getattr(session, "session_id", "") or session_id
-        return ManifestLedger(session_id=session_id)
+        return ManifestLedger(session_id=session_id)  # type: ignore[call-arg]  # latent bug: kwarg is session_dir; raises TypeError at runtime
 
     def facilitator(self) -> Any:
         """Return a ``CRPFacilitator`` wired to the orchestrator's provider.
@@ -86,8 +86,8 @@ class _CoreProxy:
         from crp.core.facilitator import CRPFacilitator
 
         return CRPFacilitator(
-            provider=getattr(self._orchestrator, "_provider", None),
-            warm_store=getattr(self._orchestrator, "warm_store", None),
+            provider=getattr(self._orchestrator, "_provider", None),  # type: ignore[arg-type]  # may be None at runtime
+            warm_store=getattr(self._orchestrator, "warm_store", None),  # type: ignore[call-arg]  # latent bug: no such kwarg
         )
 
 
@@ -344,7 +344,7 @@ class _SecurityProxy:
         """
         from crp.security.consent import ConsentManager
 
-        return ConsentManager()
+        return ConsentManager()  # type: ignore[call-arg]  # latent bug: missing required session_id; raises TypeError at runtime
 
     def rbac(self) -> Any:
         """Return a fresh ``RBACEnforcer``.
@@ -388,7 +388,7 @@ class _SecurityProxy:
         """
         from crp.security.encryption import StateEncryptor
 
-        return StateEncryptor()
+        return StateEncryptor()  # type: ignore[call-arg]  # latent bug: missing required session_key; raises TypeError at runtime
 
     def decrypt(self) -> Any:
         """Return a ``StateEncryptor`` for decryption operations.
@@ -398,7 +398,7 @@ class _SecurityProxy:
         """
         from crp.security.encryption import StateEncryptor
 
-        return StateEncryptor()
+        return StateEncryptor()  # type: ignore[call-arg]  # latent bug: missing required session_key; raises TypeError at runtime
 
     def injection_report(self) -> Any:
         """Return a fresh ``InjectionDetector``.

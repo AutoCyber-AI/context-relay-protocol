@@ -26,7 +26,13 @@ class AgentEventKind(str, Enum):
     INTEGRATED = "integrated"
     HALT = "halt"
     CLARIFICATION_REQUESTED = "clarification_requested"
+    TRUST_DECISION = "trust_decision"
+    KILL_SWITCH_FIRED = "kill_switch_fired"
+    CHECKPOINT_REQUESTED = "checkpoint_requested"
+    CHECKPOINT_RESOLVED = "checkpoint_resolved"
+    WARNING = "warning"
     FINAL = "final"
+    GOVERNANCE = "governance"
 
 
 @dataclass

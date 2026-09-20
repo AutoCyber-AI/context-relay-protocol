@@ -1,6 +1,8 @@
 """Debug: test the expansion regex with actual task text."""
-import sys, re
+import re
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 TASK = """REQUIRED SECTIONS (all 30 must be present):
@@ -25,7 +27,7 @@ for m in re.finditer(
     num = int(m.group(1))
     title = m.group(2).split("\n")[0].strip()
     items.append((num, title))
-    
+
 print(f"Found {len(items)} items:")
 for num, title in items:
     section_name = title.split(" — ")[0].split(" - ")[0].strip()

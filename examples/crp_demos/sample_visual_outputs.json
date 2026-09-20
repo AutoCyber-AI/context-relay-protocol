@@ -1,0 +1,43 @@
+{
+  "markdown": "# CRP Run Narrative\n\n## Agent run started\n*run* \u2014 Goal: Is port 443 safe for login pages?\n\n## Intent classified\n*intent* \u2014 Detected intent: security question \u2192 planned operations: RETRIEVE, VERIFY, GENERATE\n\n## Operation: RETRIEVE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Thinking\n*reasoning* \u2014 I need to verify what service runs on port 443 and whether it is safe for authentication.\n\n## Tool selected \u2014 lookup_port_service\n*tool-select* \u2014 Selected tool: lookup_port_service for operation: RETRIEVE\n\n## Calling lookup_port_service\n*tool-call* \u2014 {\n  \"port\": 443\n}\n\n## Tool result received\n*tool-result* \u2014 {\"port\": 443, \"service\": \"HTTPS\", \"secure\": true, \"note\": \"TLS encrypted\"}\n\n## Operation completed: RETRIEVE\n*operation-done* \u2014 \n\n## Safety scan \u2014 LOW\n*safety* \u2014 Stage: output; verdict: safe\n\n## Quality tier: A\n*quality* \u2014 Confidence: 0.92\n\n## Provenance link added\n*provenance* \u2014 genesis \u2192 a1b2c3d4e5f6\n\n## Operation: VERIFY\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Verification relay\n*verification* \u2014 Invalid steps: 0; repairs: 0\n\n## Operation completed: VERIFY\n*operation-done* \u2014 \n\n## Operation: GENERATE\n*operation* \u2014 Positioning the task and selecting the right tools.\n\n## Final answer\n*answer* \u2014 Port 443 is HTTPS. It is the standard encrypted port for login pages.\n\n## Operation completed: GENERATE\n*operation-done* \u2014 \n\n## Provenance link added\n*provenance* \u2014 a1b2c3d4e5f6 \u2192 f6e5d4c3b2a1\n\n## Run finished\n*run-done* \u2014 Governance summary available.\n\n## Governance Summary\n- **risk**: LOW\n- **grounded**: False\n- **chain_valid**: True\n- **tier**: A\n- **confidence**: 0.92\n- **semantic_entropy**: 0.03\n- **fabrications**: 0\n- **sources**: 0\n- **invalid_steps**: 0\n- **safety_scans**: [{'stage': 'output', 'risk': 'LOW', 'verdict': 'safe'}]\n\n## Provenance Chain\n- `genesis` \u2192 `a1b2c3d4e5f6` (RETRIEVE)\n- `a1b2c3d4e5f6` \u2192 `f6e5d4c3b2a1` (GENERATE)",
+  "html": "<div class=\"crp-narrative\">\n<div class=\"crp-narrative-step crp-narrative-step--run\"><div class=\"crp-narrative-title\">Agent run started</div><div class=\"crp-narrative-detail\">Goal: Is port 443 safe for login pages?</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--intent\"><div class=\"crp-narrative-title\">Intent classified</div><div class=\"crp-narrative-detail\">Detected intent: security question \u2192 planned operations: RETRIEVE, VERIFY, GENERATE</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation\"><div class=\"crp-narrative-title\">Operation: RETRIEVE</div><div class=\"crp-narrative-detail\">Positioning the task and selecting the right tools.</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--reasoning\"><div class=\"crp-narrative-title\">Thinking</div><div class=\"crp-narrative-detail\">I need to verify what service runs on port 443 and whether it is safe for authentication.</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--tool-select\"><div class=\"crp-narrative-title\">Tool selected \u2014 lookup_port_service</div><div class=\"crp-narrative-detail\">Selected tool: lookup_port_service for operation: RETRIEVE</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--tool-call\"><div class=\"crp-narrative-title\">Calling lookup_port_service</div><div class=\"crp-narrative-detail\">{<br>  &quot;port&quot;: 443<br>}</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--tool-result\"><div class=\"crp-narrative-title\">Tool result received</div><div class=\"crp-narrative-detail\">{&quot;port&quot;: 443, &quot;service&quot;: &quot;HTTPS&quot;, &quot;secure&quot;: true, &quot;note&quot;: &quot;TLS encrypted&quot;}</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation-done\"><div class=\"crp-narrative-title\">Operation completed: RETRIEVE</div><div class=\"crp-narrative-detail\"></div></div>\n<div class=\"crp-narrative-step crp-narrative-step--safety\"><div class=\"crp-narrative-title\">Safety scan \u2014 LOW</div><div class=\"crp-narrative-detail\">Stage: output; verdict: safe</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--quality\"><div class=\"crp-narrative-title\">Quality tier: A</div><div class=\"crp-narrative-detail\">Confidence: 0.92</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--provenance\"><div class=\"crp-narrative-title\">Provenance link added</div><div class=\"crp-narrative-detail\">genesis \u2192 a1b2c3d4e5f6</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation\"><div class=\"crp-narrative-title\">Operation: VERIFY</div><div class=\"crp-narrative-detail\">Positioning the task and selecting the right tools.</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--verification\"><div class=\"crp-narrative-title\">Verification relay</div><div class=\"crp-narrative-detail\">Invalid steps: 0; repairs: 0</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation-done\"><div class=\"crp-narrative-title\">Operation completed: VERIFY</div><div class=\"crp-narrative-detail\"></div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation\"><div class=\"crp-narrative-title\">Operation: GENERATE</div><div class=\"crp-narrative-detail\">Positioning the task and selecting the right tools.</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--answer\"><div class=\"crp-narrative-title\">Final answer</div><div class=\"crp-narrative-detail\">Port 443 is HTTPS. It is the standard encrypted port for login pages.</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--operation-done\"><div class=\"crp-narrative-title\">Operation completed: GENERATE</div><div class=\"crp-narrative-detail\"></div></div>\n<div class=\"crp-narrative-step crp-narrative-step--provenance\"><div class=\"crp-narrative-title\">Provenance link added</div><div class=\"crp-narrative-detail\">a1b2c3d4e5f6 \u2192 f6e5d4c3b2a1</div></div>\n<div class=\"crp-narrative-step crp-narrative-step--run-done\"><div class=\"crp-narrative-title\">Run finished</div><div class=\"crp-narrative-detail\">Governance summary available.</div></div>\n</div>",
+  "governance": {
+    "risk": "LOW",
+    "grounded": false,
+    "chain_valid": true,
+    "tier": "A",
+    "confidence": 0.92,
+    "semantic_entropy": 0.03,
+    "fabrications": 0,
+    "sources": 0,
+    "invalid_steps": 0,
+    "safety_scans": [
+      {
+        "stage": "output",
+        "risk": "LOW",
+        "verdict": "safe"
+      }
+    ]
+  },
+  "provenance_chain": [
+    {
+      "op": "RETRIEVE",
+      "prev_hash": "genesis",
+      "this_hash": "a1b2c3d4e5f6",
+      "seq": 0,
+      "timestamp": 1787989317.672309
+    },
+    {
+      "op": "GENERATE",
+      "prev_hash": "a1b2c3d4e5f6",
+      "this_hash": "f6e5d4c3b2a1",
+      "seq": 0,
+      "timestamp": 1787989317.672329
+    }
+  ],
+  "operations": [
+    "RETRIEVE",
+    "VERIFY",
+    "GENERATE"
+  ]
+}

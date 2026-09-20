@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -106,10 +107,21 @@ def map_agent_event(event: AgentEvent) -> list[ev.Event]:
     out: list[ev.Event] = []
 
     if kind is AgentEventKind.INTENT_CLASSIFIED:
+        # OperationStateMachine emits the plan inside nested ``data.plan``.
+        nested_raw = data.get("data")
+        nested_data: dict[str, Any] = nested_raw if isinstance(nested_raw, dict) else {}
+        plan_raw = nested_data.get("plan")
+        plan = plan_raw if isinstance(plan_raw, list) else []
+        if not plan and detail.startswith("plan="):
+            # Fallback for older state-machine logs that encoded the plan in detail.
+            try:
+                plan = json.loads(detail[5:])
+            except json.JSONDecodeError:
+                plan = []
         out.append(
             ev.custom(
                 "crp.intent",
-                {"operation": op, "detail": detail, "plan": data.get("plan", [])},
+                {"operation": op, "detail": detail, "plan": plan},
             )
         )
         if detail:
@@ -128,7 +140,13 @@ def map_agent_event(event: AgentEvent) -> list[ev.Event]:
     elif kind is AgentEventKind.TOOL_CALLED:
         cap = _capability_from_detail(detail)
         call_id = _call_id_for(event)
-        out.append(ev.tool_args(call_id=call_id, delta=f'{{"capability":"{cap}"}}'))
+        args = data.get("data", {}).get("arguments") if isinstance(data, dict) else None
+        if not isinstance(args, dict):
+            args = data.get("arguments") if isinstance(data, dict) else None
+        if not isinstance(args, dict):
+            args = {}
+        args_payload = json.dumps({"capability": cap, "arguments": args}, default=str)
+        out.append(ev.tool_args(call_id=call_id, delta=args_payload))
         out.append(ev.tool_end(call_id=call_id))
 
     elif kind is AgentEventKind.OBSERVATION_RECEIVED:
@@ -161,7 +179,57 @@ def map_agent_event(event: AgentEvent) -> list[ev.Event]:
         # leave RUN_FINISHED for the lifecycle owner to emit.
         out.append(ev.custom("crp.run_complete", {"operation": op, "detail": detail}))
 
-    elif kind is AgentEventKind.CLARIFICATION_REQUESTED:
+    elif kind == AgentEventKind.CLARIFICATION_REQUESTED:
         out.append(ev.interrupt(reason=detail or "clarification_required", action=data.get("action", {})))
+
+    elif kind == AgentEventKind.CHECKPOINT_REQUESTED:
+        out.append(
+            ev.custom(
+                "crp.checkpoint",
+                {"action": "requested", "request_id": detail, "context": data.get("request", {})},
+            )
+        )
+
+    elif kind == AgentEventKind.CHECKPOINT_RESOLVED:
+        out.append(
+            ev.custom(
+                "crp.checkpoint",
+                {
+                    "action": "resolved",
+                    "request_id": detail,
+                    "resolution": data.get("resolution", data.get("action", "")),
+                    "reviewer": data.get("reviewer", ""),
+                },
+            )
+        )
+
+    elif kind == AgentEventKind.TRUST_DECISION:
+        out.append(
+            ev.custom(
+                "crp.trust",
+                {
+                    "score": data.get("trust_score", data.get("score", 1.0)),
+                    "action": data.get("action", detail),
+                    "reason": data.get("reason", ""),
+                },
+            )
+        )
+
+    elif kind == AgentEventKind.KILL_SWITCH_FIRED:
+        out.append(
+            ev.custom(
+                "crp.kill_switch",
+                {
+                    "reason": data.get("reason", detail),
+                    "trust_score": data.get("trust_score", 0.0),
+                },
+            )
+        )
+
+    elif kind is AgentEventKind.GOVERNANCE:
+        out.append(ev.custom("crp.governance", data))
+
+    elif kind is AgentEventKind.WARNING:
+        out.append(ev.custom("crp.warning", data))
 
     return out

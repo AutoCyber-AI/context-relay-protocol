@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from crp.agent.budget import AgentSafetyBudget
+from crp.envelope.packer import PackedFact
 from crp.headers.conditional import compute_etag, evaluate_conditional
 from crp.headers.halt import HaltReason, build_halt_response
 from crp.headers.parse import strip_inbound_forbidden_headers
@@ -27,15 +28,14 @@ from crp.policy.grammar import parse_policy
 from crp.provenance import (
     DecisionProvenanceEngine,
     WindowChainRecord,
-    build_window_hmac,
-    build_fan_in_window_hmac,
     WindowHmacInput,
+    build_fan_in_window_hmac,
+    build_window_hmac,
     detect_cross_window_contradictions,
     detect_repetition,
     verify_window_chain,
 )
 from crp.provenance._types import ProvenanceConfig
-from crp.envelope.packer import PackedFact
 from crp.security.session_token import (
     TokenStatus,
     issue_token,

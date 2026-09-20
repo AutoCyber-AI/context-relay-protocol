@@ -4,22 +4,16 @@
   "use strict";
 
   const messages = [
-    { icon: "🚀", text: "<strong>Ship AI that stays compliant</strong> — try CRP Gateway", href: "/products/gateway/", cta: "Learn more →" },
-    { icon: "🛡️", text: "<strong>Audit every LLM decision automatically</strong> — see CRP Comply", href: "/products/comply/", cta: "Learn more →" },
-    { icon: "💰", text: "<strong>Cut context costs by up to 70%</strong> — view pricing", href: "/pricing/", cta: "View pricing →" },
-    { icon: "⚡", text: "<strong>Get started in 5 minutes</strong> — run your first CRP dispatch", href: "/getting-started/quickstart/", cta: "Get started →" },
-    { icon: "🔍", text: "<strong>Find ungoverned LLM calls in PRs</strong> — try CRP Scan", href: "/products/scan/", cta: "Try free →" },
-    { icon: "🏅", text: "<strong>Control Evidence</strong> — prove AI safety controls operate for EU AI Act, AIUC-1, ISO 42001 &amp; NIST", href: "/control-evidence/", cta: "See mapping →" },
-    { icon: "🏅", text: "<strong>AIUC-1 Aligned</strong> — enterprise AI trust infrastructure mapped to AIUC-1", href: "/aiuc-1/", cta: "See proof point →" },
+    { icon: "✅", text: "<strong>3,482 tests passing</strong> — ruff and mypy at zero errors", href: "/testing/", cta: "See test suite →" },
+    { icon: "🖥️", text: "<strong>Live agent console</strong> — console.crprotocol.io or self-hosted; connect any local backend", href: "https://console.crprotocol.io", cta: "Open console →" },
+    { icon: "🧠", text: "<strong>Reasoning, safeguards &amp; emotions in one preset file</strong> — enforced, not prompted", href: "https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md", cta: "Preset guide →" },
+    { icon: "🔐", text: "<strong>Every answer carries an HMAC provenance chain</strong> your auditors can verify", href: "/control-evidence/", cta: "See the evidence →" },
+    { icon: "🏠", text: "<strong>Works with local models via LM Studio / Ollama</strong> — your data never leaves the machine", href: "/getting-started/local-models/", cta: "Run local →" },
+    { icon: "⚡", text: "<strong>Get started in 5 minutes</strong> — run your first governed agent", href: "/getting-started/quickstart/", cta: "Get started →" },
     { icon: "🛡️", text: "<strong>AI Safety</strong> — detect hallucinations, injections, and PII on every call", href: "/topics/ai-safety/", cta: "Explore →" },
-    { icon: "⚖️", text: "<strong>AI Governance</strong> — enforce policies, oversight, and audit trails", href: "/topics/ai-governance/", cta: "Explore →" },
-    { icon: "📋", text: "<strong>AI Compliance</strong> — EU AI Act, ISO 42001, NIST, GDPR evidence", href: "/topics/ai-compliance/", cta: "Explore →" },
     { icon: "🧠", text: "<strong>Context Management</strong> — unbounded context and automatic continuation", href: "/topics/context-management/", cta: "Explore →" },
-    { icon: "🆚", text: "<strong>CRP vs RAG, MCP, LangChain &amp; MemGPT</strong> — see how they fit together", href: "/topics/crp-vs-rag-mcp/", cta: "Compare →" },
     { icon: "✅", text: "<strong>Conformance &amp; certification</strong> — validate CRP implementations", href: "/protocol/conformance/", cta: "Get certified →" },
-    { icon: "📚", text: "<strong>Cite CRP</strong> — research citations and references for standards work", href: "/cite/", cta: "Cite →" },
     { icon: "❓", text: "<strong>Have questions?</strong> — browse the CRP FAQ", href: "/faq/", cta: "Read FAQ →" },
-    { icon: "🤝", text: "<strong>Contribute to the open standard</strong> — join the community", href: "/contributing/", cta: "Contribute →" },
     { icon: "⭐", text: "<strong>Star us on GitHub</strong> — follow CRP development", href: "https://github.com/AutoCyber-AI/context-relay-protocol", cta: "Open repo →" }
   ];
 

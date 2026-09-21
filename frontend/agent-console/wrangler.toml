@@ -1,0 +1,8 @@
+# Cloudflare Workers Static Assets deployment for the CRP Agent Console.
+# Deployed automatically by Workers Builds on every push to main
+# (repository: AutoCyber-AI/context-relay-protocol, root: frontend/agent-console).
+name = "crp-console"
+compatibility_date = "2026-09-20"
+
+[assets]
+directory = "./dist"

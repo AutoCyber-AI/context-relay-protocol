@@ -3,10 +3,49 @@
   Licensed under Elastic License 2.0 — see LICENSE.md for details.
 -->
 
-# CRP v3 Demo Reproduction & Video Production Guide
+# CRP Demo Reproduction & Video Production Guide
 
+> **⚡ CURRENT STATE (v6.1.1, 2026-09-21) — read this first.** The fastest path
+> to a recordable demo right now:
+>
+> **Environment (already set up on this machine):** Python 3.14 venv at
+> `.venv/` with `crprotocol 6.1.1` installed editable — this IS the latest
+> release (same commit as the PyPI package). LM Studio on
+> `http://192.168.0.6:1234` (or `http://127.0.0.1:1234`) with
+> `Meta-Llama-3.1-8B-Instruct` loaded.
+>
+> **What is live right now:**
+> - **CDN console:** https://console.crprotocol.io — production, auto-deploys
+>   from `main` via Cloudflare Workers Builds. It has the *connect-to-backend*
+>   bar: point it at your local backend from the UI, no code.
+> - **Self-hosted console:** `python examples/self_hosted_console.py --port 8000`
+>   → http://localhost:8000/crp/console (serves the console + TEL stream +
+>   OpenAI-compatible chat endpoint itself). Use this for recording — no
+>   internet dependency.
+>
+> **The 3-shot demo (CRP vs without, ~10 minutes to record):**
+> 1. **Governed run with narrative** — in the console, send a task; record the
+>    right-hand panel: the chain-of-thought narrative, governance cards
+>    (risk score, grounded/fabrication counts, HMAC chain-valid badge), and
+>    the audit-trail entries appearing live.
+> 2. **Safety halt** — send a prompt-injection or destructive-action request;
+>    record the HTTP 451 halt card and the checkpoint asking the human.
+> 3. **Same model, bare** — the same question against the raw LM Studio
+>    endpoint with no CRP; record the absence of provenance, risk scoring,
+>    and narrative. This is the contrast shot.
+>
+> **Programmatic B-roll (no browser):**
+> `python examples/crp_demos/video_kit.py` → `_video_kit.html` (animated
+> diagram kit) + `_video_kit_script.md` (presenter script).
+>
+> The rest of this guide (v3-era sections) remains valid background for the
+> deep-dive shots: safety console, provenance explorer, long-context stitch
+> proof, and the 4-strategy comparison.
+>
+> ---
+>
 > **Purpose of this document.** This is a complete, step-by-step playbook that lets you
-> reproduce — exactly — every test that was run against the CRP v3 interactive demo
+> reproduce — exactly — every test that was run against the CRP interactive demo
 > applications, and turn that reproduction into a set of polished demo videos. It is
 > written so that someone who has never seen the codebase can: install the prerequisites,
 > launch a local LLM, start the demo server, drive every feature, verify every result,

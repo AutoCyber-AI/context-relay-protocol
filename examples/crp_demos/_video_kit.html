@@ -137,13 +137,13 @@
 <section class="slide">
   <h1>CRPv6 — Raw LLM vs Governed Agent</h1>
   <p class="lead">One question. Two paths. The difference is execution, transparency, and trust.</p>
-  <p class="meta">Model: meta-llama-3.1-8b-instruct &nbsp;|&nbsp; Endpoint: http://localhost:1234/v1/ &nbsp;|&nbsp; Generated: 2026-09-02T21:01:08</p>
+  <p class="meta">Model: meta-llama-3.1-8b-instruct &nbsp;|&nbsp; Endpoint: http://localhost:1234/v1/ &nbsp;|&nbsp; Generated: 2026-09-03T05:22:55</p>
 </section>
 
 <section class="slide">
   <h2>The Question</h2>
   <div class="panel">
-    <pre class="json">{"role":"user","content":"What is the weather in Sydney?"}</pre>
+    <pre class="json">{"role":"user","content":"Compare the weather in Tokyo and New York using real data."}</pre>
   </div>
 </section>
 
@@ -154,21 +154,21 @@
       <h3>Raw LLM</h3>
       <div class="bubble raw">
         <p><strong>Emits tool-call JSON but executes nothing.</strong></p>
-        <pre class="json">{"name": "get_weather", "parameters": {"city": "Sydney"}}</pre>
+        <pre class="json">{"name": "get_weather", "parameters": {"city1": "Tokyo", "city2": "New York"}}</pre>
       </div>
-      <p class="meta">Finish reason: stop &nbsp;|&nbsp; Elapsed: 5.81s</p>
+      <p class="meta">Finish reason: stop &nbsp;|&nbsp; Elapsed: 7.41s</p>
     </div>
     <div class="panel">
       <h3>CRPv6 Agent</h3>
       <div class="bubble">
-        The temperature in Sydney is currently 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. According to the weather code, it appears to be a clear or sunny day.
+        In Tokyo, the current temperature is a warm 28.2 degrees Celsius and the wind speed is relatively low at 4.3 kilometers per hour. The weather in Tokyo is currently clear or partly cloudy, indicated by a weather code of 2. In contrast to Tokyo's pleasant weather, we do not have any information about the current weather conditions in New York.
       </div>
       <div class="governance">
         <div class="card "><div class="label">Risk</div><div class="value">LOW</div></div>
         <div class="card "><div class="label">Grounded</div><div class="value">True</div></div>
         <div class="card "><div class="label">Chain valid</div><div class="value">True</div></div>
         <div class="card "><div class="label">Sources</div><div class="value">1</div></div>
-        <div class="card "><div class="label">Elapsed</div><div class="value">23.32s</div></div>
+        <div class="card "><div class="label">Elapsed</div><div class="value">40.2s</div></div>
       </div>
     </div>
   </div>
@@ -177,13 +177,12 @@
 <section class="slide">
   <h2>What CRP Did — Chain of Thought</h2>
   <div class="timeline">
-    <div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Intent classified</div><div class="step-detail">Detected intent: plan=['RETRIEVE'] → planned operations: RETRIEVE</div></div></div>
-<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Operation: RETRIEVE</div><div class="step-detail">Positioning the task and selecting the right tools.</div></div></div>
-<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool selected — get_weather</div><div class="step-detail">Selected tool: get_weather for operation: RETRIEVE</div></div></div>
+    <div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Intent classified</div><div class="step-detail">Detected intent: plan=['COMPARE'] → planned operations: COMPARE</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool selected — get_weather</div><div class="step-detail">Selected tool: get_weather for operation: COMPARE</div></div></div>
 <div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Calling get_weather</div><div class="step-detail"><pre class="json">{</pre></div></div></div>
-<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool result received</div><div class="step-detail"><pre class="json">{"event_type": "observation_received", "operation": "RETRIEVE", "operation_index": 0, "capability_id": "get_weather", "payload": {"city": "Sydney", "temperature_c": 18.0, "windspeed_kmh": 13.5, "weather_code": 1}}</pre></div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Tool result received</div><div class="step-detail"><pre class="json">{"event_type": "observation_received", "operation": "COMPARE", "operation_index": 0, "capability_id": "get_weather", "payload": {"city": "Tokyo", "temperature_c": 28.2, "windspeed_kmh": 4.3, "weather_code": 2}}</pre></div></div></div>
 <div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Governance summary</div><div class="step-detail">risk=LOW, grounded=True, chain_valid=True</div></div></div>
-<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Final answer</div><div class="step-detail">The temperature in Sydney is currently 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. According to the weather code, it appears to be a clear or sunny day.</div></div></div>
+<div class="timeline-step"><div class="dot"></div><div class="step-body"><div class="step-title">Final answer</div><div class="step-detail">In Tokyo, the current temperature is a warm 28.2 degrees Celsius and the wind speed is relatively low at 4.3 kilometers per hour. The weather in Tokyo is currently clear or partly cloudy, indicated by a weather code of 2. In contrast to Tokyo's pleasant weather, we do not have any information about the current weather conditions in New York.</div></div></div>
   </div>
 </section>
 
@@ -193,12 +192,12 @@
     <div class="panel">
       <h3>Same tool, same question, governed preset</h3>
       <div class="bubble">
-        The current temperature in Sydney is 18 degrees Celsius. The wind speed is relatively light at 13.5 km/h. The weather code indicates a clear or sunny day.
+        Tokyo is currently experiencing a warm and calm day with a temperature of 28.2 degrees Celsius and a wind speed of 4.3 km/h, corresponding to a weather code of 2. In contrast, New York is having a cooler and slightly breezier day with a temperature of 20.3 degrees Celsius and a wind speed of 3.5 km/h, corresponding to a weather code of 61.
       </div>
       <div class="governance">
         <div class="card "><div class="label">Risk</div><div class="value">LOW</div></div>
         <div class="card "><div class="label">Grounded</div><div class="value">True</div></div>
-        <div class="card "><div class="label">Sources</div><div class="value">1</div></div>
+        <div class="card "><div class="label">Sources</div><div class="value">2</div></div>
       </div>
     </div>
     <div class="panel">

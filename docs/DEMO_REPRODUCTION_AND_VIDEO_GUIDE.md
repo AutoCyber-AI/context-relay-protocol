@@ -85,6 +85,7 @@
 12. [Demo C — Context Management & Provenance Explorer (App 2)](#12-demo-c--context-management--provenance-explorer-app-2)
 12A. [Demo D — Long-Context Document Generation (CRPv3 stitch proof)](#12a-demo-d--long-context-document-generation-crpv3-stitch-proof)
 12B. [Demo E — 4-Strategy Context Management Comparison](#12b-demo-e--4-strategy-context-management-comparison)
+12C. [Demo F — CRP Agent vs Raw LLM (side-by-side, real Wikipedia API)](#12c-demo-f--crp-agent-vs-raw-llm-side-by-side-real-wikipedia-api)
 13. [Programmatic verification (no browser, for B-roll and CI proof)](#13-programmatic-verification-no-browser-for-b-roll-and-ci-proof)
 14. [The full HTTP API reference for the demos](#14-the-full-http-api-reference-for-the-demos)
 15. [Video production: gear, capture settings, and project setup](#15-video-production-gear-capture-settings-and-project-setup)
@@ -339,6 +340,33 @@ richer model-info endpoint, then normalizes:
 - **supports_tools / is_reasoning_model / is_vision_model**: booleans
 
 This is the data that powers the detection banner you'll feature in Demo A.
+
+### 6.6 Preset hygiene — the "always call tools" trap
+
+LM Studio **config presets** (`~/.lmstudio/config-presets/*.preset.json`) can inject a
+system prompt into *every* server request that doesn't carry its own. If a preset named
+something like *"Call available MCP tools ALWAYS before answering"* is active, every model
+answers with tool-call JSON even for "Say OK" — which silently ruins Demo A (detection
+looks odd) and Demo F (the raw-vs-CRP contrast disappears, because the raw arm is being
+remotely piloted too).
+
+Before any recording, probe the server (substitute your model id):
+
+```bash
+curl -s http://127.0.0.1:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"meta-llama-3.1-8b-instruct","messages":[{"role":"user","content":"Say OK"}],"max_tokens":30}'
+```
+
+- Clean server → answers `OK`.
+- Poisoned server → answers `{"name": "print", "parameters": {}}`.
+
+If poisoned: **quit LM Studio completely** (the preset is cached in memory — deleting the
+file alone is not enough), quarantine the offending `.preset.json` out of
+`~/.lmstudio/config-presets/`, reopen LM Studio, reload the model, and re-probe. Also
+check **Developer → MCP** for enabled MCP servers whose tool definitions get injected, and
+disable them for recordings. Full remediation walkthrough with the exact file contents
+found on the demo machine: §12C.7.
 
 ---
 
@@ -1038,6 +1066,154 @@ code --diff examples\crp_demos\_benchmark_results\*_crp_document.md ^
 
 In the video, show the diff view briefly and point out: repeated headings in injection, missing
 detail in hierarchical (because summaries lose specifics), and consistent coverage in CRP.
+
+---
+
+## 12C. Demo F — CRP Agent vs Raw LLM (side-by-side, real Wikipedia API)
+
+> **What it proves in one sentence:** the *same* small local model, given the *same* real
+> search tools and the *same* question, fails to act reliably when tools are just described
+> in a prompt — while the CRP agent plans operations, executes real tool calls against the
+> live Wikipedia Search API, and returns a grounded answer with full governance metadata.
+
+This is the **agentic-ecosystem demo**: not safety, not context length — *tool use and
+reasoning orchestration*. It is the strongest answer to "why do I need a protocol at all?"
+because the raw arm fails on its own, with no artificial sabotage.
+
+### 12C.1 What runs
+
+`examples/crp_demos/live_llm_vs_crp.py` runs the identical task twice against the identical
+model (default `meta-llama-3.1-8b-instruct` on LM Studio):
+
+1. **🟦 Raw LLM arm** — the tool descriptions are pasted into the system prompt as plain
+   text and the model is told to emit JSON if it wants a tool. Nothing executes whatever
+   the model prints. On a small model this typically produces an unexecuted, hallucinated
+   tool call — or a wrong direct answer with invented facts.
+2. **🟩 CRPv6 Agent arm** — `crp.Agent` declares the same tools natively. CRP builds the
+   positioned operation frame (RETRIEVE → SYNTHESISE), calls the model, parses the tool
+   call, **actually executes it**, feeds the observation back, and reports governance:
+   risk, grounded, chain_valid, operations, and source facts.
+
+With `--real-search` (recommended for the video) both arms receive the **same two real
+tools** used by `examples/templates/research_assistant_agent.py`: `web_search` and
+`read_page`, which call Wikipedia's public, documented Search/REST API — no API key, no
+scraper, real network I/O.
+
+### 12C.2 Prerequisites
+
+- LM Studio running with the server on (guide §6), model loaded, **no leftover chat
+  preset** — see §6.6 below; a config preset that injects "always call MCP tools" into
+  every request will make even the raw arm look like it works and ruin the contrast.
+- CRP installed (§5) — Demo F requires `crprotocol>=6.1.3` (the OpenAI-compatible base-URL
+  normalization fix; older versions fail against a bare `http://host:1234` URL).
+- Internet access for the Wikipedia calls.
+
+### 12C.3 Run it (exact commands)
+
+Git Bash / WSL:
+
+```bash
+cd /c/Users/User/Desktop/context-relay-protocol
+CRP_DEMO_REAL_SEARCH=1 \
+CRP_LMSTUDIO_URL=http://192.168.0.6:1234 \
+CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct \
+.venv/Scripts/python examples/crp_demos/live_llm_vs_crp.py --real-search
+```
+
+Windows cmd:
+
+```cmd
+cd c:\Users\User\Desktop\context-relay-protocol
+set CRP_DEMO_REAL_SEARCH=1
+set CRP_LMSTUDIO_URL=http://192.168.0.6:1234
+set CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
+.venv\Scripts\python.exe examples\crp_demos\live_llm_vs_crp.py --real-search
+```
+
+Optional: append your own question as the last argument, e.g.
+`"...What is the capital of Norway and its current population?"` (three different questions
+across takes makes the footage clearly unscripted).
+
+### 12C.4 What you will see (recorded live 2026-09-26 against the 8B on LM Studio)
+
+```
+TASK: Search for the AI agent article and summarise what an AI agent is.
+TOOLS: real Wikipedia Search API
+
+🟦 RAW LLM
+  response:  {"name": "web_search", "parameters": {"query": "AI agent"}}
+  → a tool call was *printed*, but nothing executed. No answer, no sources.
+
+🟩 CRPv6 AGENT
+  response:  "An AI agent is an artificial intelligence program that can pursue
+              goals, use software or other tools, and take actions with some
+              level of autonomy. ..."
+  tool_used: retrieve → synthesise
+  governance: {"risk": "LOW", "grounded": true, "chain_valid": true,
+               "operations": ["retrieve", "synthesise"], "sources": [...]}
+
+SUMMARY
+  Raw LLM returned:      6 words, no governance.
+  CRPv6 Agent returned:  98 words, with 2 operation(s) and full CRP governance.
+```
+
+A structured, re-parseable copy is written to `_video_proof.json` in the repo root —
+quote its numbers on screen as the "receipt".
+
+### 12C.5 Narration (word-for-word, ~45 s)
+
+> "Same model. Same tools. Same question.
+>
+> On the left, the raw model. Its only instruction is a paragraph of text describing the
+> tools. Watch what it does: it *prints* a tool call — and stops. Nothing ran. Nobody
+> checked anything. That text is the final answer, as far as the application is concerned.
+>
+> On the right, the same model behind CRP. CRP reads the task, plans the operations —
+> retrieve, then synthesise — calls the model, parses the tool call, **executes it for
+> real** against Wikipedia, feeds the result back, and only then writes the answer. And
+> with the answer comes the governance receipt: risk low, grounded, chain of custody valid.
+>
+> The model didn't get bigger. The prompt didn't get longer. The protocol did the work."
+
+### 12C.6 How to film it
+
+1. Terminal window, font large, both arms visible in one scrollback (§15.3 prep).
+2. Run the command, capture the full run in one take — the raw arm finishes in seconds,
+   the CRP arm takes 30–90 s on CPU/GPU inference; keep the wait on screen or speed-ramp
+   it (§18.2).
+3. Punch in on the SUMMARY block at the end (§18.3) — the word counts and the
+   governance JSON are the money shot.
+4. Cut in the `_video_proof.json` file opening in an editor as the "receipt" close-up.
+5. If the raw arm happens to answer directly (model variance), that's still fine — zoom
+   on `governance: null` vs the CRP governance object; the point is the missing
+   orchestration and receipt, not a forced failure.
+
+### 12C.7 LM Studio preset warning (learned the hard way)
+
+If **both** arms emit tool-call JSON, or the raw arm's output looks suspiciously
+structured, LM Studio is injecting a system prompt into every server request. Check:
+
+```bash
+ls ~/.lmstudio/config-presets/        # should be empty or benign
+cat ~/.lmstudio/config-presets/*.preset.json | grep -i systemPrompt
+```
+
+A preset named *"Call available MCP tools ALWAYS before answering"* (found on the demo
+machine on 2026-09-26) sets `llm.prediction.systemPrompt` to *"You MUST use the available
+MCP tools… Always call the appropriate tool."* and poisons every request without an
+explicit system message. **Fix:** quit LM Studio completely, delete/quarantine the
+`.preset.json` file, reopen LM Studio, reload the model, then re-run the "Say OK" probe:
+
+```bash
+curl -s http://192.168.0.6:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"meta-llama-3.1-8b-instruct","messages":[{"role":"user","content":"Say OK"}],"max_tokens":30}'
+```
+
+A clean server answers `OK`. A poisoned one answers `{"name": "print", "parameters": {}}`.
+Also review **Developer → MCP** in the LM Studio UI — an unrelated MCP server (e.g. a
+pentest bridge) that is enabled will inject its own tool definitions; disable it for
+recordings.
 
 ---
 

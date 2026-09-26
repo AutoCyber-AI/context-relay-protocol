@@ -27,6 +27,21 @@ JSON API (all POST bodies are JSON):
 * ``GET  /api/compare/status``    → current run state + partial results
 * ``POST /api/compare/cancel``    → cancel an in-progress run
 * ``POST /api/compare/poll``      → poll for pending events (non-SSE)
+
+Security (defaults are safe for local use):
+
+* Binds ``127.0.0.1`` by default. Pass ``--host`` (or set ``CRP_HOST``) to
+  opt into LAN exposure — a loud warning is printed unless a token is set,
+  because any website in your browser could otherwise drive your local LLM.
+* ``--token`` (or ``CRP_DEMO_TOKEN``) requires
+  ``Authorization: Bearer <token>`` on all ``/api/*`` endpoints.
+* CORS is an explicit origin allowlist (never ``*``):
+  https://console.crprotocol.io, http://localhost:8000,
+  http://127.0.0.1:8000 and the server's own origin. Non-allowlisted
+  origins receive no CORS headers, so browsers block the cross-origin read.
+
+CDN console flow: open https://console.crprotocol.io and paste
+http://127.0.0.1:8770 into the console's connect bar.
 """
 
 from __future__ import annotations
@@ -34,6 +49,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -61,10 +77,71 @@ _CONTENT_TYPES = {
 }
 
 
+def _is_loopback(host: str) -> bool:
+    """True when *host* only accepts local connections."""
+    return host in ("127.0.0.1", "localhost", "::1")
+
+
+#: Cross-origin allowlist for the demo API. The CDN-hosted console at
+#: https://console.crprotocol.io can drive a locally running demo server
+#: (the user pastes the local URL into the console's connect bar), so it
+#: stays in the allowlist; every other origin gets no CORS headers and the
+#: browser blocks the cross-origin read.
+_BASE_CORS_ORIGINS = (
+    "https://console.crprotocol.io",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+)
+
+
+def build_allowlist(host: str, port: int) -> list[str]:
+    """CORS allowlist: the fixed entries plus the server's own origin."""
+    return [
+        *_BASE_CORS_ORIGINS,
+        f"http://{host}:{port}",
+        f"http://localhost:{port}",
+        f"http://127.0.0.1:{port}",
+    ]
+
+
+def exposure_warning(host: str, token: str | None) -> str | None:
+    """Warning text when binding beyond loopback without a bearer token."""
+    if _is_loopback(host) or token:
+        return None
+    return (
+        f"WARNING: binding the CRP demo server to '{host}' exposes it to the "
+        "local network and to any website your browser visits (which can "
+        "drive your local LLM via CSRF). Prefer 127.0.0.1, or set --token / "
+        "CRP_DEMO_TOKEN so API calls must send 'Authorization: Bearer <token>'."
+    )
+
+
 class _Handler(BaseHTTPRequestHandler):
     server_version = "CRP-Demo/3.0"
 
     # ── helpers ──────────────────────────────────────────────────────────
+    def _allowlisted_origin(self) -> str | None:
+        """Return the request ``Origin`` only when it is in the allowlist."""
+        origin = self.headers.get("Origin")
+        allowed = getattr(self.server, "crp_allowlist", ())
+        if origin and origin in allowed:
+            return origin
+        return None
+
+    def _send_cors_headers(self) -> None:
+        """Emit CORS headers only for allowlisted origins (never ``*``)."""
+        origin = self._allowlisted_origin()
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+
+    def _bearer_ok(self) -> bool:
+        """Bearer-token check for ``/api/*`` when a token is configured."""
+        token = getattr(self.server, "crp_token", None)
+        if not token:
+            return True
+        return self.headers.get("Authorization") == f"Bearer {token}"
+
     def _send_json(self, payload: dict[str, Any], status: int = 200) -> None:
         body = json.dumps(payload, default=str).encode("utf-8")
         self.send_response(status)
@@ -76,6 +153,7 @@ class _Handler(BaseHTTPRequestHandler):
             val = payload.get("headers", {}).get(name) if isinstance(payload, dict) else None
             if val:
                 self.send_header(name, str(val))
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -95,7 +173,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self._send_cors_headers()
         self.end_headers()
 
         deadline = _time.time() + 1800  # 30-minute max stream
@@ -140,8 +218,27 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     # ── routing ──────────────────────────────────────────────────────────
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """CORS preflight: answered only for allowlisted origins."""
+        path = self.path.split("?", 1)[0]
+        if not path.startswith("/api/"):
+            self.send_error(404, "Not found")
+            return
+        origin = self._allowlisted_origin()
+        self.send_response(204 if origin else 403)
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/") and not self._bearer_ok():
+            self._send_json({"error": "unauthorized"}, status=401)
+            return
         if path == "/api/detect":
             try:
                 self._send_json(detect_runtime())
@@ -166,6 +263,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/") and not self._bearer_ok():
+            self._send_json({"error": "unauthorized"}, status=401)
+            return
         body = self._read_json()
         try:
             if path == "/api/safety/analyze":
@@ -221,15 +321,36 @@ class _Handler(BaseHTTPRequestHandler):
         logger.info("%s - %s", self.address_string(), fmt % args)
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="CRP demo server")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default=os.environ.get("CRP_HOST", "127.0.0.1"),
+                        help="bind host (default 127.0.0.1; set CRP_HOST to "
+                             "opt into LAN exposure)")
     parser.add_argument("--port", type=int, default=8770)
-    args = parser.parse_args()
+    parser.add_argument("--token", default=os.environ.get("CRP_DEMO_TOKEN"),
+                        help="bearer token required for /api/* (default: none)")
+    return parser
+
+
+def create_server(host: str, port: int, token: str | None = None) -> ThreadingHTTPServer:
+    """Build a configured demo ``ThreadingHTTPServer`` (also used by tests)."""
+    httpd = ThreadingHTTPServer((host, port), _Handler)
+    actual_port = httpd.server_address[1]
+    httpd.crp_allowlist = build_allowlist(host, actual_port)  # type: ignore[attr-defined]
+    httpd.crp_token = token  # type: ignore[attr-defined]
+    return httpd
+
+
+def main() -> None:
+    args = build_parser().parse_args()
 
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    httpd = ThreadingHTTPServer((args.host, args.port), _Handler)
+    warning = exposure_warning(args.host, args.token)
+    if warning:
+        logger.warning("%s", warning)
+        print(f"\n  {warning}\n")
+    httpd = create_server(args.host, args.port, token=args.token)
     url = f"http://{args.host}:{args.port}"
     print("\n  CRP demos running:")
     print(f"    Landing / detection     : {url}/")

@@ -95,7 +95,7 @@ def _detection_guidance(primary: DetectedModel | None, reachable: bool) -> str:
         return (
             "No local LLM runtime detected. Start LM Studio (Developer → Start "
             "Server on port 1234) or run `ollama serve`, load a model, then "
-            "refresh. CRP works without a model too — governance signals are "
+            "refresh. CRP works without a model too - governance signals are "
             "still computed, but generation is skipped."
         )
     if primary is None:
@@ -655,12 +655,12 @@ def _context_pressure(primary: DetectedModel | None, sess: _Session) -> dict[str
 
 def _context_guidance(primary: DetectedModel | None) -> str:
     if primary is None:
-        return ("No model loaded — chain, CKF and token signals still work, but "
+        return ("No model loaded - chain, CKF and token signals still work, but "
                 "replies will be empty. Load a model in LM Studio to chat.")
     util = primary.context_utilisation
     extra = ""
     if util and primary.max_context_length:
         extra = (f" It can handle {primary.max_context_length:,} tokens but only "
                  f"{primary.loaded_context_length:,} are allocated "
-                 f"({util * 100:.1f}%) — exactly why context management matters.")
+                 f"({util * 100:.1f}%) - exactly why context management matters.")
     return f"Chatting with **{primary.id}**.{extra}"

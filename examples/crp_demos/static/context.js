@@ -5,13 +5,13 @@
 let sessionId = null;
 let lastResult = null;
 
-function shortHmac(h) { return h ? h.slice(0, 19) + "…" : "—"; }
+function shortHmac(h) { return h ? h.slice(0, 19) + "…" : " - "; }
 
 function renderPressure(cp, model) {
   if (!cp || !cp.available) {
     el("pressure").innerHTML = model
       ? `Chatting with <strong>${esc(model.id)}</strong>.`
-      : "No model loaded — chain, CKF and token signals still work; replies will be empty.";
+      : "No model loaded - chain, CKF and token signals still work; replies will be empty.";
     return;
   }
   const util = cp.context_utilisation != null ? (cp.context_utilisation * 100).toFixed(1) + "%" : "unknown";

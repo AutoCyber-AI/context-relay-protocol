@@ -41,7 +41,7 @@
 <body>
   <h1>🛡️ CRP Live Checkpoint Console</h1>
   <div class="sub">
-    Real agent. Real local LLM. Real human-in-the-loop gate — this page's Approve/Deny
+    Real agent. Real local LLM. Real human-in-the-loop gate - this page's Approve/Deny
     buttons unblock an actual running Python thread, not a simulation.
     (CHEATSHEET.md §5.6)
   </div>
@@ -102,14 +102,14 @@ function connectStream() {
 
   es.addEventListener('step_boundary', (e) => {
     const d = JSON.parse(e.data);
-    logLine('reason', `<hr style="border-color:#30363d"><b>— Turn ${d.step} —</b> ${escapeHtml(d.question)}`);
+    logLine('reason', `<hr style="border-color:#30363d"><b> - Turn ${d.step} - </b> ${escapeHtml(d.question)}`);
   });
 
   es.addEventListener('tel', (e) => {
     const d = JSON.parse(e.data);
     const kind = d.type || 'EVENT';
     let html = `<span class="kind">${kind}</span>`;
-    if (d.detail) html += ` — <span class="detail">${escapeHtml(d.detail)}</span>`;
+    if (d.detail) html += ` - <span class="detail">${escapeHtml(d.detail)}</span>`;
     if (d.capability_id) html += ` <span class="detail">[tool: ${d.capability_id}]</span>`;
     if (d.content) html += ` <span class="detail">${escapeHtml(String(d.content)).slice(0,300)}</span>`;
     let cls = 'tel';
@@ -119,7 +119,7 @@ function connectStream() {
 
   es.addEventListener('checkpoint_request', (e) => {
     const d = JSON.parse(e.data);
-    logLine('reason', '🛑 Checkpoint requested — waiting for your decision…');
+    logLine('reason', '🛑 Checkpoint requested - waiting for your decision…');
     document.getElementById('cpReason').textContent = d.reason || '';
     document.getElementById('cpQuestion').textContent = d.question || '';
     document.getElementById('cpContext').textContent = JSON.stringify(d.context || {});
@@ -136,7 +136,7 @@ function connectStream() {
   });
 
   es.addEventListener('checkpoint_timeout', () => {
-    logLine('error', '⏱ Checkpoint timed out — auto-denied (fail-safe default).');
+    logLine('error', '⏱ Checkpoint timed out - auto-denied (fail-safe default).');
   });
 
   es.addEventListener('error', (e) => {

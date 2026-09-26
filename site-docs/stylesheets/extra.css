@@ -1885,3 +1885,33 @@ html {
   font-weight: 700;
   width: 120px;
 }
+
+/* ============================================================
+   Explainer video embed (homepage hero)
+   ============================================================ */
+.md-typeset .video-embed {
+  max-width: 860px;
+  margin: 2.5rem auto 1rem;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(124, 77, 255, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  background: #000;
+}
+.md-typeset .video-embed video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.md-typeset .video-embed .video-caption {
+  padding: 0.6rem 1rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.55);
+}
+.md-typeset .video-embed .video-caption a {
+  color: #b794f6;
+}

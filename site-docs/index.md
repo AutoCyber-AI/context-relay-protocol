@@ -1,6 +1,6 @@
 ---
-seo_title: Agentic Positioning Protocol for SLM-first AI — CRP v6
-description: Context Relay Protocol (CRP) is the agentic positioning layer for SLM-first AI. MCP exposes tools, A2A connects agents, CRP positions every agent on the right task with the right context and tools — and proves it with safety, grounding, and compliance evidence.
+seo_title: Local-first agentic AI governance — CRP v6.1.1
+description: Context Relay Protocol (CRP) is local-first agentic AI governance. pip install crprotocol and run governed agents on any model — LM Studio, Ollama, or OpenAI-compatible — with a tamper-evident audit chain, grounding and hallucination scoring, and unbounded context.
 hide:
   - toc
 ---
@@ -37,20 +37,33 @@ that <strong>EU AI Act</strong>, <strong>AIUC-1</strong>, <strong>ISO 42001</str
 <div class="hero-stat"><span class="num">3 models</span><span class="label">Open-source SLM defaults</span></div>
 </div>
 
+<div class="video-embed" markdown>
+<video controls playsinline preload="metadata">
+  <source src="https://github.com/AutoCyber-AI/context-relay-protocol/releases/download/v6.1.1/context-relay-explainer.mp4" type="video/mp4">
+  Your browser does not support HTML5 video.
+</video>
+<p class="video-caption">Watch: Context Relay Protocol explained (2 min) ·
+<a href="https://github.com/AutoCyber-AI/context-relay-protocol/releases/tag/v6.1.1">Watch on the v6.1.1 release page</a></p>
+</div>
+
 ---
 
-## What's new in CRP v6
+## What's new in CRP v6.1.1
 
-CRP v6 is the first release that ships a complete, self-contained agentic protocol you can install today:
+CRP v6.1.1 is a **local-first** release: `pip install crprotocol` and the complete
+protocol runs on your machine — LM Studio, Ollama, or any OpenAI-compatible endpoint.
+No managed cloud, no external service required:
 
 - **Declarative `crp.Agent`** — define tools, policy, and model; the protocol owns the loop.
-- **Three open-source SLM models** — intent, PRM, and safety classifiers published on Hugging Face under `AutoCyberAI/`.
-- **AG-UI-compatible transparency stream** — see intent, operations, tool calls, safety scans, verification, and provenance in real time.
-- **Verification Relay** — PRM-style step judge plus symbolic verifiers for grounded answers.
+- **Local-first safety control plane** — risk scoring, grounding verification, and HTTP 451 safety halts run on every call, on any model.
+- **Tamper-evident audit chain** — HMAC hash-chained events your auditors can verify, produced locally per session.
 - **Human-in-the-loop checkpoints** — destructive or ambiguous actions pause for approval before they run.
+- **Three open-source SLM models** — intent, PRM, and safety classifiers published on Hugging Face under `AutoCyberAI/`.
+- **Self-hosted agent console** — run `crp serve` and watch intent, operations, tool calls, safety scans, and provenance live (demo at console.crprotocol.io).
+- **Unbounded context** — automatic continuation and CSO relay keep continuity across windows until the task is done.
 - **Bi-temporal CKF memory** — facts carry valid-time and transaction-time so agents reason over history, not just the latest snapshot.
 
-The managed-cloud Gateway and Comply products are on the Wave 3 roadmap; the library and self-hosted protocol are production-ready today.
+The library, CLI, agent console, and self-hosted protocol are production-ready today, entirely local. Managed-cloud Gateway and Comply upgrades remain on the roadmap.
 
 </div>
 
@@ -331,19 +344,19 @@ CRP manages the full context lifecycle - ingestion, extraction, retrieval, packi
 <div class="product-card">
 <h3>🌐 CRP Gateway</h3>
 <p>The runtime. Routes every AI call through governance + context management.</p>
-<p class="text-small text-muted">Managed-cloud waitlist · Self-host & white-label</p>
+<p class="text-small text-muted">Local-first · Self-host & white-label</p>
 <a href="/products/gateway/" class="md-button md-button--primary mt-1">Explore Gateway</a>
 </div>
 <div class="product-card">
 <h3>📋 CRP Comply</h3>
 <p>The compliance layer. Generates audit-ready deliverables from Gateway evidence.</p>
-<p class="text-small text-muted">Managed-cloud waitlist · Self-host & white-label</p>
+<p class="text-small text-muted">Local-first · Self-host & white-label</p>
 <a href="/products/comply/" class="md-button md-button--primary mt-1">Explore Comply</a>
 </div>
 <div class="product-card">
 <h3>🔍 CRP Scan</h3>
 <p>The scanner. Finds ungoverned AI calls in your codebase and opens remediation PRs.</p>
-<p class="text-small text-muted">GitHub Action available · Managed cloud on the roadmap</p>
+<p class="text-small text-muted">GitHub Action available · Local-first</p>
 <a href="/products/scan/" class="md-button md-button--primary mt-1">Explore Scan</a>
 </div>
 </div>
@@ -396,7 +409,7 @@ CRP is not a roadmap deck. The open-source SDK, CLI, and Scan action are live, d
 <h3>🌐 Gateway</h3>
 <p><strong>OpenAI-compatible proxy</strong> with DPE, safety policy, and audit trails.</p>
 <ul class="product-list">
-<li>Managed-cloud waitlist; self-host and white-label available</li>
+<li>Local-first; self-host and white-label available</li>
 <li>58 CRP headers on every call</li>
 <li>HMAC-chained audit events</li>
 <li>Redis-backed session store</li>

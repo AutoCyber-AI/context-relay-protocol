@@ -6,7 +6,7 @@
 > **Method:** Static forensic audit of `C:\Users\User\Desktop\wasa_ai-master` (40.4 GB,
 > 138 tools, 11-phase pentest orchestrator), cross-referenced with the CRP v4.3.2
 > codebase and SPEC-049/050. Evidence is cited by file. **Runtime validation
-> (measuring the live 40% breach, kimi/local-SLM confirmation, demos) is defined in §7
+> (measuring the live 40% breach, hosted/local-SLM confirmation, demos) is defined in §7
 > and is part of remediation, not yet executed.**
 > **Verdict in one line:** CRP v5 directly removes 5 of the agentic roadblockers; the
 > 40% baseline and 40 GB size are **infrastructure** problems solved by **Railway
@@ -225,17 +225,17 @@ routed through the CRP Gateway (an independent product).
 
 ---
 
-## 7. Validation & demo plan (testing, kimi, local SLM, visuals)
+## 7. Validation & demo plan (testing, hosted, local SLM, visuals)
 
 **Before/after measurement (the real proof of the 40% claim):**
 - Instrument a representative scan in **all-local** vs **Governor+offload** modes;
   record peak RSS, sustained CPU, KV-cache size, context KB/op, steps/scan, and whether
   the working set stays **flat** across 100+ tool calls.
 
-**LLM-quality confirmation (kimi + local SLM):**
+**LLM-quality confirmation (hosted + local SLM):**
 - Run the same multi-operation task through (a) WASA's current flooded loop and (b) a
   CRP positioned loop on **meta-llama-3.1-8b-instruct** (`192.168.0.6:1234`).
-- Judge factual completeness + report quality with **kimi-k2.6** (key read locally,
+- Judge factual completeness + report quality with **hosted-k2.6** (key read locally,
   never printed). Target: positioned ≥ baseline.
 
 **Demos (some exist but are broken — finalise them):**

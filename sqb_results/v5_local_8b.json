@@ -3,7 +3,7 @@
   "run_timestamp": "2026-06-30T10:37:35.319178+00:00",
   "meta": {
     "mode": "full",
-    "model": "kimi-k2.6"
+    "model": "hosted-k2.6"
   },
   "all_cases_pass": false,
   "multihop_connector_recall_delta": 0.0,

@@ -76,8 +76,8 @@ sqb-003 (Multi-hop reasoning):
 monotonically non-decreasing on cumulative output — it directly tests CRP's core claim that
 reference facts are preserved across windows. F1 was penalising correct paraphrasing.
 
-**Model used:** kimi-k2.6 via Moonshot AI API (`https://api.moonshot.ai/v1`)  
-**CRITICAL kimi-k2.6 settings:** `temperature=0.6` + `"thinking": {"type": "disabled"}` (BOTH required — without `disabled` thinking, content=None)
+**Model used:** hosted-k2.6 via a hosted frontier-model API (`https://api.hosted-frontier.example/v1`)  
+**CRITICAL hosted-k2.6 settings:** `temperature=0.6` + `"thinking": {"type": "disabled"}` (BOTH required — without `disabled` thinking, content=None)
 
 ---
 
@@ -107,11 +107,11 @@ reference facts are preserved across windows. F1 was penalising correct paraphra
 
 ---
 
-## ⚠️ NOTE FOR KIMI (or any next agent) — READ BEFORE DOING ANYTHING
+## ⚠️ NOTE FOR HOSTED (or any next agent) — READ BEFORE DOING ANYTHING
 
 **You are in Round 4. The SQB gate is cleared. Agent B Rounds 1-3 are done. Here is exactly what to do:**
 
-### STEP 1 (OPTIONAL but recommended): Run another Kimi SQB to improve sqb-002 judge score (6.6/10 is borderline)
+### STEP 1 (OPTIONAL but recommended): Run another hosted SQB to improve sqb-002 judge score (6.6/10 is borderline)
 
 sqb-002 judge score was 6.6/10. If you want to improve it (e.g. to 7.0+), run the SQB again:
 
@@ -120,14 +120,14 @@ sqb-002 judge score was 6.6/10. If you want to improve it (e.g. to 7.0+), run th
 cd C:\Users\User\Desktop\context-relay-protocol
 
 # Read the API key from file:
-# C:\Users\User\Desktop\context-relay-protocol\kimi api key.txt
+# C:\Users\User\Desktop\context-relay-protocol\hosted api key.txt
 
 # Run:
 .venv\Scripts\python.exe examples/crp_demos/sqb_benchmark.py
 
 # When prompted for API key, use the key from the file above.
-# Model: kimi-k2.6
-# CRITICAL: temperature=0.6 + thinking:{type:disabled} are already hardcoded in run_kimi()
+# Model: hosted-k2.6
+# CRITICAL: temperature=0.6 + thinking:{type:disabled} are already hardcoded in run_hosted()
 # min_window_delay=25.0 is already set (rate limiting)
 ```
 
@@ -147,7 +147,7 @@ Add a `## [4.0.0] — 2026-06-06` section to `CHANGELOG.md` with all changes. Ke
 - **Agent B R1:** Safety Control Plane (SPEC-033), Checkpoint (SPEC-033/034), Safety Coverage Map (SPEC-034), Unified Config (SPEC-037), Progressive SDK L0+L1 (SPEC-032), Pluggable Storage Backends (SPEC-038)
 - **Agent B R2:** Multi-Horizon Context (SPEC-028), Scratch Buffer (SPEC-029), Semantic Task Layer/STL (SPEC-031), Retrieval Integrity (SPEC-027), SDK Level 2
 - **Agent B R3:** Comply Gateway Swap (SPEC-042), Stripe+Clerk webhooks (SPEC-047), GitHub App (SPEC-048), No-Code Governance Loop
-- **SQB gate:** recall=1.000/1.000/0.800 on sqb-001/002/003 — ALL_CASES_PASS: True — kimi-k2.6
+- **SQB gate:** recall=1.000/1.000/0.800 on sqb-001/002/003 — ALL_CASES_PASS: True — hosted-k2.6
 
 #### 2b. Bump version to 4.0.0
 ```python
@@ -179,7 +179,7 @@ git push origin v4.0.0
 The full test suite crashes at ~41% with a Windows fatal exception in GLiNER/PyTorch (`torch.nn.modules.sparse.py` access violation on Python 3.14). This is a platform issue, not a code bug. Run tests excluding the killer_test and live tests:
 
 ```cmd
-.venv\Scripts\python.exe -m pytest tests/ --ignore=tests/test_live_openai.py --ignore=tests/test_live_anthropic.py --ignore=tests/test_live_ollama.py --ignore=tests/test_live_kimi.py --ignore=tests/killer_test --ignore=tests/test_integration.py --tb=short -q --no-header
+.venv\Scripts\python.exe -m pytest tests/ --ignore=tests/test_live_openai.py --ignore=tests/test_live_anthropic.py --ignore=tests/test_live_ollama.py --ignore=tests/test_live_hosted.py --ignore=tests/killer_test --ignore=tests/test_integration.py --tb=short -q --no-header
 ```
 
 `test_integration.py` triggers GLiNER model loading which causes the crash. Skip it for the final run count.

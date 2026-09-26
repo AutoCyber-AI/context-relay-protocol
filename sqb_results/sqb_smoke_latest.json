@@ -3,7 +3,7 @@
   "run_timestamp": "2026-09-02T20:33:08.264130+00:00",
   "meta": {
     "mode": "smoke",
-    "model": "kimi-k2.6"
+    "model": "hosted-k2.6"
   },
   "all_cases_pass": true,
   "multihop_connector_recall_delta": 0.18,

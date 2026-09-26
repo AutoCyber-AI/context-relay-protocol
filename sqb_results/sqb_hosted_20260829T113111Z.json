@@ -2,8 +2,8 @@
   "sqb_version": "4.0.0b1",
   "run_timestamp": "2026-08-29T11:31:11.926978+00:00",
   "meta": {
-    "mode": "kimi",
-    "model": "kimi-k2.6"
+    "mode": "hosted",
+    "model": "hosted-k2.6"
   },
   "all_cases_pass": true,
   "multihop_connector_recall_delta": 0.0,

@@ -2,7 +2,7 @@
 
 > Prepared: 2026-09-02; updated 2026-09-03 (WASA bridge fix, GitHub lockdown, console live test, suite re-run, SQB refresh)  
 > Package: `crprotocol 6.1.1` (live on PyPI)  
-> Models used for live proof: `meta-llama-3.1-8b-instruct` and `qwen2.5-7b-instruct` via LM Studio; `kimi-k2.6` via Moonshot API  
+> Models used for live proof: `meta-llama-3.1-8b-instruct` and `qwen2.5-7b-instruct` via LM Studio; `hosted-k2.6` via a hosted model API  
 > Test gate: 3,298 passed / 1 skipped (full non-live suite excluding live-LLM files, re-verified 2026-09-03)
 
 ---
@@ -21,7 +21,7 @@
 | MCP bridge | **Implemented** — load external MCP servers as CRP tools and expose CRP tools as MCP server | `crp_mcp/connectors/mcp_to_crp.py`, `crp_mcp/connectors/crp_to_mcp.py`, `examples/wasa_crp_bridge.py` |
 | Frontend / Agent Console | **Builds cleanly + self-hosted launcher added** | `frontend/agent-console/`, `npm run build` succeeds, `examples/self_hosted_console.py` |
 | Full regression suite | **Passing** | `pytest tests/` (live files ignored) — 3,297 passed, 2 skipped |
-| SQB benchmark gate (Kimi) | **Passed again, this session** | `sqb_results/sqb_kimi_rerun_20260902T205350Z.json` |
+| SQB benchmark gate (hosted) | **Passed again, this session** | `sqb_results/sqb_hosted_rerun_20260902T205350Z.json` |
 
 ### What version is current
 
@@ -293,8 +293,8 @@ The following untracked files containing live secrets were removed from the work
 - `crp_gateway_railway.env`
 - `env_reference.env`
 - `encrypted-crp-comply.2026-06-05.private-key.pem`
-- `_kimi_test.py`, `_kimi_debug.py`, `_kimi_debug2.py`, `_kimi_debug3.py`, `_kimi_debug4.py`
-- `kimi_moonshot_api_key.txt`
+- `_hosted_test.py`, `_hosted_debug.py`, `_hosted_debug2.py`, `_hosted_debug3.py`, `_hosted_debug4.py`
+- `hosted_model_api_key.txt`
 
 All are covered by `.gitignore` patterns (`*.env`, `*_railway.env`, `*.pem`, `*_api_key.txt`, `/_*.py`).
 
@@ -332,10 +332,10 @@ All are covered by `.gitignore` patterns (`*.env`, `*_railway.env`, `*.pem`, `*_
 
 ## 9. SQB benchmark gate
 
-### Kimi rerun (2026-09-03, valid key, live)
+### Hosted rerun (2026-09-03, valid key, live)
 
-- File: `sqb_results/sqb_kimi_20260903T085056Z.json`
-- Model: `kimi-k2.6`, profile `frontier`, LLM-as-judge enabled
+- File: `sqb_results/sqb_hosted_20260903T085056Z.json`
+- Model: `hosted-k2.6`, profile `frontier`, LLM-as-judge enabled
 - Result: **all_cases_pass = true** with REAL generation (not a false pass):
   - sqb-001 (technical): 5 windows, **22,209 words**, WLast rep 0.07%, coverage 1.00, judge **7.0/10** — PASS
   - sqb-002 (regulatory): 4 windows, **7,004 words**, WLast rep 0.73%, coverage 0.92, judge **7.0/10** — PASS
@@ -343,7 +343,7 @@ All are covered by `.gitignore` patterns (`*.env`, `*_railway.env`, `*.pem`, `*_
 - Total elapsed: 771s
 - Repetition stayed far under the 1.5% gate in every window (max 1.84% on one mid regulatory window); coverage climbed to ≥0.72 everywhere.
 
-(Previous proven pass: `sqb_kimi_rerun_20260902T205350Z.json`, judge 7.0–7.6/10.)
+(Previous proven pass: `sqb_hosted_rerun_20260902T205350Z.json`, judge 7.0–7.6/10.)
 
 ### LM Studio runs
 
@@ -352,13 +352,13 @@ All are covered by `.gitignore` patterns (`*.env`, `*_railway.env`, `*.pem`, `*_
 
 ### Bottom line on the gate
 
-- **Proven pass:** `sqb_results/sqb_kimi_rerun_20260902T205350Z.json` — Kimi-k2.6, all gates pass, judge scores 7.0–7.6/10.
-- **2026-09-03 refresh in progress** — see `sqb_live_run.log` and the auto-saved `sqb_results/sqb_kimi_*.json` from the valid-key run.
+- **Proven pass:** `sqb_results/sqb_hosted_rerun_20260902T205350Z.json` — hosted-k2.6, all gates pass, judge scores 7.0–7.6/10.
+- **2026-09-03 refresh in progress** — see `sqb_live_run.log` and the auto-saved `sqb_results/sqb_hosted_*.json` from the valid-key run.
 - **Local 7–8B:** clears the harness end-to-end under the `capable-local` profile.
 
 ### ✅ Gate robustness gap — found AND fixed 2026-09-03
 
-**Found:** the SQB harness reported **"ALL CASES PASS" even when every LLM call failed** (e.g. 401 Unauthorized): empty output trivially satisfies the repetition, forbidden-claim, and coverage gates, and the judge scored 0/10 but the per-case verdict still showed PASS. A run with an invalid key produced an all-zero "pass" (`sqb_kimi_20260903T084528Z.json`, since deleted). **Gate 5 (judge) was also never included in `all_gates_pass`.**
+**Found:** the SQB harness reported **"ALL CASES PASS" even when every LLM call failed** (e.g. 401 Unauthorized): empty output trivially satisfies the repetition, forbidden-claim, and coverage gates, and the judge scored 0/10 but the per-case verdict still showed PASS. A run with an invalid key produced an all-zero "pass" (`sqb_hosted_20260903T084528Z.json`, since deleted). **Gate 5 (judge) was also never included in `all_gates_pass`.**
 
 **Fixed in `examples/crp_demos/sqb_benchmark.py`:**
 - New `WindowResult.generation_failed` flag, set by the runner when the API errors after retries or returns empty/`[empty response]`.
@@ -366,7 +366,7 @@ All are covered by `.gitignore` patterns (`*.env`, `*_railway.env`, `*.pem`, `*_
 - **Gate 5 (judge)** is now enforced: `mean_score < 6.0` fails the case.
 - Smoke mode pads synthetic windows with strictly-unique tokens so the harness self-check still passes end-to-end.
 
-With the guard in place, the 2026-09-03 Kimi pass above is trustworthy (non-zero word counts, judge 7.0–7.8).
+With the guard in place, the 2026-09-03 hosted pass above is trustworthy (non-zero word counts, judge 7.0–7.8).
 
 - For a stronger marketing claim, implement the `--strict` consensus-judge gate described in `docs/CRPv6_STRONGER_MODEL_GATE_DESIGN.md`.
 
@@ -394,7 +394,7 @@ With the guard in place, the 2026-09-03 Kimi pass above is trustworthy (non-zero
 - The SDK installs from PyPI, the core tests pass (3,297/2 skipped), and live local-model demos work.
 - The "CRP vs raw" narrative is demonstrable with a single HTML file (`examples/crp_demos/_video_kit.html`).
 - Cognitive presets and safeguards are real and enforceable, including `ask` and `warn` actions, emotion triggers, and hard-enforced reasoning phases.
-- The SQB gate has been proven against Kimi again this session — **and the gate itself is now hardened** against false passes (empty/errored windows can no longer trivially "pass").
+- The SQB gate has been proven against the hosted model again this session — **and the gate itself is now hardened** against false passes (empty/errored windows can no longer trivially "pass").
 - Multi-turn state relay and mixed parameterless/parameterized tools work after the latest fix.
 - A self-hosted console launcher (`examples/self_hosted_console.py`) — **live-tested against LM Studio** — and MCP bridges (`crp_mcp/connectors/mcp_to_crp.py`, `crp_mcp/connectors/crp_to_mcp.py`) — **live-tested against WASA AI's 239-tool MCP server** — are available.
 
@@ -420,7 +420,7 @@ With the guard in place, the 2026-09-03 Kimi pass above is trustworthy (non-zero
 5. ✅ Small-model fixes: `device=-1` for NER/safety pipelines; tool-positioner snap-to-capability.
 
 **Still open:**
-1. **SQB gate refresh:** rerun `python examples/crp_demos/sqb_benchmark.py --mode kimi` (in progress this session).
+1. **SQB gate refresh:** rerun `python examples/crp_demos/sqb_benchmark.py --mode hosted` (in progress this session).
 2. **CDN:** create an S3/R2/CloudFront bucket and upload `frontend/agent-console/dist/`; guide at `docs/CRP_AGENT_CONSOLE_DEPLOYMENT_GUIDE.md`.
 3. **Stronger gate:** add OpenAI/Anthropic judge keys and implement `--strict` per `docs/CRPv6_STRONGER_MODEL_GATE_DESIGN.md`.
 4. **Rotate GitHub App secrets** if the old `CRP_Comply_github_app_details.txt` was ever committed to history.

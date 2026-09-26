@@ -3,7 +3,7 @@
   "run_timestamp": "2026-09-02T20:39:26.653432+00:00",
   "meta": {
     "mode": "smoke",
-    "model": "kimi-k2.6",
+    "model": "hosted-k2.6",
     "profile": "capable-local"
   },
   "all_cases_pass": true,

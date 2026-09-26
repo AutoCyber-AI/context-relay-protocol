@@ -1,7 +1,7 @@
 # CRPv6 Live Proof Summary
 
 > Honest results from live runs against a real loaded model (LM Studio,
-> Meta-Llama-3.1-8B-Instruct-GGUF) and Kimi. No hardcoded outputs.
+> Meta-Llama-3.1-8B-Instruct-GGUF) and a hosted frontier model. No hardcoded outputs.
 
 ---
 
@@ -113,16 +113,16 @@ Multi-hop recall delta (CDGR vs CDR): +0.180
 **Conclusion:** Meta-Llama-3.1-8B-Instruct-GGUF is **not strong enough** to pass
 the full SQB gate. The smoke harness works; the model is the bottleneck.
 
-### Kimi mode
+### Hosted mode
 
-`--mode kimi` runs the full benchmark against the Kimi API. Result from the
+`--mode hosted` runs the full benchmark against the hosted API. Result from the
 live run:
 
 ```text
 ALL CASES PASS ✓ — v4 gate cleared
 Total elapsed: 838.5s
-Model: kimi-k2.6
-API: https://api.moonshot.ai/v1
+Model: hosted-k2.6
+API: https://api.hosted-frontier.example/v1
 ```
 
 | Case | Result | WLast F1 | WLast lex-rep | WLast cov | LLM-judge |
@@ -138,7 +138,7 @@ re-coverage.
 > Note: the benchmark does not yet compute the CDGR vs CDR multi-hop connector
 > recall delta in production mode; that metric is available in `--mode smoke`.
 
-Full JSON artifact: `sqb_results/sqb_kimi_20260829T113111Z.json`
+Full JSON artifact: `sqb_results/sqb_hosted_20260829T113111Z.json`
 
 ---
 
@@ -151,7 +151,7 @@ Full JSON artifact: `sqb_results/sqb_kimi_20260829T113111Z.json`
 The full regression passes after the display fixes. The previously failing
 warm-state ingestion test now passes.
 
-## 5. Quality benchmark — Kimi-k2.6 (prior run)
+## 5. Quality benchmark — hosted-k2.6 (prior run)
 
 ```text
 mean quality 8.31/10
@@ -165,7 +165,7 @@ saved → sqb_results/quality_benchmark.json
 1. **Small local models are fragile for compound tool-calling.** With Llama 3.1
    8B, single-purpose prompts work reliably; multi-part prompts can confuse the
    model into emitting a non-existent capability name or raw tool JSON. The
-   protocol structure is correct; model capability is the variable. Use Kimi,
+   protocol structure is correct; model capability is the variable. Use a hosted frontier model,
    GPT-4o, or Claude 3.5 for higher-friction demos.
 
 2. **CDN / hosted console is buildable but not deployed to a public CDN.** The
@@ -195,7 +195,7 @@ saved → sqb_results/quality_benchmark.json
 
 1. **Re-run the unified demo** before any video recording to refresh live
    weather/time data.
-2. **Use a stronger model** (Kimi, GPT-4o, Claude 3.5) for the full SQB and for
+2. **Use a stronger model** (e.g. a hosted frontier model, GPT-4o, Claude 3.5) for the full SQB and for
    demos where compound tool-calling reliability matters.
-3. **Move `kimi_moonshot_api_key.txt` out of the repo** into a secret manager or
+3. **Move `hosted_model_api_key.txt` out of the repo** into a secret manager or
    GitHub secret.

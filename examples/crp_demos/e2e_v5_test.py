@@ -1,10 +1,10 @@
 # Copyright © 2025 Constantinos Vidiniotis. All rights reserved.
 # Licensed under Elastic License 2.0 — see LICENSE.md for details.
-"""CRP v5 — COMPLETE end-to-end use-case test (local SLM + Kimi).
+"""CRP v5 — COMPLETE end-to-end use-case test (local SLM + hosted model).
 
 Exercises EVERY use case of the v5 positioned agentic layer against real models,
 and prints a pass/fail matrix. LLM-dependent cases run on both the local LM Studio
-model and Kimi (Moonshot); logic-only cases (CLARIFY, oversight halt, governor,
+model and a hosted frontier model; logic-only cases (CLARIFY, oversight halt, governor,
 multi-turn state relay) run deterministically.
 
 Use cases covered:
@@ -17,10 +17,10 @@ Use cases covered:
   7. Bounded working set (frame stays small regardless of catalogue/turns)
 
 Run:
-    python examples/crp_demos/e2e_v5_test.py                 # local + kimi
+    python examples/crp_demos/e2e_v5_test.py                 # local + hosted
     python examples/crp_demos/e2e_v5_test.py --only local
 
-Kimi key: MOONSHOT_API_KEY env or kimi_moonshot_api_key.txt (never printed).
+Hosted-model key: HOSTED_MODEL_API_KEY env or hosted_model_api_key.txt (never printed).
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ from crp.tools.capability_fabric import PolicyContext
 
 LOCAL_BASE = os.environ.get("CRP_LLM_BASE", "http://192.168.0.6:1234/v1")
 LOCAL_MODEL = os.environ.get("CRP_LLM_MODEL", "meta-llama-3.1-8b-instruct")
-KIMI_BASE = "https://api.moonshot.ai/v1"
-KIMI_MODEL = "kimi-k2.6"
+HOSTED_BASE = "https://api.hosted-frontier.example/v1"
+HOSTED_MODEL = "hosted-k2.6"
 
 PASS, FAIL = "PASS", "FAIL"
 _results: list[tuple[str, str, str, str]] = []  # (usecase, backend, status, detail)
@@ -265,17 +265,17 @@ def uc_continuation_windows_logic() -> None:
            f"windows={windows} note_events={note_events} header={r.headers.get('CRP-Continuation-Windows')}")
 
 
-def _load_kimi_key() -> str:
-    key = os.environ.get("MOONSHOT_API_KEY", "").strip()
+def _load_hosted_key() -> str:
+    key = os.environ.get("HOSTED_MODEL_API_KEY", "").strip()
     if key:
         return key
-    f = Path(__file__).resolve().parents[2] / "kimi_moonshot_api_key.txt"
+    f = Path(__file__).resolve().parents[2] / "hosted_model_api_key.txt"
     return f.read_text(encoding="utf-8").strip() if f.exists() else ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", choices=["local", "kimi", "logic"], default=None)
+    ap.add_argument("--only", choices=["local", "hosted", "logic"], default=None)
     args = ap.parse_args()
 
     print("=== CRP v5 — COMPLETE end-to-end use-case test ===")
@@ -295,13 +295,13 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"  local skipped: {exc}")
 
-    if args.only in (None, "kimi"):
-        key = _load_kimi_key()
+    if args.only in (None, "hosted"):
+        key = _load_hosted_key()
         if key:
-            run_backend(f"KIMI·{KIMI_MODEL}",
-                        make_model_call(KIMI_BASE, KIMI_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}))
+            run_backend(f"HOSTED·{HOSTED_MODEL}",
+                        make_model_call(HOSTED_BASE, HOSTED_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}))
         else:
-            print("  kimi skipped: no key")
+            print("  hosted skipped: no key")
 
     n_pass = sum(1 for *_, s, _ in ((*r,) for r in _results) if s == PASS)
     print(f"\n=== SUMMARY: {n_pass}/{len(_results)} passed ===")

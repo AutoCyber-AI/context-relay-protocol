@@ -6,7 +6,7 @@
 
 The SQB harness already supports tiered thresholds:
 
-- `frontier` — for Kimi-k2.6, GPT-4o, Claude 3.5+.
+- `frontier` — for hosted-k2.6, GPT-4o, Claude 3.5+.
 - `capable-local` — for 7–8B local models (e.g. Qwen2.5-7B, Llama 3.1 8B).
 - `small-local` — for ≤4B local models (e.g. Qwen3-4B, Gemma 3 270M).
 
@@ -30,7 +30,7 @@ Add a `--strict` flag to `examples/crp_demos/sqb_benchmark.py` that enables:
 
 ```python
 STRICT_GATE = {
-    "judges": ["kimi-k2.6", "gpt-4o", "claude-3-5-sonnet"],  # require 2/3 consensus
+    "judges": ["hosted-k2.6", "gpt-4o", "claude-3-5-sonnet"],  # require 2/3 consensus
     "pass_at_k": 3,
     "perturb": True,  # rephrase prompt and check answer consistency
     "symbolic_verify": True,  # check dates, numbers, counts
@@ -72,8 +72,8 @@ Instead of aggregate F1, require each reference fact to appear with ≥0.5 seman
 
 ## What the user needs to do
 
-- Provide API keys for at least two strong judge models (Kimi, OpenAI, Anthropic).
-- Run: `python examples/crp_demos/sqb_benchmark.py --mode kimi --strict`
+- Provide API keys for at least two strong judge models (e.g. a hosted frontier model, OpenAI, Anthropic).
+- Run: `python examples/crp_demos/sqb_benchmark.py --mode hosted --strict`
 - Budget: strict gate costs ~3–5x more tokens than the current gate.
 - Marketing claim: only say "passes the strict SQB gate" after `--strict` passes.
 

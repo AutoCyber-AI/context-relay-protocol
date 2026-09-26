@@ -719,7 +719,7 @@ def llm_judge(
     full_output: str,
     api_url: str,
     api_key: str,
-    model: str = "kimi-k2.6",
+    model: str = "hosted-k2.6",
     temperature: float = 1.0,
     extra_request_fields: dict | None = None,
 ) -> dict[str, Any]:
@@ -852,7 +852,7 @@ def save_results_json(
 
 
 # ---------------------------------------------------------------------------
-# Production runner — Kimi / any OpenAI-compatible API (SPEC-026 final gate)
+# Production runner — any OpenAI-compatible hosted API (SPEC-026 final gate)
 # ---------------------------------------------------------------------------
 
 
@@ -864,7 +864,7 @@ def run_production(
     verbose: bool = True,
     run_judge: bool = True,
     min_window_delay: float = 25.0,  # seconds between windows — respects free-tier 3 RPM
-    temperature: float = 1.0,  # kimi-k2.6 only accepts temperature=1; other models accept 0-2
+    temperature: float = 1.0,  # hosted-k2.6 only accepts temperature=1; other models accept 0-2
     extra_request_fields: dict | None = None,  # extra JSON fields merged into each request body
     profile: str = "frontier",
 ) -> SQBSuiteResult:
@@ -1005,7 +1005,7 @@ def run_production(
                 else:
                     raise last_err or RuntimeError("All retry attempts exhausted")
                 window_output = resp_obj.json()["choices"][0]["message"].get("content") or ""  # type: ignore[union-attr]
-                # kimi-k2.6 thinking mode: if content is None/empty, fall back to reasoning_content
+                # hosted-k2.6 thinking mode: if content is None/empty, fall back to reasoning_content
                 if not window_output:
                     window_output = resp_obj.json()["choices"][0]["message"].get("reasoning_content") or "[empty response]"  # type: ignore[union-attr]
                 if window_output.strip() in ("", "[empty response]"):
@@ -1060,7 +1060,7 @@ def run_production(
                 )
             results.append(w)
 
-            # Rate-limit courtesy delay between windows (free-tier Kimi: ~3 RPM)
+            # Rate-limit courtesy delay between windows (free-tier hosted API: ~3 RPM)
             if win_num < tc.windows and min_window_delay > 0:
                 if verbose:
                     print(f"    (waiting {min_window_delay:.0f}s before next window…)")
@@ -1108,28 +1108,28 @@ def run_production(
     return suite
 
 
-def run_kimi(
+def run_hosted(
     api_key: str,
-    model: str = "kimi-k2.6",
+    model: str = "hosted-k2.6",
     verbose: bool = True,
     min_window_delay: float = 25.0,
     profile: str = "frontier",
 ) -> SQBSuiteResult:
-    """Run the SPEC-026 final gate benchmark against Kimi's production API.
+    """Run the SPEC-026 final gate benchmark against a hosted production API.
 
-    Uses kimi-k2.6 for both generation and LLM-as-judge scoring.
-    Base URL: https://api.moonshot.ai/v1 (OpenAI-compatible).
-    kimi-k2.6 thinking mode disabled via temperature=0.6 (required by API when disabling thinking).
+    Uses hosted-k2.6 for both generation and LLM-as-judge scoring.
+    Base URL: https://api.hosted-frontier.example/v1 (OpenAI-compatible).
+    hosted-k2.6 thinking mode disabled via temperature=0.6 (required by API when disabling thinking).
     """
     return run_production(
-        api_url="https://api.moonshot.ai/v1",
+        api_url="https://api.hosted-frontier.example/v1",
         api_key=api_key,
         model=model,
         max_tokens_per_window=2048,
         verbose=verbose,
         run_judge=True,
         min_window_delay=min_window_delay,
-        temperature=0.6,  # required by kimi-k2.6 API when disabling thinking.
+        temperature=0.6,  # required by hosted-k2.6 API when disabling thinking.
         extra_request_fields={"thinking": {"type": "disabled"}},
         profile=profile,
     )
@@ -1209,9 +1209,9 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        choices=["smoke", "full", "kimi", "compare"],
+        choices=["smoke", "full", "hosted", "compare"],
         default="smoke",
-        help="smoke: no LLM; full: LM Studio; kimi: Kimi production API; compare: v3 vs v4",
+        help="smoke: no LLM; full: LM Studio; hosted: hosted production API; compare: v3 vs v4",
     )
     parser.add_argument(
         "--lm-url",
@@ -1230,14 +1230,14 @@ def _parse_args() -> argparse.Namespace:
         help="Capability-profile gate thresholds: frontier (strict), capable-local (7-8B), small-local (<=4B)",
     )
     parser.add_argument(
-        "--kimi-key",
-        default=os.environ.get("MOONSHOT_API_KEY", ""),
-        help="Kimi / Moonshot API key (or set MOONSHOT_API_KEY env var)",
+        "--hosted-key",
+        default=os.environ.get("HOSTED_MODEL_API_KEY", ""),
+        help="hosted-model API key (or set HOSTED_MODEL_API_KEY env var)",
     )
     parser.add_argument(
-        "--kimi-model",
-        default="kimi-k2.6",
-        help="Kimi model to use (default: kimi-k2.6)",
+        "--hosted-model",
+        default="hosted-k2.6",
+        help="hosted model to use (default: hosted-k2.6)",
     )
     parser.add_argument(
         "--save-results",
@@ -1269,33 +1269,33 @@ def main() -> int:
             profile=args.profile,
             verbose=verbose,
         )
-    elif args.mode == "kimi":
-        api_key = args.kimi_key
+    elif args.mode == "hosted":
+        api_key = args.hosted_key
         if not api_key:
             print(
-                "ERROR: Kimi API key required. "
-                "Pass --kimi-key KEY or set MOONSHOT_API_KEY environment variable."
+                "ERROR: hosted API key required. "
+                "Pass --hosted-key KEY or set HOSTED_MODEL_API_KEY environment variable."
             )
             return 1
-        result = run_kimi(
+        result = run_hosted(
             api_key=api_key,
-            model=args.kimi_model,
+            model=args.hosted_model,
             verbose=verbose,
             min_window_delay=args.window_delay,
             profile=args.profile,
         )
     else:
-        # compare: smoke (proxy v3 baseline) followed by kimi (v4 production)
+        # compare: smoke (proxy v3 baseline) followed by hosted (v4 production)
         if verbose:
-            print("=== Comparison mode: smoke (v3 proxy) vs Kimi (v4 production) ===")
+            print("=== Comparison mode: smoke (v3 proxy) vs hosted (v4 production) ===")
         run_smoke(profile=args.profile, verbose=verbose)
-        api_key = args.kimi_key
+        api_key = args.hosted_key
         if not api_key:
-            print("ERROR: --kimi-key required for compare mode")
+            print("ERROR: --hosted-key required for compare mode")
             return 1
-        result = run_kimi(
+        result = run_hosted(
             api_key=api_key,
-            model=args.kimi_model,
+            model=args.hosted_model,
             verbose=verbose,
             min_window_delay=args.window_delay,
             profile=args.profile,
@@ -1308,12 +1308,12 @@ def main() -> int:
             args.save_results,
             meta={
                 "mode": args.mode,
-                "model": args.lm_model or getattr(args, 'kimi_model', 'local'),
+                "model": args.lm_model or getattr(args, 'hosted_model', 'local'),
                 "profile": args.profile,
             },
         )
         print(f"\n  Results saved → {out_path}")
-    elif args.mode in ("kimi", "compare"):
+    elif args.mode in ("hosted", "compare"):
         # Auto-save for production runs with timestamp
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         auto_path = os.path.join("sqb_results", f"sqb_{args.mode}_{ts}.json")
@@ -1322,7 +1322,7 @@ def main() -> int:
             auto_path,
             meta={
                 "mode": args.mode,
-                "model": getattr(args, 'kimi_model', 'local'),
+                "model": getattr(args, 'hosted_model', 'local'),
                 "profile": args.profile,
             },
         )

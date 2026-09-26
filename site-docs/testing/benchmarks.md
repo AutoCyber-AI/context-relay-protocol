@@ -167,14 +167,14 @@ to close on local models. Re-run it yourself:
 > n-gram repetition guard that retries a window once and then stops rather than
 > padding). Reproduce with `python examples/crp_demos/sqb_positioned.py`.
 
-| Backend | Windows | Mean factual F1 | Mean 4-gram repetition | Mean judge (Kimi) |
+| Backend | Windows | Mean factual F1 | Mean 4-gram repetition | Mean judge (hosted) |
 |---|---|---|---|---|
-| **Kimi (`kimi-k2.6`, frontier)** | 10 | 0.332 | **3.66%** | 6.73/10 |
+| **Hosted frontier (`hosted-k2.6`)** | 10 | 0.332 | **3.66%** | 6.73/10 |
 | **Local 8B (`meta-llama-3.1-8b-instruct`)** | 6 | 0.531 | **20.58%** | n/a (judge rate-limited) |
 
 <small>All 3 SQB cases (technical, regulatory, multi-hop), full dataset — no cases
-pending. The judge column shows `n/a` because the Kimi judge API returned `0.0` for
-every one of the 3 calls in this run, immediately after the Kimi-backend run above
+pending. The judge column shows `n/a` because the hosted judge API returned `0.0` for
+every one of the 3 calls in this run, immediately after the hosted-backend run above
 had already exhausted the same rate-limited quota; a `0.0` score across an *entire*
 run (rather than isolated low scores) is a quota signal, not a genuine quality
 verdict, so it is reported as not-obtained rather than as a real 0/10.</small>
@@ -187,12 +187,12 @@ verdict, so it is reported as not-obtained rather than as a real 0/10.</small>
 | sqb-002 (regulatory) | 2 751 | 0.88 | 0.282 | 17.79% | 0.40 |
 | sqb-003 (multi-hop) | 2 967 | 0.80 | 0.471 | 28.44% | 0.00 |
 
-**Reading it honestly — does the local model reach Kimi's repetition level?** **Not
+**Reading it honestly — does the local model reach the hosted model's repetition level?** **Not
 yet.** The anti-repetition mechanism (covered-section TOC + n-gram retry guard) is
 the *same code path* for both backends and measurably improved the naive-harness
 baseline (which spiked to 15–30% on individual windows) into a **consistently low
-3.66% mean on Kimi**. On the local 8B, mean repetition across all 3 cases sits at
-**20.58%** — roughly 5–6× Kimi's rate, and worst on the multi-hop case (28.44%),
+3.66% mean on the hosted model**. On the local 8B, mean repetition across all 3 cases sits at
+**20.58%** — roughly 5–6× the hosted model's rate, and worst on the multi-hop case (28.44%),
 which mirrors the same case's **0.00 topic coverage** in the naive-harness table
 above: multi-hop reasoning is consistently the local 8B's weakest domain across both
 harnesses, not just this one. This is an honest, model-capability finding, not a

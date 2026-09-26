@@ -11,13 +11,13 @@ It closes two gaps:
   1. "Have we run SQB on the positioned loop?" — yes, here.
   2. "Does the continuation anti-repetition fix work?" — measured by ``repetition_rate``.
 
-Runs on the local SLM and Kimi. Kimi judges usefulness (Gate 5) too.
+Runs on the local SLM and a hosted model. The hosted model judges usefulness (Gate 5) too.
 
 Run:
-    python examples/crp_demos/sqb_positioned.py                 # local + kimi
+    python examples/crp_demos/sqb_positioned.py                 # local + hosted
     python examples/crp_demos/sqb_positioned.py --only local
 
-Kimi key: MOONSHOT_API_KEY env or kimi_moonshot_api_key.txt (never printed).
+Hosted-model key: HOSTED_MODEL_API_KEY env or hosted_model_api_key.txt (never printed).
 """
 
 from __future__ import annotations
@@ -48,8 +48,8 @@ from examples.crp_demos.sqb_benchmark import (  # noqa: E402
 
 LOCAL_BASE = os.environ.get("CRP_LLM_BASE", "http://192.168.0.6:1234/v1")
 LOCAL_MODEL = os.environ.get("CRP_LLM_MODEL", "meta-llama-3.1-8b-instruct")
-KIMI_BASE = "https://api.moonshot.ai/v1"
-KIMI_MODEL = "kimi-k2.6"
+HOSTED_BASE = "https://api.hosted-frontier.example/v1"
+HOSTED_MODEL = "hosted-k2.6"
 
 
 def make_model_call(base: str, model: str, api_key: str | None, temperature: float, extra: dict | None = None) -> Any:
@@ -88,7 +88,7 @@ def run_backend(name: str, mc: Any, judge_key: str | None, judge_fields: dict | 
         cov = required_topic_coverage(out, tc.required_topics)
         judge = 0.0
         if judge_key:
-            j = llm_judge(tc, out, api_url=KIMI_BASE, api_key=judge_key, model=KIMI_MODEL,
+            j = llm_judge(tc, out, api_url=HOSTED_BASE, api_key=judge_key, model=HOSTED_MODEL,
                           temperature=0.6, extra_request_fields=judge_fields)
             judge = j.get("mean_score", 0.0)
         rows.append({"case": tc.case_id, "domain": tc.domain, "words": len(out.split()),
@@ -106,23 +106,23 @@ def run_backend(name: str, mc: Any, judge_key: str | None, judge_fields: dict | 
             "mean_judge": mean_judge, "rows": rows}
 
 
-def _load_kimi_key() -> str:
-    key = os.environ.get("MOONSHOT_API_KEY", "").strip()
+def _load_hosted_key() -> str:
+    key = os.environ.get("HOSTED_MODEL_API_KEY", "").strip()
     if key:
         return key
-    f = Path(__file__).resolve().parents[2] / "kimi_moonshot_api_key.txt"
+    f = Path(__file__).resolve().parents[2] / "hosted_model_api_key.txt"
     return f.read_text(encoding="utf-8").strip() if f.exists() else ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", choices=["local", "kimi"], default=None)
+    ap.add_argument("--only", choices=["local", "hosted"], default=None)
     ap.add_argument("--save", default="sqb_results/sqb_positioned.json")
     ap.add_argument("--windows", type=int, default=10,
                     help="max_continuation_windows per case (default 10; use 6 for a shorter run)")
     args = ap.parse_args()
 
-    key = _load_kimi_key()
+    key = _load_hosted_key()
     results = []
     if args.only in (None, "local"):
         try:
@@ -132,13 +132,13 @@ def main() -> int:
                            key or None, None, max_windows=args.windows))
         except Exception as exc:  # noqa: BLE001
             print(f"  local skipped: {exc}")
-    if args.only in (None, "kimi"):
+    if args.only in (None, "hosted"):
         if key:
-            results.append(run_backend(f"KIMI·{KIMI_MODEL}",
-                           make_model_call(KIMI_BASE, KIMI_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}),
+            results.append(run_backend(f"HOSTED·{HOSTED_MODEL}",
+                           make_model_call(HOSTED_BASE, HOSTED_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}),
                            key, {"thinking": {"type": "disabled"}}, max_windows=args.windows))
         else:
-            print("  kimi skipped: no key")
+            print("  hosted skipped: no key")
 
     if results:
         out = Path(args.save)

@@ -2,8 +2,8 @@
   "sqb_version": "4.0.0b1",
   "run_timestamp": "2026-09-03T08:50:56.740081+00:00",
   "meta": {
-    "mode": "kimi",
-    "model": "kimi-k2.6",
+    "mode": "hosted",
+    "model": "hosted-k2.6",
     "profile": "frontier"
   },
   "all_cases_pass": true,

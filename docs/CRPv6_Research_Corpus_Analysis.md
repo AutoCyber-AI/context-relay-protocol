@@ -1071,7 +1071,7 @@ From Part VI (Ch. 16–17), Ch. 37, and Appendix F:
 | Abstention / clarification | **PARTIAL** | `crp/clr/` (clarification loop) + `crp/security/clarify.py` + `should_clarify` in agent SDK; no coverage-vs-accuracy-on-attempted selective metrics |
 | Deterministic-first grader hierarchy | **PARTIAL** | VR uses deterministic symbolic verifiers before PRM; SQB judge has rubric criteria (`sqb_benchmark.py` `judge_criteria`) but no position-debias/human-calibration reporting |
 | Faithful narration (SPEC-056) | **IMPLEMENTED** | `crp/tel/faithful.py` (+ emitter/sse/report, AG-UI adapter) |
-| SQB benchmark (SPEC-026 gate) | **IMPLEMENTED** | `examples/crp_demos/sqb_benchmark.py` (5 criteria incl. Factual F1 + LLM-judge usefulness), plus `sqb_positioned.py`, `sqb_kimi_judge.py` |
+| SQB benchmark (SPEC-026 gate) | **IMPLEMENTED** | `examples/crp_demos/sqb_benchmark.py` (5 criteria incl. Factual F1 + LLM-judge usefulness), plus `sqb_positioned.py`, `sqb_judge.py` |
 | Compliance evidence pack (Art. 55 adversarial record) | **PARTIAL** | `crp/security/compliance.py` (EU AI Act/ISO 42001) + audit chain exist; no red-team results to record, no eval-evidence pack |
 | Governed-vs-bare paired A/B | **PARTIAL** | `examples/crp_demos/positioned_benchmark.py`, `comparison_backend.py`, `sqb_positioned.py` compare positioned vs baseline; not McNemar-paired, no ASR arm, no latency-overhead reporting |
 | Online per-turn labeling → eval feedback | **PARTIAL** | `crp/qsr/harvest.py` harvests production routing examples; observability events exist; no failure-label → eval-set loop |

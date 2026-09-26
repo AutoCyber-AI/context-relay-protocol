@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-13
 **Scope:** CRP Comply + CRP Gateway production deployment health, security audit, and roadmap
-**Executed by:** Kimi Code CLI (afk mode)
+**Executed by:** AI coding assistant (afk mode)
 
 ---
 

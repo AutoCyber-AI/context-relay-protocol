@@ -1,6 +1,6 @@
 {
   "name": "@crprotocol/agent-console",
-  "version": "6.1.1",
+  "version": "6.1.3",
   "description": "CRP Agent Console — AG-UI + CRP governance transparency stream",
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 # Copyright © 2025 Constantinos Vidiniotis. All rights reserved.
 # Licensed under Elastic License 2.0 — see LICENSE.md for details.
-"""CRP v5 Positioned-Loop Benchmark — local SLM vs. Kimi (frontier).
+"""CRP v5 Positioned-Loop Benchmark — local SLM vs. hosted frontier model.
 
 Unlike the legacy SQB (a *naive* long-form continuation harness), this benchmark
 exercises the real CRP v5 positioned-tool-loop (`run_positioned`, SPEC-049/050):
@@ -10,7 +10,7 @@ window stays bounded regardless of catalogue size or session length.
 
 It runs the *same* agentic tasks on:
   • a local SLM via LM Studio (default meta-llama-3.1-8b-instruct), and
-  • Kimi (Moonshot, kimi-k2.6) — a frontier model,
+  • a hosted frontier model (hosted-k2.6),
 
 and reports, per model, the operation plan, the tools the protocol selected, the
 bounded frame-token count, observation count, completion, and whether the final
@@ -20,11 +20,11 @@ The point it proves: **identical governance + bounded-window contract on a 1-lap
 SLM and a frontier model** — positioning, not injection.
 
 Usage:
-    python examples/crp_demos/positioned_benchmark.py                 # local + kimi
+    python examples/crp_demos/positioned_benchmark.py                 # local + hosted
     python examples/crp_demos/positioned_benchmark.py --only local
-    python examples/crp_demos/positioned_benchmark.py --only kimi
+    python examples/crp_demos/positioned_benchmark.py --only hosted
 
-Kimi key: MOONSHOT_API_KEY env var or kimi_moonshot_api_key.txt (never printed).
+Hosted-model key: HOSTED_MODEL_API_KEY env var or hosted_model_api_key.txt (never printed).
 """
 
 from __future__ import annotations
@@ -45,8 +45,8 @@ from crp.tools import CapabilityExecutor, CapabilityProfile, ToolCapabilityFabri
 
 LOCAL_BASE = os.environ.get("CRP_LLM_BASE", "http://192.168.0.6:1234/v1")
 LOCAL_MODEL = os.environ.get("CRP_LLM_MODEL", "meta-llama-3.1-8b-instruct")
-KIMI_BASE = "https://api.moonshot.ai/v1"
-KIMI_MODEL = "kimi-k2.6"
+HOSTED_BASE = "https://api.hosted-frontier.example/v1"
+HOSTED_MODEL = "hosted-k2.6"
 
 
 # ── deterministic demo tools (same fabric the demo server uses) ─────────────
@@ -181,17 +181,17 @@ def run_backend(name: str, model_call: Any) -> dict[str, Any]:
     return {"backend": name, "model": None, "rows": rows, "correct": n_correct, "max_frame": max_frame}
 
 
-def _load_kimi_key() -> str:
-    key = os.environ.get("MOONSHOT_API_KEY", "").strip()
+def _load_hosted_key() -> str:
+    key = os.environ.get("HOSTED_MODEL_API_KEY", "").strip()
     if key:
         return key
-    f = Path(__file__).resolve().parents[2] / "kimi_moonshot_api_key.txt"
+    f = Path(__file__).resolve().parents[2] / "hosted_model_api_key.txt"
     return f.read_text(encoding="utf-8").strip() if f.exists() else ""
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="CRP v5 positioned-loop benchmark (local vs Kimi)")
-    ap.add_argument("--only", choices=["local", "kimi"], default=None)
+    ap = argparse.ArgumentParser(description="CRP v5 positioned-loop benchmark (local vs hosted)")
+    ap.add_argument("--only", choices=["local", "hosted"], default=None)
     ap.add_argument("--save", default="sqb_results/positioned_benchmark.json")
     args = ap.parse_args()
 
@@ -206,14 +206,14 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"  local backend skipped: {exc}")
 
-    if args.only in (None, "kimi"):
-        key = _load_kimi_key()
+    if args.only in (None, "hosted"):
+        key = _load_hosted_key()
         if not key:
-            print("  kimi backend skipped: no MOONSHOT_API_KEY / kimi_moonshot_api_key.txt")
+            print("  hosted backend skipped: no HOSTED_MODEL_API_KEY / hosted_model_api_key.txt")
         else:
-            mc = make_model_call(KIMI_BASE, KIMI_MODEL, key, extra={"thinking": {"type": "disabled"}}, temperature=0.6)
-            r = run_backend(f"KIMI · {KIMI_MODEL}", mc)
-            r["model"] = KIMI_MODEL
+            mc = make_model_call(HOSTED_BASE, HOSTED_MODEL, key, extra={"thinking": {"type": "disabled"}}, temperature=0.6)
+            r = run_backend(f"HOSTED · {HOSTED_MODEL}", mc)
+            r["model"] = HOSTED_MODEL
             results.append(r)
 
     if results:

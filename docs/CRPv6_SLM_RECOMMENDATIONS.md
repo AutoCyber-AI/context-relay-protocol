@@ -29,13 +29,13 @@ That means the **same 7–8B model** can reliably do work it could not do in a f
 
 | Tier | Params | Models tested | Best for | CRP profile |
 |------|--------|---------------|----------|-------------|
-| **Frontier** | — | `kimi-k2.6`, GPT-4o, Claude 3.5 Sonnet | Full SQB gate, compound tool calls, long reasoning | `frontier` |
+| **Frontier** | — | `hosted-k2.6`, GPT-4o, Claude 3.5 Sonnet | Full SQB gate, compound tool calls, long reasoning | `frontier` |
 | **Capable local** | 7–8B | `meta-llama-3.1-8b-instruct`, `qwen2.5-7b-instruct` | Single-purpose tool calls, short reasoning, on-device | `capable-local` |
 | **Small local** | ≤4B | `qwen3-4b`, `gemma-3-270m-it-qat` | Toy demos only today | `small-local` |
 
 ### What "works" means
 
-* **Frontier:** passes the full SQB benchmark (`examples/crp_demos/sqb_benchmark.py --mode kimi`) and handles compound prompts.
+* **Frontier:** passes the full SQB benchmark (`examples/crp_demos/sqb_benchmark.py --mode hosted`) and handles compound prompts.
 * **Capable local:** passes the harness end-to-end under the `capable-local` profile with relaxed thresholds.
 * **Small local:** currently fails structured tool calling with default prompts; needs tighter frames.
 
@@ -73,7 +73,7 @@ That means the **same 7–8B model** can reliably do work it could not do in a f
 
 ### 3.4 Frontier judge / gate model
 
-**`kimi-k2.6`**
+**`hosted-k2.6`**
 
 * **Why:** Proven to pass all five SQB gate criteria.
 * **Context:** 256K.

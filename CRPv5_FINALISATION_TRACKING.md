@@ -123,20 +123,20 @@ CRP makes **two distinct guarantees**, and it is important not to conflate them:
 2. **G1 — Taxonomy reconciliation** lands cleanly; existing tests stay green.
 3. **G2 — TCF + Operation State Machine** unit-tested; descriptor validates against `schemas/capability-descriptor.json`.
 4. **G3 — Live positioned loop** runs end-to-end on **meta-llama-3.1-8b-instruct** (LM Studio `192.168.0.6:1234`) for a multi-operation task, bounded window confirmed.
-5. **G4 — SQB re-run** (kimi-k2.6 judge): positioned ≥ baseline on factual F1 and usefulness.
+5. **G4 — SQB re-run** (hosted-k2.6 judge): positioned ≥ baseline on factual F1 and usefulness.
 6. **G5 — Scale test:** ≥ 100 tool calls in one session with **flat** working-set size (resource telemetry recorded).
 7. **G6 — Demo:** a visual demo that conveys the positioned tool loop, the operation state machine, CSO growth, and flat resource usage.
 
 ---
 
-## 7. Testing & demo plan (kimi + local SLM + visuals)
+## 7. Testing & demo plan (hosted + local SLM + visuals)
 
 **Test bench (confirmed reachable):** LM Studio `http://192.168.0.6:1234/v1`
 - `meta-llama-3.1-8b-instruct` — capable-local target
 - `qwen2.5-7b-instruct`, `qwen3-4b`, `mergebench-gemma-2-2b-it` — profile spread
 - `gemma-3-270m-it-qat` — small-local extreme
 - `text-embedding-nomic-embed-text-v1.5` — TCF semantic retrieval
-- **Judge:** kimi-k2.6 (`api.moonshot.ai/v1`, `temperature=0.6`, `thinking:{type:disabled}`) — key read from local file, **never printed**.
+- **Judge:** hosted-k2.6 (`api.hosted-frontier.example/v1`, `temperature=0.6`, `thinking:{type:disabled}`) — key read from local file, **never printed**.
 
 **Tests to build:**
 - `tests/test_tcf.py` — descriptor validation, retrieval, policy pre-filter, top-K by profile.
@@ -164,16 +164,16 @@ CRP makes **two distinct guarantees**, and it is important not to conflate them:
 ## 9. Realised state audit (2026-07-01) — the honest answer
 
 > **What is really the state of CRPv5?** The positioned agentic loop is **real and
-> working for single- and multi-turn requests**, proven end-to-end on Kimi (frontier)
+> working for single- and multi-turn requests**, proven end-to-end on a hosted frontier model
 > and the local 8B. It is **not yet** wired to the v4 deep-context/continuation
 > subsystems. Below is the audited truth.
 
-### Working (verified end-to-end, local 8B + Kimi + logic)
+### Working (verified end-to-end, local 8B + hosted + logic)
 | Use case | Status | Evidence |
 |----------|--------|----------|
-| Tool-call agentic execution | ✅ working | `run_positioned` + TCF + executor; e2e local 3/3, Kimi 3/3 |
+| Tool-call agentic execution | ✅ working | `run_positioned` + TCF + executor; e2e local 3/3, hosted 3/3 |
 | Context positioning (in-turn) | ✅ working | CSO `to_prompt_context` carries facts across operations; e2e PASS |
-| **Multi-turn state relay** | ✅ **NEW, working** | `prior_cso` param seeds established_facts/observations/decisions; window advances; e2e Kimi PASS + regression test `test_multi_turn_state_relay` |
+| **Multi-turn state relay** | ✅ **NEW, working** | `prior_cso` param seeds established_facts/observations/decisions; window advances; e2e hosted PASS + regression test `test_multi_turn_state_relay` |
 | CLARIFY / human-in-the-loop | ✅ working | `resolve_clarification`; e2e PASS |
 | Preventive oversight halt | ✅ working | `_preventive_check` + oversight set; e2e PASS |
 | Resource-governed profile | ✅ working | `ResourceGovernor.plan`; e2e PASS |
@@ -192,7 +192,7 @@ The loop is a **real agentic executor with proven multi-turn continuity and boun
 windows**. The remaining gaps are *depth* enhancements (auto-retrieval, output
 continuation, DPE gating) — valuable next, but the core "positioning + multi-turn +
 context carry-forward" is done and tested. Test harnesses: `examples/crp_demos/e2e_v5_test.py`
-(every use case, local+Kimi+logic) and `examples/crp_demos/positioned_benchmark.py`.
+(every use case, local+hosted+logic) and `examples/crp_demos/positioned_benchmark.py`.
 
 ---
 

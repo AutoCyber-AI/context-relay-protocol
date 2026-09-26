@@ -45,7 +45,7 @@ AutoCyber AI Agentic AI research with CRP/
 # Local-only training artifacts and model caches
 model_artifacts/
 checkpoints/
-.kimi/
+.[k]imi/
 .venv*/
 .venv-train/
 
@@ -61,7 +61,6 @@ encrypted-*.pem
 .env.staging
 .env.development
 secrets/
-kimi_moonshot_api_key.txt
 *_api_key.txt
 
 # Dev scratch files (root-level only)

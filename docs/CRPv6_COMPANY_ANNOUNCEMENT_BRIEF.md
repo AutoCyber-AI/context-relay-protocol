@@ -41,7 +41,7 @@ Use this section to anchor every claim in verifiable fact. Every bullet below ma
 | **Quality tiers + provenance** | `AgentResponse.crp.risk`, `.grounded`, `.chain_valid`, `.quality_tier` | `examples/crp_demos/live_llm_vs_crp.py` |
 | **Model-agnostic** | Adapters for OpenAI, Anthropic, Ollama, llama.cpp, LM Studio, custom | `crp/providers/` |
 | **Full test gate** | 3,291 non-live tests pass | `pytest tests/` |
-| **SQB benchmark** | All cases pass against Kimi-k2.6 | `examples/crp_demos/sqb_benchmark.py --mode kimi` |
+| **SQB benchmark** | All cases pass against hosted-k2.6 | `examples/crp_demos/sqb_benchmark.py --mode hosted` |
 
 ---
 

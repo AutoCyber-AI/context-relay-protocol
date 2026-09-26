@@ -85,7 +85,7 @@ Every CRP run can output a Markdown narrative, a JSON event log, or a live web c
 ## Live proof (not a mock)
 
 - `examples/crp_demos/unified_video_demo.py` runs a real LM Studio model and a live Open-Meteo API call side-by-side with a raw LLM call. Raw LLM emits tool JSON and does nothing; CRP executes the tool and returns live weather.
-- `examples/crp_demos/sqb_benchmark.py --mode kimi` passes all three Semantic Quality Benchmark cases against the Kimi API.
+- `examples/crp_demos/sqb_benchmark.py --mode hosted` passes all three Semantic Quality Benchmark cases against the hosted API.
 - The full non-live regression suite passes: **3277 passed, 1 skipped**.
 
 ---
@@ -99,7 +99,7 @@ Every CRP run can output a Markdown narrative, a JSON event log, or a live web c
 - Tools are registered from plain Python functions and executed live.
 - Presets load and shape reasoning.
 - The transparency stream, narrative builder, and embedded console work.
-- The SQB gate passes with Kimi.
+- The SQB gate passes with the hosted model.
 - The full non-live test suite passes.
 
 **What remains before a hard marketing push:**

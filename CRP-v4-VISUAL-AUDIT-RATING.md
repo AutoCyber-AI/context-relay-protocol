@@ -162,4 +162,4 @@
 
 ---
 
-*Rating by Kimi Code CLI, 2026-06-05. Both products have been materially improved but require the remaining items above to reach true 10/10 accessibility and visual excellence.*
+*Rating by AI coding assistant, 2026-06-05. Both products have been materially improved but require the remaining items above to reach true 10/10 accessibility and visual excellence.*

@@ -1,7 +1,7 @@
 {
   "backends": [
     {
-      "backend": "KIMI\u00b7kimi-k2.6",
+      "backend": "HOSTED\u00b7hosted-k2.6",
       "mean_f1": 0.332,
       "mean_repetition": 0.0366,
       "mean_judge": 6.73,

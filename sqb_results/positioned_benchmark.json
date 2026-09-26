@@ -1,8 +1,8 @@
 {
   "backends": [
     {
-      "backend": "KIMI \u00b7 kimi-k2.6",
-      "model": "kimi-k2.6",
+      "backend": "HOSTED \u00b7 hosted-k2.6",
+      "model": "hosted-k2.6",
       "rows": [
         {
           "task": 1,

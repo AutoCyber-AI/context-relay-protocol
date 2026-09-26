@@ -103,7 +103,7 @@ CRP is deliberately a **thin, neutral layer on plain HTTP**, not a runtime or a 
   per-operation window even with the full catalogue available, typed state carried
   forward, full event-stream = audit.
 - **Model-agnostic, measured today:** the *same* positioned agentic tasks run on a
-  **local 8B** and on **Kimi (frontier)** — **3/3 correct on both**, with the working
+  **local 8B** and on a **hosted frontier model** — **3/3 correct on both**, with the working
   window held to a **≤ 206-token** per-operation frame on both. Positioning, not
   injection: identical governance + bounded-window contract from laptop to frontier.
 - **SQB (continuation quality), local 8B:** cumulative **factual recall holds flat

@@ -29,7 +29,7 @@
 | Path | What it is | Best for |
 |---|---|---|
 | `docs/CRPv6_VIDEO_STORYBOARD.md` | 120-second shot list with voiceover and captions. | Planning an edited video. |
-| `docs/CRPv6_LIVE_PROOF_SUMMARY.md` | Honest results from LM Studio and Kimi SQB runs. | Evidence slide / investor appendix. |
+| `docs/CRPv6_LIVE_PROOF_SUMMARY.md` | Honest results from LM Studio and hosted-model SQB runs. | Evidence slide / investor appendix. |
 | `docs/CRPv6_COMPANY_ANNOUNCEMENT.md` | Press/investor announcement draft. | Website copy, press release, pitch intro. |
 | `docs/CRPv6_AGENTIC_ECOSYSTEM_CAPABILITIES.md` | Every user-configurable surface. | Deep-dive on what users can set and trust. |
 | `docs/CRPv6_TOOLS_AND_MCP.md` | How tools connect, with and without MCP. | Answering "is this MCP?" / integration FAQ. |
@@ -61,8 +61,8 @@
 
 | Path | What it is | Best for |
 |---|---|---|
-| `sqb_results/sqb_kimi_20260829T113111Z.json` | Full Kimi SQB run proving all five gate criteria pass. | "We proved it" slide. |
-| `sqb_results/quality_benchmark.json` | Prior Kimi quality benchmark (8.31/10). | Quality score slide. |
+| `sqb_results/sqb_hosted_20260829T113111Z.json` | Full hosted-model SQB run proving all five gate criteria pass. | "We proved it" slide. |
+| `sqb_results/quality_benchmark.json` | Prior hosted-model quality benchmark (8.31/10). | Quality score slide. |
 
 ---
 

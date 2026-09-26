@@ -5,16 +5,16 @@
 The e2e tests measure *correctness* (right answer) and *bounded windows*. This
 benchmark measures *response quality*: it runs the real positioned loop on a set of
 tasks (single-op, multi-op, multi-turn, and long continuation) on the local SLM and
-Kimi, then scores each assembled output with a frontier judge (Kimi) on a rubric
+a hosted model, then scores each assembled output with a frontier judge (hosted model) on a rubric
 (usefulness, coherence, completeness, grounding) 1–10.
 
 This is the SQB Gate-5 (usefulness) dimension applied to the v5 positioned loop.
 
 Run:
-    python examples/crp_demos/quality_benchmark.py                 # local + kimi
+    python examples/crp_demos/quality_benchmark.py                 # local + hosted
     python examples/crp_demos/quality_benchmark.py --only local
 
-Kimi key: MOONSHOT_API_KEY env or kimi_moonshot_api_key.txt (never printed).
+Hosted-model key: HOSTED_MODEL_API_KEY env or hosted_model_api_key.txt (never printed).
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ from crp.tools import CapabilityExecutor, CapabilityProfile, ToolCapabilityFabri
 
 LOCAL_BASE = os.environ.get("CRP_LLM_BASE", "http://192.168.0.6:1234/v1")
 LOCAL_MODEL = os.environ.get("CRP_LLM_MODEL", "meta-llama-3.1-8b-instruct")
-KIMI_BASE = "https://api.moonshot.ai/v1"
-KIMI_MODEL = "kimi-k2.6"
+HOSTED_BASE = "https://api.hosted-frontier.example/v1"
+HOSTED_MODEL = "hosted-k2.6"
 
 _PORTS = {"22": "SSH", "80": "HTTP", "443": "HTTPS", "3306": "MySQL"}
 
@@ -93,7 +93,7 @@ _JUDGE_RUBRIC = [
 ]
 
 
-def kimi_judge(task: str, output: str, api_key: str) -> dict[str, Any]:
+def hosted_judge(task: str, output: str, api_key: str) -> dict[str, Any]:
     crit = "\n".join(f"  {i+1}. {c}" for i, c in enumerate(_JUDGE_RUBRIC))
     prompt = (
         f"You are a precise evaluator. Rate the RESPONSE to the TASK on each criterion "
@@ -103,9 +103,9 @@ def kimi_judge(task: str, output: str, api_key: str) -> dict[str, Any]:
     )
     for attempt in range(4):
         try:
-            r = httpx.post(f"{KIMI_BASE}/chat/completions",
+            r = httpx.post(f"{HOSTED_BASE}/chat/completions",
                            headers={"Authorization": f"Bearer {api_key}"},
-                           json={"model": KIMI_MODEL, "messages": [{"role": "user", "content": prompt}],
+                           json={"model": HOSTED_MODEL, "messages": [{"role": "user", "content": prompt}],
                                  "temperature": 0.6, "max_tokens": 500,
                                  "response_format": {"type": "json_object"},
                                  "thinking": {"type": "disabled"}}, timeout=90)
@@ -162,7 +162,7 @@ def run_backend(name: str, mc: Any, judge_key: str) -> dict[str, Any]:
     for label, fn in TASKS:
         t0 = time.time()
         task, output = fn(mc)
-        j = kimi_judge(task, output, judge_key)
+        j = hosted_judge(task, output, judge_key)
         rows.append({"task": label, "quality": j["mean"], "words": len(output.split()), "notes": j["notes"]})
         print(f"  {label:<18} quality={j['mean']}/10  words={len(output.split())}  ({time.time()-t0:.0f}s)  {j['notes']}")
     scores = [r["quality"] for r in rows if r["quality"] > 0]
@@ -171,23 +171,23 @@ def run_backend(name: str, mc: Any, judge_key: str) -> dict[str, Any]:
     return {"backend": name, "mean_quality": mean, "rows": rows}
 
 
-def _load_kimi_key() -> str:
-    key = os.environ.get("MOONSHOT_API_KEY", "").strip()
+def _load_hosted_key() -> str:
+    key = os.environ.get("HOSTED_MODEL_API_KEY", "").strip()
     if key:
         return key
-    f = Path(__file__).resolve().parents[2] / "kimi_moonshot_api_key.txt"
+    f = Path(__file__).resolve().parents[2] / "hosted_model_api_key.txt"
     return f.read_text(encoding="utf-8").strip() if f.exists() else ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", choices=["local", "kimi"], default=None)
+    ap.add_argument("--only", choices=["local", "hosted"], default=None)
     ap.add_argument("--save", default="sqb_results/quality_benchmark.json")
     args = ap.parse_args()
 
-    key = _load_kimi_key()
+    key = _load_hosted_key()
     if not key:
-        print("Kimi judge key required (MOONSHOT_API_KEY or kimi_moonshot_api_key.txt)")
+        print("hosted judge key required (HOSTED_MODEL_API_KEY or hosted_model_api_key.txt)")
         return 1
 
     results = []
@@ -197,15 +197,15 @@ def main() -> int:
             results.append(run_backend(f"LOCAL·{LOCAL_MODEL}", make_model_call(LOCAL_BASE, LOCAL_MODEL, None, 0.2), key))
         except Exception as exc:  # noqa: BLE001
             print(f"  local skipped: {exc}")
-    if args.only in (None, "kimi"):
-        results.append(run_backend(f"KIMI·{KIMI_MODEL}",
-                       make_model_call(KIMI_BASE, KIMI_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}), key))
+    if args.only in (None, "hosted"):
+        results.append(run_backend(f"HOSTED·{HOSTED_MODEL}",
+                       make_model_call(HOSTED_BASE, HOSTED_MODEL, key, 0.6, {"thinking": {"type": "disabled"}}), key))
 
     if results:
         out = Path(args.save)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps({"backends": results}, indent=2), encoding="utf-8")
-        print("\n=== QUALITY SUMMARY (Kimi-judged, 1–10) ===")
+        print("\n=== QUALITY SUMMARY (hosted-judge, 1–10) ===")
         for r in results:
             print(f"  {r['backend']}: mean {r['mean_quality']}/10")
         print(f"  saved → {out}")

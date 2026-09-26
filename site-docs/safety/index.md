@@ -1,7 +1,7 @@
 ---
 hide:
   - toc
-seo_title: "AI Safety & Governance — The CRP Safety Case"
+seo_title: "AI Safety & Governance - The CRP Safety Case"
 description: "The CRP safety case: how the Decision Provenance Engine, Safety Policy, and audit chain make LLM outputs safer and accountable."
 ---
 

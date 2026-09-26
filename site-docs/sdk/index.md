@@ -1,5 +1,5 @@
 ---
-seo_title: "CRP SDK Reference — Context Management, Safety & Tools"
+seo_title: "CRP SDK Reference - Context Management, Safety & Tools"
 description: "SDK reference for CRP: context management, AI safety, AIUC-1 aligned controls, tools and agents, configuration, async usage, and errors."
 ---
 
@@ -10,7 +10,7 @@ The CRP SDK is the developer-facing surface for the entire Context Relay Protoco
 - **Level 0 - Governance:** drop-in replacement for OpenAI/Anthropic clients; every call becomes governed, risk-scored, and audited.
 - **Level 1 - Quality:** give CRP knowledge, then ask questions with grounded, cited answers.
 - **Level 2 - Control:** depth, tools, safety profiles, reasoning transparency, and output shaping.
-- **Level 2+ - Agent SDK (SPEC-059):** declarative agents with `crp.Agent` — declare tools + policy + model and let the protocol run the positioned loop.
+- **Level 2+ - Agent SDK (SPEC-059):** declarative agents with `crp.Agent` - declare tools + policy + model and let the protocol run the positioned loop.
 - **Level 3 - Infrastructure:** raw protocol headers, audit export, compliance evidence, conformance tests, amplification, and multi-agent safety budgets.
 
 This reference is the canonical map from installation to every public capability. For task-oriented tutorials, see the [SDK Guide](../guides/sdk.md) and [Quickstart](../getting-started/quickstart.md).

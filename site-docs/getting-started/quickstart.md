@@ -1,5 +1,5 @@
 ---
-seo_title: CRP Quick Start — Governed AI in 5 Minutes
+seo_title: CRP Quick Start - Governed AI in 5 Minutes
 description: Get started with CRP in 5 minutes. Install the SDK, make your first governed AI call, and inspect safety headers.
 ---
 

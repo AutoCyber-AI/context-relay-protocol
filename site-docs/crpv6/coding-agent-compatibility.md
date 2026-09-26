@@ -1,6 +1,6 @@
-# CRPv6 — Coding Agent Compatibility
+# CRPv6 - Coding Agent Compatibility
 
-CRPv6 is built to power coding agents: agents that read, understand, modify, and reason about codebases. This requires more than text chunking — it requires a structured understanding of code.
+CRPv6 is built to power coding agents: agents that read, understand, modify, and reason about codebases. This requires more than text chunking - it requires a structured understanding of code.
 
 ## What a coding agent needs
 
@@ -16,11 +16,11 @@ CRPv6 is built to power coding agents: agents that read, understand, modify, and
 
 ## How CRP models a codebase
 
-1. **Ingest** — parse files into AST-aware chunks.
-2. **Extract** — pull out functions, classes, imports, calls, types, docstrings.
-3. **Relate** — build a fact graph: `def A` calls `def B`, `class C` imports `module D`.
-4. **Query** — answer "where is X used?", "what breaks if I change Y?", "summarize this module".
-5. **Act** — generate edits through capabilities, verify with tests/linter, update CKF.
+1. **Ingest** - parse files into AST-aware chunks.
+2. **Extract** - pull out functions, classes, imports, calls, types, docstrings.
+3. **Relate** - build a fact graph: `def A` calls `def B`, `class C` imports `module D`.
+4. **Query** - answer "where is X used?", "what breaks if I change Y?", "summarize this module".
+5. **Act** - generate edits through capabilities, verify with tests/linter, update CKF.
 
 ## Key components to build
 

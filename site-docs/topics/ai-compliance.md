@@ -1,5 +1,5 @@
 ---
-seo_title: AI Compliance — EU AI Act, ISO 42001, NIST AI RMF & GDPR Evidence
+seo_title: AI Compliance - EU AI Act, ISO 42001, NIST AI RMF & GDPR Evidence
 description: Generate automated AI compliance evidence for EU AI Act, ISO/IEC 42001, NIST AI RMF, and GDPR with CRP's runtime audit chain and compliance headers.
 tags:
   - ai-compliance
@@ -58,13 +58,13 @@ management, regulatory compliance), and Data & Privacy (input-data policy).
 
 CRP addresses **33 of 35 technical controls** across EU AI Act Articles 6–17:
 
-- Article 9 — Risk management system
-- Article 10 — Data and data governance
-- Article 13 — Transparency and provision of information
-- Article 14 — Human oversight
-- Article 15 — Accuracy, robustness, and cybersecurity
-- Article 16 — Quality management system
-- Article 17 — Record-keeping and logging
+- Article 9 - Risk management system
+- Article 10 - Data and data governance
+- Article 13 - Transparency and provision of information
+- Article 14 - Human oversight
+- Article 15 - Accuracy, robustness, and cybersecurity
+- Article 16 - Quality management system
+- Article 17 - Record-keeping and logging
 
 See the full mapping in [CRP-SPEC-010 Regulatory Controls Mapping](../spec/CRP-SPEC-010-regulatory-mapping.md).
 

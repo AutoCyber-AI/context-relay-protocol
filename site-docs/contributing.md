@@ -1,5 +1,5 @@
 ---
-seo_title: "Contribute to CRP — Protocol, SDK, Docs & Standards"
+seo_title: "Contribute to CRP - Protocol, SDK, Docs & Standards"
 description: "How to contribute to the Context Relay Protocol: code, documentation, specifications, and standards feedback."
 ---
 

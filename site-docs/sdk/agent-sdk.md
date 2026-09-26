@@ -1,5 +1,5 @@
 ---
-seo_title: "CRP Agent SDK — declarative agents with tools, policy, and SLM-first execution"
+seo_title: "CRP Agent SDK - declarative agents with tools, policy, and SLM-first execution"
 description: "Build governed, tool-using agents with crp.Agent. Declare Python tools + policy + model and let CRPv6 run the positioned loop. Works with local SLMs, OpenAI, Anthropic, and the CRP Gateway."
 ---
 
@@ -181,9 +181,9 @@ Additional reference templates are in `examples/templates/`:
 
 ## Reference
 
-- SPEC-049 — SLM Agent Execution Profile
-- SPEC-050 — Tool Capability Fabric & Operation Orchestration
-- SPEC-059 — Agent SDK
+- SPEC-049 - SLM Agent Execution Profile
+- SPEC-050 - Tool Capability Fabric & Operation Orchestration
+- SPEC-059 - Agent SDK
 - `crp/agent_sdk/agent.py`
 - `crp/tools/capability_fabric.py`
 - `crp/stl/positioned.py`

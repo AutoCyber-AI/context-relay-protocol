@@ -1,5 +1,5 @@
 ---
-seo_title: "CRP Products — Gateway, Comply, Scan, Visualise & Scribe"
+seo_title: "CRP Products - Gateway, Comply, Scan, Visualise & Scribe"
 description: "Overview of CRP products: Gateway runtime, Comply evidence platform, Scan code scanner, Visualise, and Scribe."
 ---
 
@@ -29,7 +29,7 @@ becomes audit-ready evidence.
 
 **Context Relay Protocol™** powers production-ready products built on top of the
 core protocol. Every product leverages CRP's 6-stage extraction, HMAC audit trail,
-and continuation engine — giving you capabilities that no other framework provides.
+and continuation engine - giving you capabilities that no other framework provides.
 
 CRP Gateway and CRP Comply are **on the managed-cloud waitlist**. All products can also be self-hosted. White-label and OEM deployments are available for Enterprise.
 
@@ -43,7 +43,7 @@ CRP Gateway and CRP Comply are **on the managed-cloud waitlist**. All products c
 
 <span class="product-badge badge-live">Managed-cloud waitlist</span>
 
-**The AI Safety Firewall — govern every LLM call with one `base_url` change.**
+**The AI Safety Firewall - govern every LLM call with one `base_url` change.**
 
 A drop-in HTTPS endpoint that adds the Decision Provenance Engine, Safety Policy enforcement, automatic continuation, and HMAC audit emission to any OpenAI-compatible LLM call. Non-bypassable safety for every service that points its LLM client at the gateway.
 
@@ -68,9 +68,9 @@ A drop-in HTTPS endpoint that adds the Decision Provenance Engine, Safety Policy
 
 <span class="product-badge badge-live">Managed-cloud waitlist</span>
 
-**The Compliance Automation Engine — turn runtime evidence into regulator-ready compliance.**
+**The Compliance Automation Engine - turn runtime evidence into regulator-ready compliance.**
 
-A compliance gateway + dashboard that routes every LLM call through 13+ CRP security subsystems and generates EU AI Act, ISO 42001, GDPR, and AIUC-1 evidence packs from your actual system behaviour — not consultant PDFs.
+A compliance gateway + dashboard that routes every LLM call through 13+ CRP security subsystems and generates EU AI Act, ISO 42001, GDPR, and AIUC-1 evidence packs from your actual system behaviour - not consultant PDFs.
 
 - **Best for:** Organisations facing EU AI Act, ISO 42001, GDPR, or AIUC-1 deadlines that need audit-ready evidence.
 - **Key outcome:** DPIAs, technical docs, and conformity packs generated in seconds from cryptographic audit trails.
@@ -91,7 +91,7 @@ A compliance gateway + dashboard that routes every LLM call through 13+ CRP secu
 
 <span class="product-badge badge-available">Available</span>
 
-**The Pre-Production Security Scanner — catch ungoverned AI calls before they reach production.**
+**The Pre-Production Security Scanner - catch ungoverned AI calls before they reach production.**
 
 Add one workflow step and every pull request is checked for AI-system patterns that need CRP coverage: unaudited LLM calls, missing safety policies, ungoverned context construction, and regulatory mapping gaps. Free for public repos.
 

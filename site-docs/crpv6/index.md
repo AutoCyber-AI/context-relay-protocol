@@ -1,4 +1,4 @@
-# CRPv6 — Agent SDK & SLM-first Agentic Protocol
+# CRPv6 - Agent SDK & SLM-first Agentic Protocol
 
 CRPv6 is the agentic execution layer. It builds on CRP v5's governance spine and adds:
 
@@ -20,8 +20,8 @@ The big shift for full completeness is moving from **rule-based defaults with op
 
 ## Learn more
 
-- [CRPv6 Roadmap & TODOs](roadmap.md) — every remaining task with repo links
-- [Completeness Roadmap](completeness-roadmap.md) — strategic local → hosted plan
+- [CRPv6 Roadmap & TODOs](roadmap.md) - every remaining task with repo links
+- [Completeness Roadmap](completeness-roadmap.md) - strategic local → hosted plan
 - [Operational Readiness Report](operational-readiness.md)
 - [Model Training Guide](model-training-guide.md)
 - [Hosting & Backends Guide](hosting-and-backends.md)

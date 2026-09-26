@@ -1,5 +1,5 @@
 ---
-seo_title: "AIUC-1 Aligned AI Safety & Security — CRP Protocol"
+seo_title: "AIUC-1 Aligned AI Safety & Security - CRP Protocol"
 description: "CRP Protocol is AIUC-1 aligned: the open HTTP-header standard that delivers adversarial-tested AI safety, tamper-evident audit chains, and automated compliance evidence for AI agents."
 tags:
   - aiuc-1
@@ -24,7 +24,7 @@ AIUC-1 Ready.<br/>Evidence-First.
 
 <p class="hero-sub">
 <strong>AIUC-1</strong> (<a href="https://aiuc.com">AI Unified Certification</a>) is the world's first
-independent standard to certify that AI agents are secure, safe, and reliable — created with 100+
+independent standard to certify that AI agents are secure, safe, and reliable - created with 100+
 Fortune 500 CISOs. It demands third-party adversarial testing, real-time input filtering, access
 controls, audit trails, and compliance documentation across <strong>6 principles and 51
 requirements</strong>. <strong>Context Relay Protocol™ produces 80%+ of the signed, tamper-evident
@@ -54,21 +54,21 @@ and reliable. It was developed by the **Artificial Intelligence Underwriting Com
 a consortium of **100+ Fortune 500 CISOs and security leaders**. AIUC-1 defines **51 requirements
 and 130 controls** across six risk principles:
 
-- **Adversarial robustness** — can the system resist prompt injection, jailbreaks, and data exfiltration?
-- **Real-time safety filtering** — are harmful inputs and outputs blocked before they reach users?
-- **Access control & scope enforcement** — can the AI take unauthorised actions?
-- **Human oversight** — is there a human-in-the-loop for high-risk decisions?
-- **Audit & accountability** — can every decision be traced, attributed, and verified?
-- **Compliance documentation** — can the system produce the evidence auditors expect?
+- **Adversarial robustness** - can the system resist prompt injection, jailbreaks, and data exfiltration?
+- **Real-time safety filtering** - are harmful inputs and outputs blocked before they reach users?
+- **Access control & scope enforcement** - can the AI take unauthorised actions?
+- **Human oversight** - is there a human-in-the-loop for high-risk decisions?
+- **Audit & accountability** - can every decision be traced, attributed, and verified?
+- **Compliance documentation** - can the system produce the evidence auditors expect?
 
 AIUC-1's six principles are:
 
-1. **Data & Privacy** — confidentiality, integrity, and privacy of data handled by AI agents.
-2. **Security** — protection against vulnerabilities, adversarial attacks, and unauthorized access.
-3. **Safety** — prevention of unintended and harmful actions, with robust controls and fail-safes.
-4. **Reliability** — predictable, consistent agent behaviour, proper error handling and recovery.
-5. **Accountability** — clear audit trails, logging, and human oversight for all agent actions.
-6. **Society** — alignment with societal norms, ethics, and regulatory requirements.
+1. **Data & Privacy** - confidentiality, integrity, and privacy of data handled by AI agents.
+2. **Security** - protection against vulnerabilities, adversarial attacks, and unauthorized access.
+3. **Safety** - prevention of unintended and harmful actions, with robust controls and fail-safes.
+4. **Reliability** - predictable, consistent agent behaviour, proper error handling and recovery.
+5. **Accountability** - clear audit trails, logging, and human oversight for all agent actions.
+6. **Society** - alignment with societal norms, ethics, and regulatory requirements.
 
 Certification involves **thousands of adversarial scenarios derived from real-world incidents**,
 conducted by accredited auditors. The certificate is valid for **12 months**, with agent behaviour
@@ -85,7 +85,7 @@ complementary.
 ## The CRP answer: protocol-layer safety
 
 Most AI safety tools are bolted on **after** the model responds. CRP implements safety at the
-**protocol layer** — every LLM call is scored, annotated, and enforced through standard HTTP
+**protocol layer** - every LLM call is scored, annotated, and enforced through standard HTTP
 headers before the response reaches your application.
 
 <div class="cr-compare" markdown>
@@ -193,14 +193,14 @@ each principle to the CRP capabilities that produce the evidence AIUC-1 auditors
 ### 🌐 CRP Gateway
 **The AI Safety Firewall**
 
-13-stage DPE safety, unbounded context, automatic continuation, and enforced provenance on every call — all in &lt;50 ms.
+13-stage DPE safety, unbounded context, automatic continuation, and enforced provenance on every call - all in &lt;50 ms.
 
-- Security — adversarial robustness
-- Security — real-time input filtering
-- Security — unauthorized-action prevention
-- Safety — harmful-output blocking
-- Safety — HITL checkpoints
-- Reliability — hallucination prevention
+- Security - adversarial robustness
+- Security - real-time input filtering
+- Security - unauthorized-action prevention
+- Safety - harmful-output blocking
+- Safety - HITL checkpoints
+- Reliability - hallucination prevention
 
 [Explore Gateway](products/gateway.md){ .md-button .md-button--primary }
 
@@ -212,11 +212,11 @@ each principle to the CRP capabilities that produce the evidence AIUC-1 auditors
 
 Recipe-driven governance generates article-cited EU AI Act, ISO 42001, and GDPR evidence from HMAC-signed audit chains.
 
-- Accountability — tamper-evident logging
-- Accountability — quality-management evidence
-- Society — regulatory compliance packs
-- Data & Privacy — input-data governance
-- Society — acceptable-use policy templates
+- Accountability - tamper-evident logging
+- Accountability - quality-management evidence
+- Society - regulatory compliance packs
+- Data & Privacy - input-data governance
+- Society - acceptable-use policy templates
 
 [Explore Comply](products/comply.md){ .md-button .md-button--primary }
 
@@ -226,12 +226,12 @@ Recipe-driven governance generates article-cited EU AI Act, ISO 42001, and GDPR 
 ### 🔍 CRP Scan
 **The Pre-Production Security Scanner**
 
-Finds ungoverned AI calls, hard-coded keys, missing safety policies, and injection risks in CI — before attackers do.
+Finds ungoverned AI calls, hard-coded keys, missing safety policies, and injection risks in CI - before attackers do.
 
-- Security — pre-deploy adversarial gap detection
-- Security — endpoint-scraping prevention
-- Security — deployment-environment hardening
-- Accountability — logging assurance
+- Security - pre-deploy adversarial gap detection
+- Security - endpoint-scraping prevention
+- Security - deployment-environment hardening
+- Accountability - logging assurance
 
 [Explore Scan](products/scan.md){ .md-button .md-button--primary }
 
@@ -243,9 +243,9 @@ Finds ungoverned AI calls, hard-coded keys, missing safety policies, and injecti
 
 Real-time risk posture, context flow, provenance chains, and compliance status for auditors and incident responders.
 
-- Security — adversarial-input detection alerts
-- Safety — risk-category monitoring
-- Accountability — visual audit-trail exploration
+- Security - adversarial-input detection alerts
+- Safety - risk-category monitoring
+- Accountability - visual audit-trail exploration
 
 [Explore Visualise](products/visualise.md){ .md-button }
 
@@ -257,9 +257,9 @@ Real-time risk posture, context flow, provenance chains, and compliance status f
 
 Auto-documents every safety-policy decision, governance change, and compliance action with full provenance.
 
-- Accountability — ownership documentation
-- Society — AI disclosure reports
-- Accountability — documented QMS
+- Accountability - ownership documentation
+- Society - AI disclosure reports
+- Accountability - documented QMS
 
 [Explore Scribe](products/scribe.md){ .md-button }
 
@@ -289,7 +289,7 @@ before attackers do.
 ### HMAC-signed audit = immutable attack evidence
 
 When attacks are attempted, the audit chain captures them immutably. You don't just know an
-attack happened — you cryptographically prove it to regulators, insurers, and auditors.
+attack happened - you cryptographically prove it to regulators, insurers, and auditors.
 
 ### Local LLM = zero external attack surface
 
@@ -329,7 +329,7 @@ are the areas CRP does not fully cover today and how we handle them:
 
 !!! info "Certification is the floor, not the ceiling"
     AIUC-1 certification validates a point-in-time state. CRP's architecture makes adversarial
-defense, audit, and compliance evidence **continuous by design** — so your system stays aligned
+defense, audit, and compliance evidence **continuous by design** - so your system stays aligned
 long after the certificate is issued.
 
 ## See the broader control-evidence mapping

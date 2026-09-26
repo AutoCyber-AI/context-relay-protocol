@@ -1,5 +1,5 @@
 ---
-seo_title: CRP Specifications — 50 Open Specs for AI Context, Safety & Compliance
+seo_title: CRP Specifications - 50 Open Specs for AI Context, Safety & Compliance
 description: Index of the 50 CRP specifications covering core protocol, headers, envelope, safety, provenance, compliance, agentic positioning, and product interfaces.
 ---
 

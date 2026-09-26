@@ -1,5 +1,5 @@
 ---
-seo_title: CRP Testing & Benchmarks — Reproduce Results
+seo_title: CRP Testing & Benchmarks - Reproduce Results
 description: How to run the CRP test suite and reproduce benchmark results for context management, safety, and quality.
 ---
 

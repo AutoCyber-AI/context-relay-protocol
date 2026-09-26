@@ -1,6 +1,6 @@
 ---
-seo_title: Local-first agentic AI governance — CRP v6.1.1
-description: Context Relay Protocol (CRP) is local-first agentic AI governance. pip install crprotocol and run governed agents on any model — LM Studio, Ollama, or OpenAI-compatible — with a tamper-evident audit chain, grounding and hallucination scoring, and unbounded context.
+seo_title: Local-first agentic AI governance - CRP v6.1.1
+description: Context Relay Protocol (CRP) is local-first agentic AI governance. pip install crprotocol and run governed agents on any model - LM Studio, Ollama, or OpenAI-compatible - with a tamper-evident audit chain, grounding and hallucination scoring, and unbounded context.
 hide:
   - toc
 ---
@@ -20,7 +20,7 @@ Build governed agents that think, act, and prove every step.
 <strong>MCP exposes tools. A2A connects agents. Context Relay Protocol™ positions every agent and proves it.</strong>
 With <code>crp.Agent</code>, you declare <code>tools + policy + model</code> once and the protocol runs the loop: intent classification,
 operation positioning, tool selection, safety scanning, human-in-the-loop checkpoints, verification, and cross-turn memory.
-Every response carries a risk score, grounding verdict, source attribution, and an HMAC-signed audit link — the live evidence
+Every response carries a risk score, grounding verdict, source attribution, and an HMAC-signed audit link - the live evidence
 that <strong>EU AI Act</strong>, <strong>AIUC-1</strong>, <strong>ISO 42001</strong>, and <strong>NIST AI RMF</strong> demand.
 </p>
 
@@ -51,17 +51,17 @@ that <strong>EU AI Act</strong>, <strong>AIUC-1</strong>, <strong>ISO 42001</str
 ## What's new in CRP v6.1.1
 
 CRP v6.1.1 is a **local-first** release: `pip install crprotocol` and the complete
-protocol runs on your machine — LM Studio, Ollama, or any OpenAI-compatible endpoint.
+protocol runs on your machine - LM Studio, Ollama, or any OpenAI-compatible endpoint.
 No managed cloud, no external service required:
 
-- **Declarative `crp.Agent`** — define tools, policy, and model; the protocol owns the loop.
-- **Local-first safety control plane** — risk scoring, grounding verification, and HTTP 451 safety halts run on every call, on any model.
-- **Tamper-evident audit chain** — HMAC hash-chained events your auditors can verify, produced locally per session.
-- **Human-in-the-loop checkpoints** — destructive or ambiguous actions pause for approval before they run.
-- **Three open-source SLM models** — intent, PRM, and safety classifiers published on Hugging Face under `AutoCyberAI/`.
-- **Self-hosted agent console** — run `crp serve` and watch intent, operations, tool calls, safety scans, and provenance live (demo at console.crprotocol.io).
-- **Unbounded context** — automatic continuation and CSO relay keep continuity across windows until the task is done.
-- **Bi-temporal CKF memory** — facts carry valid-time and transaction-time so agents reason over history, not just the latest snapshot.
+- **Declarative `crp.Agent`** - define tools, policy, and model; the protocol owns the loop.
+- **Local-first safety control plane** - risk scoring, grounding verification, and HTTP 451 safety halts run on every call, on any model.
+- **Tamper-evident audit chain** - HMAC hash-chained events your auditors can verify, produced locally per session.
+- **Human-in-the-loop checkpoints** - destructive or ambiguous actions pause for approval before they run.
+- **Three open-source SLM models** - intent, PRM, and safety classifiers published on Hugging Face under `AutoCyberAI/`.
+- **Self-hosted agent console** - run `crp serve` and watch intent, operations, tool calls, safety scans, and provenance live (demo at console.crprotocol.io).
+- **Unbounded context** - automatic continuation and CSO relay keep continuity across windows until the task is done.
+- **Bi-temporal CKF memory** - facts carry valid-time and transaction-time so agents reason over history, not just the latest snapshot.
 
 The library, CLI, agent console, and self-hosted protocol are production-ready today, entirely local. Managed-cloud Gateway and Comply upgrades remain on the roadmap.
 
@@ -71,13 +71,13 @@ The library, CLI, agent console, and self-hosted protocol are production-ready t
 
 ## Controls are easy to claim. CRP proves they operate.
 
-Every major AI assurance framework — **EU AI Act, AIUC-1, ISO/IEC 42001, NIST AI RMF, SOC 2-for-AI** — demands the same three things underneath its own vocabulary:
+Every major AI assurance framework - **EU AI Act, AIUC-1, ISO/IEC 42001, NIST AI RMF, SOC 2-for-AI** - demands the same three things underneath its own vocabulary:
 
-1. **Controls exist** — you have safety, security, and governance mechanisms.
-2. **Controls operate** — they run on every AI call, continuously, not on paper.
-3. **You can prove it** — verifiable evidence the controls ran, not assertions.
+1. **Controls exist** - you have safety, security, and governance mechanisms.
+2. **Controls operate** - they run on every AI call, continuously, not on paper.
+3. **You can prove it** - verifiable evidence the controls ran, not assertions.
 
-Most organisations manage #1 and sometimes #2. **The universal failure is #3.** CRP closes that gap: every governed AI call emits signed, tamper-evident evidence that your security and safety controls ran — the proof all of these standards require.
+Most organisations manage #1 and sometimes #2. **The universal failure is #3.** CRP closes that gap: every governed AI call emits signed, tamper-evident evidence that your security and safety controls ran - the proof all of these standards require.
 
 <div class="cta-bar" markdown>
 <div class="cta-bar__text">

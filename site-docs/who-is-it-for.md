@@ -1,5 +1,5 @@
 ---
-seo_title: Who CRP Is For — Developers, Enterprises, Compliance & Security Teams
+seo_title: Who CRP Is For - Developers, Enterprises, Compliance & Security Teams
 description: CRP is built for developers, enterprises, security teams, compliance officers, and AI product teams that need governed LLM systems.
 ---
 

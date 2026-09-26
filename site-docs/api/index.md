@@ -1,5 +1,5 @@
 ---
-seo_title: CRP API Reference — Python Client & Modules
+seo_title: CRP API Reference - Python Client & Modules
 description: API reference for the CRP Python client, dispatch methods, compliance API, JSON schemas, and module namespaces.
 ---
 

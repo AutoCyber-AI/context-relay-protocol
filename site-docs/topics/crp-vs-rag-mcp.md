@@ -1,5 +1,5 @@
 ---
-seo_title: CRP vs RAG, MCP, LangChain & MemGPT — Context Management Comparison
+seo_title: CRP vs RAG, MCP, LangChain & MemGPT - Context Management Comparison
 description: Compare CRP with RAG, MemGPT, LangChain, MCP, and A2A. CRP is the governance and context layer that makes every AI call safer, continuous, and compliant.
 tags:
   - context-management
@@ -34,8 +34,8 @@ flowchart TB
         P[Provenance + Audit]
     end
     subgraph "Agent Infrastructure"
-        M[MCP — tools]
-        A2[A2A — agent chat]
+        M[MCP - tools]
+        A2[A2A - agent chat]
     end
     subgraph "Inference"
         L[OpenAI / Anthropic / local LLMs]

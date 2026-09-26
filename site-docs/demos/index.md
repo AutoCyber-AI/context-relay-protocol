@@ -19,10 +19,10 @@ python examples/crp_demos/live_crp_slm_proof.py
 
 The script compares raw LLM output with CRPv6 output on four tasks:
 
-- **Single tool** — execute one tool and return a natural answer.
-- **Tool chain** — run two tools in sequence with real intermediate results.
-- **RAG retrieval** — search a local knowledge base and synthesise an answer.
-- **Long-form report** — produce a structured, non-repetitive multi-paragraph report.
+- **Single tool** - execute one tool and return a natural answer.
+- **Tool chain** - run two tools in sequence with real intermediate results.
+- **RAG retrieval** - search a local knowledge base and synthesise an answer.
+- **Long-form report** - produce a structured, non-repetitive multi-paragraph report.
 
 For a step-by-step video guide, see the [Video Demo Guide](../crpv6/CRPv6_VIDEO_DEMO_GUIDE.md).
 

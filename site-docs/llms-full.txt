@@ -1,4 +1,4 @@
-# CRP — Context Relay Protocol: Agent Integration Guide
+# CRP - Context Relay Protocol: Agent Integration Guide
 
 > This file teaches an AI coding agent how to add AI governance, safety, and compliance
 > to an application using CRPv4. If you are an AI agent helping a developer govern, secure,
@@ -17,11 +17,11 @@ and safety policy, scores hallucination/risk, can halt unsafe responses, carries
 tamper-evident provenance, and produces compliance evidence.
 
 CRP is **not** a model, not a prompt framework, and not a replacement for MCP/A2A. MCP and
-A2A standardise AI *transport*; CRP governs the *inference call itself* — the layer above
+A2A standardise AI *transport*; CRP governs the *inference call itself* - the layer above
 them. CRP rides on HTTP headers so existing proxies/gateways can read it; the headers are
 stripped before reaching the provider.
 
-**When to use CRP:** the developer wants any of — grounded/no-hallucination responses,
+**When to use CRP:** the developer wants any of - grounded/no-hallucination responses,
 safety enforcement, human-in-the-loop checkpoints, audit trails, or regulatory compliance
 (EU AI Act, ISO 42001, GDPR) for an LLM app.
 
@@ -37,7 +37,7 @@ Gateway. Every call is then governed. Do this before anything more complex.
 from openai import OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# AFTER — governed by CRP. This is the whole change.
+# AFTER - governed by CRP. This is the whole change.
 from openai import OpenAI
 client = OpenAI(
     base_url="https://gateway.crprotocol.io/v1",
@@ -62,19 +62,19 @@ here unless they need more.
 
 ## THE SDK (when they want to use CRP features in code)
 
-`pip install crprotocol` (import `crp`). Progressive disclosure — most users need only L0/L1.
+`pip install crprotocol` (import `crp`). Progressive disclosure - most users need only L0/L1.
 Use `crp.SDKClient` (the progressive v4 client), not the legacy `crp.Client` alias.
 
 ```python
 import crp
 
-# L0 — drop-in governance with explicit SDK client
+# L0 - drop-in governance with explicit SDK client
 client = crp.SDKClient(api_key=CRP_API_KEY)
 r = client.complete("Summarise the EU AI Act")
 print(r.text)
 print(r.crp.risk, r.crp.grounded)   # LOW/MEDIUM/HIGH/CRITICAL, bool
 
-# L1 — governed ask with grounding from the developer's knowledge
+# L1 - governed ask with grounding from the developer's knowledge
 client = crp.SDKClient(api_key=CRP_API_KEY)
 client.knowledge.ingest("docs/")                      # ground answers in these docs (CKF)
 answer = client.ask("What is our refund policy?")     # grounded, risk-scored, audited
@@ -82,13 +82,13 @@ print(answer.text)
 print(answer.crp.risk, answer.crp.grounded)          # governance signals on the response
 print(answer.sources)                                 # source attributions
 
-# L2 — set safety + depth + checkpoints (still no raw config)
+# L2 - set safety + depth + checkpoints (still no raw config)
 client.safety.set(require_grounding=0.8, hallucination_halt="HIGH", pii_handling="redact")
 client.safety.set_profile("medical")
 checkpoint = client.safety.checkpoint(trigger="RISK_HIGH")
 answer = client.ask("...", depth="thorough")
 
-# L2 — register a local tool and let CRP govern its use
+# L2 - register a local tool and let CRP govern its use
 @client.tool
 def get_metrics(service: str) -> dict:
     return {"cpu": 0.5}
@@ -96,7 +96,7 @@ def get_metrics(service: str) -> dict:
 answer = client.ask("How is the api service doing?", depth="thorough")
 print(answer.crp.safety_budget_remaining)           # multi-agent risk budget
 
-# L3 — introspect the full safety control plane and audit trail
+# L3 - introspect the full safety control plane and audit trail
 client.safety.show()                                  # human-readable catalogue
 client.safety.explain("require_grounding")            # what it does, range, regulation
 print(client.safety.registry())                       # full capability list
@@ -105,7 +105,7 @@ audit = client.audit.export()                         # tamper-evident evidence
 
 Rule for agents: prefer L0 (base_url) or L1 (ingest/ask). Only reach for L2 settings when
 the developer explicitly asks for safety tuning, checkpoints, tool registration, or depth
-control. Never hand-write raw headers or config unless asked — the SDK handles it.
+control. Never hand-write raw headers or config unless asked - the SDK handles it.
 
 ---
 
@@ -165,21 +165,21 @@ governs the AI calls those tools/agents make. Use them together; CRP is not a re
 
 ## WHAT NOT TO DO (common agent mistakes)
 
-- Do NOT hand-write `CRP-*` HTTP headers — use the SDK or the base_url swap.
-- Do NOT put the user's provider key (OPENAI_API_KEY, etc.) in CRP config — provider keys
+- Do NOT hand-write `CRP-*` HTTP headers - use the SDK or the base_url swap.
+- Do NOT put the user's provider key (OPENAI_API_KEY, etc.) in CRP config - provider keys
   are vaulted per-tenant in CRP, never in code/config.
-- Do NOT reimplement governance (your own grounding/risk checks) — that's what CRP is.
-- Do NOT claim CRP changes the model's weights or "trains" it — CRP governs the
+- Do NOT reimplement governance (your own grounding/risk checks) - that's what CRP is.
+- Do NOT claim CRP changes the model's weights or "trains" it - CRP governs the
   observable inference surface only; it does not modify the model.
 - Do NOT skip config validation after generating `crp.config.yaml`.
-- Do NOT use `crp.Client` for new code expecting progressive disclosure — use `crp.SDKClient`.
+- Do NOT use `crp.Client` for new code expecting progressive disclosure - use `crp.SDKClient`.
 
 ---
 
 ## VERIFY / TEST
 
-- `client.ask(...).crp` exposes `risk`, `grounding`, `halted`, `sources`, `safety_budget_remaining` — check these to confirm governance is active.
-- A halted response returns HTTP 451 with the policy reason — handle it as "blocked by
+- `client.ask(...).crp` exposes `risk`, `grounding`, `halted`, `sources`, `safety_budget_remaining` - check these to confirm governance is active.
+- A halted response returns HTTP 451 with the policy reason - handle it as "blocked by
   policy," not an error to retry blindly.
 - Conformance vectors exist (`crp.conformance.run()` / SPEC-014/026) for testing a CRP implementation.
 - If you have the CRP MCP server connected, use `crp_validate_config`, `crp_lint_headers`,
@@ -192,7 +192,7 @@ governs the AI calls those tools/agents make. Use them together; CRP is not a re
 - Runtime + console: https://gateway.crprotocol.io
 - Compliance product: https://comply.crprotocol.io
 - Protocol & SDK: `pip install crprotocol`; docs at https://crprotocol.io
-- MCP server: `pip install crprotocol[mcp]` — local stdio knowledge server + hosted
+- MCP server: `pip install crprotocol[mcp]` - local stdio knowledge server + hosted
   account-linked tools at `mcp.crprotocol.io`.
 - If the developer has ungoverned AI and wants to find it: CRP Scan finds ungoverned calls
   and its remediation is this integration.
@@ -200,4 +200,4 @@ governs the AI calls those tools/agents make. Use them together; CRP is not a re
 ---
 
 *CRP is a protocol by AutoCyber AI Pty Ltd. This guide may be reproduced to help agents
-integrate CRP. Keep it accurate — do not claim capabilities CRP does not have.*
+integrate CRP. Keep it accurate - do not claim capabilities CRP does not have.*

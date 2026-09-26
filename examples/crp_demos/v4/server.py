@@ -1138,10 +1138,10 @@ _DEMO_CVE_DB = {
     "CVE-2017-5638": {"name": "Struts RCE", "severity": "CRITICAL", "cvss": 10.0},
 }
 _DEMO_REGS = {
-    "encryption": "ISO 27001 A.10 / GDPR Art. 32 — encryption of personal data",
-    "logging": "EU AI Act Art. 12 — automatic record-keeping (logging)",
-    "oversight": "EU AI Act Art. 14 — human oversight of high-risk AI systems",
-    "transparency": "EU AI Act Art. 13 — transparency and provision of information",
+    "encryption": "ISO 27001 A.10 / GDPR Art. 32 - encryption of personal data",
+    "logging": "EU AI Act Art. 12 - automatic record-keeping (logging)",
+    "oversight": "EU AI Act Art. 14 - human oversight of high-risk AI systems",
+    "transparency": "EU AI Act Art. 13 - transparency and provision of information",
 }
 
 

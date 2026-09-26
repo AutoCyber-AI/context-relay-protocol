@@ -31,10 +31,10 @@ function renderVerdict(r) {
       return `<div class="fact"><b>${esc(violationLabel(v.type))}</b>
         <span class="tag">${esc(v.type)}</span>
         <span class="pill ${isHalt ? 'red' : 'amber'}">${esc(ACTION_LABELS[v.action] || v.action)}</span>
-        <div class="cat">${esc(v.directive)} — ${esc(v.detail)}</div></div>`;
+        <div class="cat">${esc(v.directive)} - ${esc(v.detail)}</div></div>`;
     }).join("");
   } else {
-    html += `<p class="muted">No policy violations — the response is cleared for release.</p>`;
+    html += `<p class="muted">No policy violations - the response is cleared for release.</p>`;
   }
 
   if (r.halt_response) {
@@ -84,8 +84,8 @@ function renderProvenance(r) {
     </div>
     <h3>Hallucination risk</h3>
     <div class="flex">${pill(p.risk_level, riskClass(p.risk_level))}
-      <span class="tag">mean risk score: ${p.mean_risk_score != null ? p.mean_risk_score.toFixed(3) : "—"}</span>
-      <span class="tag">fidelity: ${p.fidelity_score != null ? p.fidelity_score.toFixed(3) : "—"}</span></div>
+      <span class="tag">mean risk score: ${p.mean_risk_score != null ? p.mean_risk_score.toFixed(3) : " - "}</span>
+      <span class="tag">fidelity: ${p.fidelity_score != null ? p.fidelity_score.toFixed(3) : " - "}</span></div>
   `;
 }
 

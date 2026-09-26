@@ -16,10 +16,27 @@ The console shows:
   * Provenance chain (HMAC links)
   * Raw AG-UI + CRP events
 
+CDN console flow: the console hosted at https://console.crprotocol.io can
+also drive this local server — open https://console.crprotocol.io and paste
+http://127.0.0.1:8000 into the console's connect bar. That origin is in the
+CORS allowlist by default; non-allowlisted origins receive no CORS headers.
+
+Security defaults (safe for local use):
+
+  * Binds 127.0.0.1 by default. Pass ``--host`` (or set ``CRP_HOST``) to opt
+    into LAN exposure — a loud warning is printed unless a token is set,
+    because any website in your browser could then drive your local LLM.
+  * CORS is an explicit allowlist (never ``*``): https://console.crprotocol.io,
+    http://localhost:8000, http://127.0.0.1:8000 and the server's own origin.
+  * ``--token`` (or ``CRP_CONSOLE_TOKEN``) requires
+    ``Authorization: Bearer <token>`` on all ``/v1/*`` endpoints.
+
 Environment variables:
   CRP_MODEL          model identifier, default "local/llama3.1"
   CRP_LM_STUDIO_URL  override the local base URL, e.g. "http://192.168.0.6:1234/v1"
   CRP_CONSOLE_PORT   default 8000
+  CRP_HOST           bind host, default "127.0.0.1"
+  CRP_CONSOLE_TOKEN  bearer token for /v1/* endpoints (optional)
 """
 
 from __future__ import annotations
@@ -130,19 +147,61 @@ def _make_agent(model: str | None = None, depth: str = "standard") -> crp.Agent:
     )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Self-hosted CRP Agent Console")
-    parser.add_argument(
-        "--port", type=int, default=int(os.environ.get("CRP_CONSOLE_PORT", "8000"))
-    )
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--model", default=None, help="Model identifier (default: local/llama3.1)")
-    args = parser.parse_args()
+def _is_loopback(host: str) -> bool:
+    """True when *host* only accepts local connections."""
+    return host in ("127.0.0.1", "localhost", "::1")
 
+
+def _exposure_warning(host: str, token: str | None) -> str | None:
+    """Warning text when binding beyond loopback without a bearer token."""
+    if _is_loopback(host) or token:
+        return None
+    return (
+        f"WARNING: binding to {host} exposes the console and your local LLM "
+        "to the local network and to any website your browser visits (which "
+        "can drive the agent via CSRF). Set --token / CRP_CONSOLE_TOKEN, or "
+        "bind 127.0.0.1."
+    )
+
+
+def _cors_allowlist(host: str, port: int) -> list[str]:
+    """Explicit CORS allowlist (never ``*``): the CDN console at
+    https://console.crprotocol.io, the fixed local dev origins, and the
+    server's own origin."""
+    return [
+        "https://console.crprotocol.io",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        f"http://{host}:{port}",
+        f"http://localhost:{port}",
+        f"http://127.0.0.1:{port}",
+    ]
+
+
+def build_app(host: str, port: int, model: str | None = None,
+              token: str | None = None) -> FastAPI:
+    """Create the console FastAPI app (bind/CORS/token wiring; does not serve)."""
     app = FastAPI(title="CRP Self-Hosted Agent Console")
 
-    # Mount the console at /crp/console and the TEL stream at /v1/tel/stream.
-    mount_fastapi(app, path="/crp/console", stream_path="/v1/tel/stream")
+    # Mount the console at /crp/console and the TEL stream at /v1/tel/stream,
+    # with the explicit CORS allowlist (mount_fastapi never emits "*").
+    mount_fastapi(
+        app,
+        path="/crp/console",
+        stream_path="/v1/tel/stream",
+        cors_origins=_cors_allowlist(host, port),
+    )
+
+    if token:
+
+        @app.middleware("http")
+        async def _bearer_guard(request: Request, call_next: Any) -> Any:
+            # OPTIONS (CORS preflight) carries no Authorization header by design.
+            if (request.url.path.startswith("/v1/")
+                    and request.method != "OPTIONS"
+                    and request.headers.get("authorization") != f"Bearer {token}"):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+            return await call_next(request)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -160,7 +219,7 @@ def main() -> None:
         session_id = body.get("session_id") or f"console-{os.urandom(4).hex()}"
         depth = body.get("depth", "standard")
 
-        agent = _make_agent(args.model, depth=depth)
+        agent = _make_agent(model, depth=depth)
 
         async def stream_events():
             try:
@@ -179,6 +238,32 @@ def main() -> None:
                 yield f"data: {json.dumps(err)}\n\n".encode()
 
         return StreamingResponse(stream_events(), media_type="text/event-stream")
+
+    return app
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Self-hosted CRP Agent Console")
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("CRP_CONSOLE_PORT", "8000"))
+    )
+    parser.add_argument("--host", default=os.environ.get("CRP_HOST", "127.0.0.1"),
+                        help="bind host (default 127.0.0.1; set CRP_HOST to "
+                             "opt into LAN exposure)")
+    parser.add_argument("--model", default=None, help="Model identifier (default: local/llama3.1)")
+    parser.add_argument("--token", default=os.environ.get("CRP_CONSOLE_TOKEN"),
+                        help="bearer token required for /v1/* (default: none)")
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    warning = _exposure_warning(args.host, args.token)
+    if warning:
+        print(f"\n  {warning}\n")
+
+    app = build_app(args.host, args.port, model=args.model, token=args.token)
 
     import uvicorn
 

@@ -90,7 +90,7 @@ function formatHeaderValue(key, value) {
       const level = m[1].replace(/_/g, " ").toLowerCase();
       const covered = +m[2], total = +m[3];
       const uncovered = m[4] ? m[4].split(",").join(", ") : "";
-      let text = `Answer ${level} — covered ${covered} of ${total} sub-questions.`;
+      let text = `Answer ${level} - covered ${covered} of ${total} sub-questions.`;
       if (uncovered) text += ` Uncovered: ${uncovered}.`;
       return `${esc(text)} ${raw}`;
     }
@@ -106,7 +106,7 @@ function formatHeaderValue(key, value) {
 function renderModel(m) {
   if (!m) return `<p class="muted">No model loaded.</p>`;
   const util = m.context_utilisation != null
-    ? (m.context_utilisation * 100).toFixed(1) + "%" : "—";
+    ? (m.context_utilisation * 100).toFixed(1) + "%" : " - ";
   const caps = [];
   if (m.supports_tools) caps.push(pill("tools / MCP", "blue"));
   if (m.is_reasoning_model) caps.push(pill("reasoning", "amber"));

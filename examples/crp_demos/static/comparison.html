@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CRP — Context Management Comparison</title>
+  <title>CRP - Context Management Comparison</title>
   <link rel="stylesheet" href="style.css"/>
   <style>
     /* ── Comparison-specific styles ─────────────────────────────────────── */
@@ -270,7 +270,7 @@
       </div>
     </div>
     <button class="run-btn" id="run-btn" onclick="startBenchmark()">
-      ▶ Run Comparison (local LLM — allow 10–20 min)
+      ▶ Run Comparison (local LLM - allow 10–20 min)
     </button>
   </section>
 
@@ -377,11 +377,11 @@ function createPanels(strategies) {
         <span class="panel-badge" id="badge-${s}">waiting</span>
       </div>
       <div class="panel-metrics" id="metrics-row-${s}">
-        ${makeMetricChip('words', '—')}
-        ${makeMetricChip('efficiency', '—')}
-        ${makeMetricChip('repetition', '—')}
-        ${makeMetricChip('unique', '—')}
-        ${makeMetricChip('window', '—')}
+        ${makeMetricChip('words', ' - ')}
+        ${makeMetricChip('efficiency', ' - ')}
+        ${makeMetricChip('repetition', ' - ')}
+        ${makeMetricChip('unique', ' - ')}
+        ${makeMetricChip('window', ' - ')}
       </div>
       <div class="panel-output" id="output-${s}"><span style="color:var(--muted)">Waiting to start…</span></div>
     `;
@@ -398,7 +398,7 @@ function updatePanelMetrics(s, metrics) {
   if (!row) return;
   row.innerHTML = `
     ${chip('words', (metrics.running_words||0).toLocaleString())}
-    ${chip('efficiency', metrics.tokens_output ? ((metrics.tokens_output/(Math.max(1,(metrics.tokens_prompt||0)+(metrics.tokens_output||0))))*100).toFixed(1)+'%' : '—')}
+    ${chip('efficiency', metrics.tokens_output ? ((metrics.tokens_output/(Math.max(1,(metrics.tokens_prompt||0)+(metrics.tokens_output||0))))*100).toFixed(1)+'%' : ' - ')}
     ${chip('repetition', ((metrics.repetition_6gram||0)*100).toFixed(2)+'%')}
     ${chip('unique', ((metrics.unique_word_ratio||0)*100).toFixed(1)+'%')}
     ${chip('window', '#'+(metrics.window||'?'))}
@@ -449,7 +449,7 @@ async function startBenchmark() {
   STATE.done = false;
   STATE.results = {};
 
-  setStatus('running', `Benchmark started — run ${STATE.runId.slice(0,8)}`);
+  setStatus('running', `Benchmark started - run ${STATE.runId.slice(0,8)}`);
   startPolling();
   startElapsedTimer();
 }
@@ -682,10 +682,10 @@ function showSummary(results, summary) {
     html += `<tr><td>${m.label}</td>`;
     strategies.forEach(s => {
       const r = results[s] || {};
-      const v = r[m.key] !== undefined ? r[m.key] : '—';
+      const v = r[m.key] !== undefined ? r[m.key] : ' - ';
       const rank = (rankings[m.key] || {})[s] || 0;
       const cls = rank ? `rank-${rank}` : '';
-      const display = v === '—' ? '—' : m.format(v);
+      const display = v === ' - ' ? ' - ' : m.format(v);
       html += `<td class="${cls}">${display}</td>`;
     });
     html += '</tr>';
@@ -697,7 +697,7 @@ function showSummary(results, summary) {
     strategies.forEach(s => {
       const r = summary.avg_rank[s];
       const best = Math.min(...Object.values(summary.avg_rank));
-      html += `<td class="${r === best ? 'rank-1' : ''}">${r != null ? r.toFixed(2) : '—'}</td>`;
+      html += `<td class="${r === best ? 'rank-1' : ''}">${r != null ? r.toFixed(2) : ' - '}</td>`;
     });
     html += '</tr>';
   }

@@ -14,11 +14,13 @@ function renderPressure(cp, model) {
       : "No model loaded — chain, CKF and token signals still work; replies will be empty.";
     return;
   }
-  const util = cp.context_utilisation != null ? (cp.context_utilisation * 100).toFixed(1) + "%" : "—";
+  const util = cp.context_utilisation != null ? (cp.context_utilisation * 100).toFixed(1) + "%" : "unknown";
+  const loaded = cp.loaded_context_length != null ? cp.loaded_context_length.toLocaleString() : "unknown";
+  const maximum = cp.max_context_length != null ? cp.max_context_length.toLocaleString() : "unknown";
   el("pressure").innerHTML = `
     <div class="flex" style="gap:1.4rem">
-      <div><div class="tag">loaded window</div><b>${cp.loaded_context_length.toLocaleString()}</b> tokens</div>
-      <div><div class="tag">model ceiling</div><b>${cp.max_context_length.toLocaleString()}</b> tokens</div>
+      <div><div class="tag">loaded window</div><b>${loaded}</b> tokens</div>
+      <div><div class="tag">model ceiling</div><b>${maximum}</b> tokens</div>
       <div><div class="tag">utilisation</div><b>${util}</b></div>
       <div><div class="tag">CKF-managed facts</div><b>${cp.ckf_managed_facts}</b></div>
     </div>

@@ -18,7 +18,7 @@ from .conditional import (
     parse_cache_directives,
 )
 from .emit import emit_headers
-from .halt import HaltReason, HaltResponse, build_halt_response
+from .halt import HALT_REASON_INFO, HaltReason, HaltResponse, build_halt_response, halt_reason_info
 from .middleware import (
     CRPHeaderMiddleware,
     inject_into_raw,
@@ -51,4 +51,6 @@ __all__ = [
     "build_halt_response",
     "HaltReason",
     "HaltResponse",
+    "HALT_REASON_INFO",
+    "halt_reason_info",
 ]

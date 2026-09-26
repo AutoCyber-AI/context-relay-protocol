@@ -16,25 +16,38 @@ function riskClass(level) {
 
 function renderVerdict(r) {
   const halted = r.decision.halted;
+  const actionLabel = ACTION_LABELS[r.decision.action] || r.decision.action;
   const statusPill = halted
     ? pill("HTTP 451 · HALTED", "red")
-    : pill(`HTTP ${r.http_status} · ${r.decision.action}`, "green");
+    : pill(`HTTP ${r.http_status} · ${actionLabel}`, "green");
   let html = `<div class="flex" style="margin-bottom:0.8rem">${statusPill}
     ${pill("risk " + r.provenance.risk_level, riskClass(r.provenance.risk_level))}
     ${pill("tier " + (r.provenance.quality_tier || "?"), "blue")}</div>`;
 
   if (r.decision.violations.length) {
     html += `<h3>Policy violations</h3>`;
-    html += r.decision.violations.map(v =>
-      `<div class="fact"><b>${esc(v.type)}</b> <span class="pill ${v.action==='halt'?'red':'amber'}">${esc(v.action)}</span>
-       <div class="cat">${esc(v.directive)} — ${esc(v.detail)}</div></div>`).join("");
+    html += r.decision.violations.map(v => {
+      const isHalt = v.action === "HALT" || v.action === "halt";
+      return `<div class="fact"><b>${esc(violationLabel(v.type))}</b>
+        <span class="tag">${esc(v.type)}</span>
+        <span class="pill ${isHalt ? 'red' : 'amber'}">${esc(ACTION_LABELS[v.action] || v.action)}</span>
+        <div class="cat">${esc(v.directive)} — ${esc(v.detail)}</div></div>`;
+    }).join("");
   } else {
     html += `<p class="muted">No policy violations — the response is cleared for release.</p>`;
   }
 
   if (r.halt_response) {
+    const body = r.halt_response.body || {};
+    const reason = body.crp_halt_reason || "SAFETY_POLICY_VIOLATION";
+    const fb = HALT_REASON_FALLBACK[reason] || HALT_REASON_FALLBACK.SAFETY_POLICY_VIOLATION;
+    const title = body.crp_halt_title || fb[0];
+    const explanation = body.crp_halt_explanation || fb[1];
     html += `<h3>HTTP 451 halt response body</h3>
-      <pre class="json">${esc(JSON.stringify(r.halt_response.body, null, 2))}</pre>`;
+      <div class="fact"><b>${esc(title)}</b> <span class="tag">${esc(reason)}</span>
+        <div class="cat">${esc(explanation)}</div></div>
+      <details><summary class="muted" style="cursor:pointer">Raw response body (wire values)</summary>
+        <pre class="json">${esc(JSON.stringify(body, null, 2))}</pre></details>`;
   }
   el("verdict").innerHTML = html;
 }
@@ -86,7 +99,8 @@ function renderAudit(r) {
   el("audit").innerHTML = `
     <table class="hdr-table"><tr><td>#</td><td>event</td><td>entry hash</td></tr>${rows}</table>
     <h3>OCSF export (SIEM-ready, first event)</h3>
-    <pre class="json">${esc(JSON.stringify((a.ocsf_sample||[])[0] || {}, null, 2))}</pre>`;
+    <details><summary class="muted" style="cursor:pointer">Raw OCSF JSON</summary>
+      <pre class="json">${esc(JSON.stringify((a.ocsf_sample||[])[0] || {}, null, 2))}</pre></details>`;
 }
 
 async function analyze() {

@@ -134,6 +134,39 @@ def test_parse_ollama_tags_show_failure_tolerated(monkeypatch) -> None:
     assert models[0].max_context_length is None
 
 
+def test_ollama_num_ctx_from_dict_parameters() -> None:
+    show = {"parameters": {"num_ctx": 8192, "temperature": 0.7}}
+    assert discovery._ollama_num_ctx(show) == 8192
+
+
+def test_ollama_num_ctx_from_modelfile_lines() -> None:
+    show = {"parameters": "num_ctx 16384\nrepeat_penalty 1.1\ntemperature 0.6"}
+    assert discovery._ollama_num_ctx(show) == 16384
+
+
+def test_ollama_num_ctx_absent_or_invalid() -> None:
+    assert discovery._ollama_num_ctx({}) is None
+    assert discovery._ollama_num_ctx({"parameters": "temperature 0.6"}) is None
+    assert discovery._ollama_num_ctx({"parameters": {"num_ctx": "abc"}}) is None
+    assert discovery._ollama_num_ctx({"parameters": {"num_ctx": 0}}) is None
+
+
+def test_parse_ollama_tags_num_ctx_sets_loaded_window(monkeypatch) -> None:
+    def _fake_post(url, payload, *, timeout):
+        return {
+            "parameters": "num_ctx 8192",
+            "model_info": {f"{payload['model']}.context_length": 131072},
+        }
+
+    monkeypatch.setattr(discovery, "_post_json", _fake_post)
+    models = _parse_ollama_tags(
+        {"models": [{"name": "llama3.1"}]}, "http://e", timeout=1.0,
+    )
+    assert models[0].max_context_length == 131072
+    assert models[0].loaded_context_length == 8192
+    assert models[0].context_utilisation == round(8192 / 131072, 4)
+
+
 # ── Probers ─────────────────────────────────────────────────────────────
 
 

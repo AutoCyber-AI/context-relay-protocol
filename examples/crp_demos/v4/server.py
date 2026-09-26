@@ -66,6 +66,7 @@ from crp.envelope.scoring import ScoringConfig, score_facts
 from crp.extraction.types import Fact, FactEdge, FactGraph
 from crp.headers import names as H
 from crp.headers.emit import emit_headers
+from crp.headers.halt import HaltReason, halt_reason_info
 from crp.observability.quality import QualityReporter
 from crp.policy.enforce import (
     EnforcementAction,
@@ -100,14 +101,25 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 MASTER_KEY = hashlib.sha256(b"crp-v4-demo-master-key").digest()
 TOKEN_MANAGER = SessionTokenManager(MASTER_KEY, default_ttl_seconds=3600)
-PROTOCOL_VERSION = "5.0.0"
+
+
+def _package_version() -> str:
+    """Protocol version label — always tracks the installed crprotocol package."""
+    try:
+        from importlib.metadata import version
+        return version("crprotocol")
+    except Exception:  # noqa: BLE001 — source-tree fallback when not installed
+        from crp._version import __version__
+        return __version__
+
+
+PROTOCOL_VERSION = _package_version()
 
 # Active safety layer instances (Layer 1–2, advisory but surfaced).
 _INPUT_VALIDATOR = InputValidator()
 _INJECTION_DETECTOR = InjectionDetector()
 _PII_SCANNER = PIIScanner()
 _SAFETY_CONTROL_PLANE = get_default_control_plane()
-# Note: PROTOCOL_VERSION is the demo runtime label; package version is in crp/_version.py.
 
 # Tuned DPE config for the demo: be less aggressive about parametric/uncertain
 # claims so that open-domain prompts (creative writing, math, opinion) do not
@@ -253,6 +265,57 @@ def _coerce_risk(value: Any) -> RiskLevel:
         return RiskLevel(raw)
     except ValueError:
         return RiskLevel.LOW
+
+
+# Which HaltReason best names each policy ViolationType. Anything unlisted
+# maps to the generic SAFETY_POLICY_VIOLATION.
+_HALT_REASON_BY_VIOLATION: dict[str, HaltReason] = {
+    "GROUNDING_BELOW_THRESHOLD": HaltReason.GROUNDING_BELOW_THRESHOLD,
+    "ENTAILMENT_BELOW_THRESHOLD": HaltReason.GROUNDING_BELOW_THRESHOLD,
+    "QUALITY_TIER_REJECTED": HaltReason.QUALITY_TIER_REJECTED,
+    "SOURCE_NOT_TRUSTED": HaltReason.UNTRUSTED_SOURCE,
+    "UNGROUNDED_CLAIM": HaltReason.UNTRUSTED_SOURCE,
+    "MIXED_CONTENT": HaltReason.UNTRUSTED_SOURCE,
+    "PARAMETRIC_CONTENT": HaltReason.UNTRUSTED_SOURCE,
+    "FABRICATION_DETECTED": HaltReason.CRITICAL_HALLUCINATION_RISK,
+    "HALT_ON_RISK": HaltReason.CRITICAL_HALLUCINATION_RISK,
+}
+
+# Lower rank = more specific and explanatory. A concrete threshold breach
+# beats the generic untrusted-source / policy umbrella.
+_REASON_SPECIFICITY: dict[HaltReason | None, int] = {
+    HaltReason.GROUNDING_BELOW_THRESHOLD: 0,
+    HaltReason.QUALITY_TIER_REJECTED: 1,
+    HaltReason.CRITICAL_HALLUCINATION_RISK: 2,
+    HaltReason.UNTRUSTED_SOURCE: 3,
+    HaltReason.SAFETY_POLICY_VIOLATION: 4,
+    None: 5,
+}
+
+
+def _dominant_halt_reason(violations: list[Any], input_safety: dict[str, Any]) -> HaltReason:
+    """Pick the HaltReason that names the *real* dominant violation.
+
+    A detected prompt injection always wins; otherwise the halting violation
+    with the most specific mapped reason wins. Falls back to the generic
+    SAFETY_POLICY_VIOLATION when nothing concrete applies.
+    """
+    if input_safety.get("injection_flags"):
+        return HaltReason.PROMPT_INJECTION_DETECTED
+    best: HaltReason | None = None
+    for v in violations:
+        if getattr(v.action, "value", v.action) != "HALT":
+            continue
+        vtype = getattr(v.violation_type, "value", v.violation_type)
+        mapped = _HALT_REASON_BY_VIOLATION.get(str(vtype))
+        rank = _REASON_SPECIFICITY.get(mapped, _REASON_SPECIFICITY[None])
+        if best is None or rank < _REASON_SPECIFICITY.get(
+            best, _REASON_SPECIFICITY[None]
+        ):
+            best = mapped
+    if best is None:
+        return HaltReason.SAFETY_POLICY_VIOLATION
+    return best
 
 
 _TIER_ORDER = ["S", "A", "B", "C", "D"]
@@ -930,10 +993,12 @@ async def _do_dispatch(
                 "risk_level": risk_level.value,
             },
         )
+        halt_reason = _dominant_halt_reason(policy_decision.violations, input_safety)
+        halt_title, halt_explanation = halt_reason_info(halt_reason)
         halt_body = {
-            "crp_halt_reason": (
-                policy_decision.violations[0].detail if policy_decision.violations else "policy-halt"
-            ),
+            "crp_halt_reason": halt_reason.value,
+            "crp_halt_explanation": halt_explanation,
+            "crp_halt_title": halt_title,
             "audit_trail_uri": audit_trail_uri,
             "oversight_required": True,
             "retry_condition": policy_decision.retry_after or "human-review-required",

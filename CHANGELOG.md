@@ -2,6 +2,38 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.2] — Human-Readable Halts & Console Accuracy
+
+### Added
+- **New `HaltReason` values** (`crp.headers.halt`) — `GROUNDING_BELOW_THRESHOLD`,
+  `QUALITY_TIER_REJECTED`, `UNTRUSTED_SOURCE`, `PROMPT_INJECTION_DETECTED`,
+  `SAFETY_POLICY_VIOLATION` — so callers report the dominant, real violation
+  instead of always claiming an EU-AI-Act umbrella prohibition. Existing enum
+  values are unchanged (stable wire contract).
+- **`HALT_REASON_INFO` / `halt_reason_info()`** (`crp.headers.halt`) — a
+  `HaltReason → (short title, one-sentence plain-English explanation)` mapping.
+- **HTTP 451 body now includes `crp_halt_explanation`** — a human-readable
+  sentence alongside the unchanged `crp_halt_reason` wire value. Backwards
+  compatible (new optional field only).
+
+### Fixed
+- **Demo consoles reported an accurate halt reason** (`examples/crp_demos/pipeline.py`,
+  `examples/crp_demos/v4/server.py`) — the safety console previously emitted
+  `UNACCEPTABLE_EU_AI_ACT` for every halt regardless of the actual violation;
+  it now derives the reason from the dominant policy violation (prompt
+  injection > first halting violation > CRITICAL-risk > generic policy).
+- **Stale protocol version in demo consoles** — `PROTOCOL_VERSION` is now
+  derived from the installed `crprotocol` package version (was hardcoded
+  `"3.0"` / `"5.0.0"` while shipping 6.1.x).
+- **Ollama context-length detection** (`crp.providers.discovery`) — reads
+  `num_ctx` from Ollama's `/api/show` `parameters` field (dict or Modelfile
+  lines), not just `<arch>.context_length` model-info keys.
+- **Console readability pass** (`static/safety.js`, `static/context.js`,
+  `static/app.js`) — halt reasons, policy violation codes, enforcement
+  actions, retry conditions and `CRP-Quality-Completeness` values render as
+  plain English with raw wire values kept in small tags / collapsible raw
+  views; unknown context lengths show an explicit "unknown" label.
+
 ## [6.1.1] — Launch Hardening
 
 ### Added

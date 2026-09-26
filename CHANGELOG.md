@@ -2,6 +2,20 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.3] — OpenAI-Compatible Base URL Normalization
+
+### Fixed
+- **`OpenAIAdapter` normalizes `base_url` to include `/v1`** — passing a bare
+  host (`http://192.168.0.6:1234`) previously made the SDK post to
+  `/chat/completions`, which LM Studio answers with HTTP 200 and a body that
+  parses into an empty completion (`choices=None`), surfacing as a cryptic
+  `TypeError: 'NoneType' object is not subscriptable`. The adapter now appends
+  `/v1` when missing (found and reproduced live against LM Studio).
+- **Clear error on empty completions** — `generate_chat` and
+  `generate_chat_with_tools` now raise a descriptive `ValueError` naming the
+  model and effective base URL when a provider returns `choices=None`, instead
+  of an opaque subscript error.
+
 ## [6.1.2] — Human-Readable Halts & Console Accuracy
 
 ### Added

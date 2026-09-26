@@ -347,6 +347,16 @@ class OpenAIAdapter(LLMProvider):
                 raise ValueError(
                     "No API key provided. Pass api_key= or set OPENAI_API_KEY."
                 )
+        # Normalize the base URL: OpenAI-compatible servers (LM Studio,
+        # llama.cpp, vLLM, Ollama) serve the API under /v1.  When the caller
+        # passes a bare host ("http://192.168.0.6:1234") the SDK would post
+        # to "/chat/completions", which LM Studio answers with HTTP 200 and a
+        # body that parses into a ChatCompletion with choices=None — surfacing
+        # later as a cryptic TypeError.  Append /v1 when it is missing.
+        if base_url:
+            base_url = base_url.rstrip("/")
+            if not base_url.endswith("/v1"):
+                base_url = base_url + "/v1"
         kwargs: dict[str, Any] = {"api_key": key, "timeout": timeout}
         if base_url:
             kwargs["base_url"] = base_url
@@ -418,6 +428,16 @@ class OpenAIAdapter(LLMProvider):
         for attempt in range(self._MAX_RETRIES):
             try:
                 response = self._client.chat.completions.create(**params)
+                if not response.choices:
+                    # Some servers (e.g. LM Studio answering a non-/v1 path)
+                    # return HTTP 200 with a body that parses into an empty
+                    # ChatCompletion.  Raise a clear error instead of the
+                    # cryptic "'NoneType' object is not subscriptable".
+                    raise ValueError(
+                        f"Provider returned an empty completion (choices=None) "
+                        f"for model {self._model!r} — check the base URL "
+                        f"({self._client.base_url}) is the API root, e.g. http://host:1234/v1"
+                    )
                 choice = response.choices[0]
                 text = choice.message.content or ""
                 reason = choice.finish_reason or "stop"
@@ -562,6 +582,12 @@ class OpenAIAdapter(LLMProvider):
         for attempt in range(self._MAX_RETRIES):
             try:
                 response = self._client.chat.completions.create(**params)
+                if not response.choices:
+                    raise ValueError(
+                        f"Provider returned an empty completion (choices=None) "
+                        f"for model {self._model!r} — check the base URL "
+                        f"({self._client.base_url}) is the API root, e.g. http://host:1234/v1"
+                    )
                 choice = response.choices[0]
                 text = choice.message.content or ""
                 reason = choice.finish_reason or "stop"

@@ -6,9 +6,13 @@ from __future__ import annotations
 
 
 def test_version() -> None:
+    import re
+
     from crp import __version__
 
-    assert __version__ == "6.1.2"
+    # Shape-only assertion: the exact version lives in crp/_version.py and
+    # changes every release, so pinning it here just creates churn.
+    assert re.fullmatch(r"\d+\.\d+\.\d+([-.][0-9A-Za-z.]+)?", __version__)
 
 
 def test_imports() -> None:

@@ -4,16 +4,16 @@
   "use strict";
 
   const messages = [
-    { icon: "🎉", text: "<strong>CRP v6.1.1 is live</strong> — local-first agentic AI governance for any model", href: "https://github.com/AutoCyber-AI/context-relay-protocol/releases/tag/v6.1.1", cta: "See the release →" },
-    { icon: "🏠", text: "<strong>Runs locally on LM Studio, Ollama, or any OpenAI-compatible model</strong> — your data never leaves the machine", href: "/getting-started/local-models/", cta: "Run local →" },
-    { icon: "🖥️", text: "<strong>Live agent console</strong> — console.crprotocol.io or self-hosted via <code>crp serve</code>", href: "https://console.crprotocol.io", cta: "Open console →" },
-    { icon: "🛡️", text: "<strong>Grounding &amp; hallucination scoring on every call</strong> — CRITICAL risk halts with HTTP 451", href: "/topics/ai-safety/", cta: "Explore safety →" },
+    { icon: "🎉", text: "<strong>CRP v6.1.1 is live</strong> - local-first agentic AI governance for any model", href: "https://github.com/AutoCyber-AI/context-relay-protocol/releases/tag/v6.1.1", cta: "See the release →" },
+    { icon: "🏠", text: "<strong>Runs locally on LM Studio, Ollama, or any OpenAI-compatible model</strong> - your data never leaves the machine", href: "/getting-started/local-models/", cta: "Run local →" },
+    { icon: "🖥️", text: "<strong>Live agent console</strong> - console.crprotocol.io or self-hosted via <code>crp serve</code>", href: "https://console.crprotocol.io", cta: "Open console →" },
+    { icon: "🛡️", text: "<strong>Grounding &amp; hallucination scoring on every call</strong> - CRITICAL risk halts with HTTP 451", href: "/topics/ai-safety/", cta: "Explore safety →" },
     { icon: "🔐", text: "<strong>Tamper-evident HMAC hash-chained audit trail</strong> on every governed call", href: "/control-evidence/", cta: "See the evidence →" },
-    { icon: "🧠", text: "<strong>Unbounded context with continuity across windows</strong> — automatic continuation, no lost state", href: "/topics/context-management/", cta: "Explore →" },
-    { icon: "🧠", text: "<strong>Reasoning, safeguards &amp; emotions in one preset file</strong> — enforced, not prompted", href: "https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md", cta: "Preset guide →" },
-    { icon: "⚡", text: "<strong>Get started in 5 minutes</strong> — <code>pip install crprotocol</code> and run your first governed agent", href: "/getting-started/quickstart/", cta: "Get started →" },
-    { icon: "✅", text: "<strong>3,482 tests passing</strong> — ruff and mypy at zero errors", href: "/testing/", cta: "See test suite →" },
-    { icon: "⭐", text: "<strong>Star us on GitHub</strong> — follow CRP development", href: "https://github.com/AutoCyber-AI/context-relay-protocol", cta: "Open repo →" }
+    { icon: "🧠", text: "<strong>Unbounded context with continuity across windows</strong> - automatic continuation, no lost state", href: "/topics/context-management/", cta: "Explore →" },
+    { icon: "🧠", text: "<strong>Reasoning, safeguards &amp; emotions in one preset file</strong> - enforced, not prompted", href: "https://github.com/AutoCyber-AI/context-relay-protocol/blob/main/docs/CRPv6_COGNITIVE_PRESETS_GUIDE.md", cta: "Preset guide →" },
+    { icon: "⚡", text: "<strong>Get started in 5 minutes</strong> - <code>pip install crprotocol</code> and run your first governed agent", href: "/getting-started/quickstart/", cta: "Get started →" },
+    { icon: "✅", text: "<strong>3,482 tests passing</strong> - ruff and mypy at zero errors", href: "/testing/", cta: "See test suite →" },
+    { icon: "⭐", text: "<strong>Star us on GitHub</strong> - follow CRP development", href: "https://github.com/AutoCyber-AI/context-relay-protocol", cta: "Open repo →" }
   ];
 
   const INTERVAL = 6000;

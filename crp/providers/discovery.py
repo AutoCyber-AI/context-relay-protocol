@@ -360,6 +360,29 @@ def _parse_openai_models(
     return models
 
 
+def _ollama_num_ctx(show: dict[str, Any]) -> int | None:
+    """Extract ``num_ctx`` (the loaded window) from an Ollama ``/api/show`` body.
+
+    Ollama reports it in the free-form ``parameters`` field — either a dict
+    (``{"num_ctx": 8192}``) or Modelfile-style lines (``"num_ctx 8192"``).
+    Returns ``None`` when the runtime does not advertise it.
+    """
+    params = show.get("parameters")
+    if isinstance(params, dict):
+        val = params.get("num_ctx")
+        return val if isinstance(val, int) and val > 0 else None
+    if isinstance(params, str):
+        for line in params.splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[0] == "num_ctx":
+                try:
+                    val = int(parts[1])
+                except ValueError:
+                    return None
+                return val if val > 0 else None
+    return None
+
+
 def _parse_ollama_tags(data: Any, endpoint: str, *, timeout: float) -> list[DetectedModel]:
     """Parse Ollama's ``/api/tags`` and enrich each model via ``/api/show``."""
     models: list[DetectedModel] = []
@@ -402,6 +425,11 @@ def _parse_ollama_tags(data: Any, endpoint: str, *, timeout: float) -> list[Dete
                 if key.endswith(".context_length") and isinstance(val, int):
                     model.max_context_length = val
                     break
+            # Ollama usually advertises the *loaded* window as num_ctx in the
+            # Modelfile parameters rather than as a model_info key.
+            num_ctx = _ollama_num_ctx(show)
+            if num_ctx:
+                model.loaded_context_length = num_ctx
         models.append(model)
     return models
 

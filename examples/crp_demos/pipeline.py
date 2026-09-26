@@ -54,7 +54,18 @@ from crp.providers.ollama import OllamaAdapter
 from crp.security.audit_trail import ComplianceAuditTrail, ComplianceEventType
 from crp.security.session_token import format_set_session_header, issue_token
 
-PROTOCOL_VERSION = "3.0"
+
+def _package_version() -> str:
+    """Protocol version label — always tracks the installed crprotocol package."""
+    try:
+        from importlib.metadata import version
+        return version("crprotocol")
+    except Exception:  # noqa: BLE001 — source-tree fallback when not installed
+        from crp._version import __version__
+        return __version__
+
+
+PROTOCOL_VERSION = _package_version()
 
 # The demos run the DPE in pure-lexical mode: the optional cross-encoder NLI
 # model (sentence-transformers / torch) is disabled so the apps stay
@@ -166,6 +177,67 @@ DEFAULT_SAFETY_POLICY = (
     "require-grounding 0.70; require-quality S A B C"
 )
 
+# Which HaltReason best describes each policy ViolationType. Violations not
+# listed here map to the generic SAFETY_POLICY_VIOLATION.
+_HALT_REASON_BY_VIOLATION: dict[str, HaltReason] = {
+    "GROUNDING_BELOW_THRESHOLD": HaltReason.GROUNDING_BELOW_THRESHOLD,
+    "ENTAILMENT_BELOW_THRESHOLD": HaltReason.GROUNDING_BELOW_THRESHOLD,
+    "QUALITY_TIER_REJECTED": HaltReason.QUALITY_TIER_REJECTED,
+    "SOURCE_NOT_TRUSTED": HaltReason.UNTRUSTED_SOURCE,
+    "UNGROUNDED_CLAIM": HaltReason.UNTRUSTED_SOURCE,
+    "MIXED_CONTENT": HaltReason.UNTRUSTED_SOURCE,
+    "PARAMETRIC_CONTENT": HaltReason.UNTRUSTED_SOURCE,
+    "FABRICATION_DETECTED": HaltReason.CRITICAL_HALLUCINATION_RISK,
+    "PII_DETECTED": HaltReason.SAFETY_POLICY_VIOLATION,
+    "HALT_ON_RISK": HaltReason.CRITICAL_HALLUCINATION_RISK,
+}
+
+# Lower rank = more specific and explanatory. A concrete threshold breach
+# beats the generic untrusted-source / policy umbrella.
+_REASON_SPECIFICITY: dict[HaltReason | None, int] = {
+    HaltReason.GROUNDING_BELOW_THRESHOLD: 0,
+    HaltReason.QUALITY_TIER_REJECTED: 1,
+    HaltReason.CRITICAL_HALLUCINATION_RISK: 2,
+    HaltReason.UNTRUSTED_SOURCE: 3,
+    HaltReason.SAFETY_POLICY_VIOLATION: 4,
+    None: 5,
+}
+
+
+def _dominant_halt_reason(
+    violations: list[Any],
+    injection: list[Any],
+    risk_level: str,
+) -> HaltReason:
+    """Pick the HaltReason that names the *real* dominant violation.
+
+    A detected prompt injection always wins (it is the clearest signal);
+    otherwise the halting violation with the most specific mapped reason
+    wins (a concrete threshold breach beats the generic untrusted-source
+    umbrella). Falls back to CRITICAL_HALLUCINATION_RISK for a CRITICAL-risk
+    halt with no concrete violation, then SAFETY_POLICY_VIOLATION.
+    """
+    if injection:
+        return HaltReason.PROMPT_INJECTION_DETECTED
+    best: HaltReason | None = None
+    for v in violations:
+        if getattr(v.action, "value", v.action) != "HALT":
+            continue
+        vtype = getattr(v.violation_type, "value", v.violation_type)
+        mapped = _HALT_REASON_BY_VIOLATION.get(str(vtype))
+        # Lower rank = more specific/explanatory. Unmapped violations map to
+        # the generic SAFETY_POLICY_VIOLATION (worst rank).
+        rank = _REASON_SPECIFICITY.get(mapped, len(_REASON_SPECIFICITY))
+        if best is None or rank < _REASON_SPECIFICITY.get(
+            best, len(_REASON_SPECIFICITY)
+        ):
+            best = mapped
+    if best is not None:
+        return best
+    if risk_level == "CRITICAL":
+        return HaltReason.CRITICAL_HALLUCINATION_RISK
+    return HaltReason.SAFETY_POLICY_VIOLATION
+
 
 def run_safety_pipeline(
     *,
@@ -256,9 +328,7 @@ def run_safety_pipeline(
     http_status = 200
     if decision.halted:
         http_status = 451
-        reason = (HaltReason.UNACCEPTABLE_EU_AI_ACT
-                  if risk_level in ("CRITICAL", "HIGH")
-                  else HaltReason.CRITICAL_HALLUCINATION_RISK)
+        reason = _dominant_halt_reason(decision.violations, injection, risk_level)
         halt = build_halt_response(
             reason=reason, session_id=session_id,
             audit_trail_uri=f"/api/safety/audit/{session_id}",

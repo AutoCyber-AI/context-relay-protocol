@@ -17,11 +17,82 @@ from . import names as H
 
 
 class HaltReason(str, Enum):
-    """Canonical ``crp_halt_reason`` values (SPEC-002 §13.2)."""
+    """Canonical ``crp_halt_reason`` values (SPEC-002 §13.2).
+
+    The three original values are a stable wire contract; the additional
+    values added in 6.1.2 let callers report the *dominant* violation instead
+    of always claiming an umbrella prohibition.
+    """
 
     CRITICAL_HALLUCINATION_RISK = "CRITICAL_HALLUCINATION_RISK"
     UNACCEPTABLE_EU_AI_ACT = "UNACCEPTABLE_EU_AI_ACT"
     SAFETY_BUDGET_DEPLETED = "SAFETY_BUDGET_DEPLETED"
+    GROUNDING_BELOW_THRESHOLD = "GROUNDING_BELOW_THRESHOLD"
+    QUALITY_TIER_REJECTED = "QUALITY_TIER_REJECTED"
+    UNTRUSTED_SOURCE = "UNTRUSTED_SOURCE"
+    PROMPT_INJECTION_DETECTED = "PROMPT_INJECTION_DETECTED"
+    SAFETY_POLICY_VIOLATION = "SAFETY_POLICY_VIOLATION"
+
+
+#: Human-readable rendering for each halt reason: ``(short title, explanation)``.
+#: Used for the ``crp_halt_explanation`` body field and for UIs that want to
+#: show operators a plain-English sentence instead of the raw enum value.
+HALT_REASON_INFO: dict[HaltReason, tuple[str, str]] = {
+    HaltReason.CRITICAL_HALLUCINATION_RISK: (
+        "Critical hallucination risk",
+        "CRP halted the response because its analysis indicates a critical "
+        "risk that the model invented or distorted facts.",
+    ),
+    HaltReason.UNACCEPTABLE_EU_AI_ACT: (
+        "Prohibited under the EU AI Act",
+        "CRP halted the response because the request falls under a practice "
+        "the EU AI Act prohibits, which cannot be served in any form.",
+    ),
+    HaltReason.SAFETY_BUDGET_DEPLETED: (
+        "Safety budget depleted",
+        "CRP halted the session because its multi-agent safety budget was "
+        "consumed by repeated high-risk activity.",
+    ),
+    HaltReason.GROUNDING_BELOW_THRESHOLD: (
+        "Answer not grounded in allowed sources",
+        "CRP halted the response because too few of its claims trace back to "
+        "your provided context, below the grounding threshold in your policy.",
+    ),
+    HaltReason.QUALITY_TIER_REJECTED: (
+        "Answer below required quality tier",
+        "CRP halted the response because its overall quality tier is lower "
+        "than the minimum your policy accepts.",
+    ),
+    HaltReason.UNTRUSTED_SOURCE: (
+        "Untrusted source used",
+        "CRP halted the response because it relied on a source your policy "
+        "does not trust.",
+    ),
+    HaltReason.PROMPT_INJECTION_DETECTED: (
+        "Prompt injection detected",
+        "CRP halted the response because its input shield detected an "
+        "attempt to override the system's instructions.",
+    ),
+    HaltReason.SAFETY_POLICY_VIOLATION: (
+        "Safety policy violated",
+        "CRP halted the response because it violated one or more directives "
+        "in your safety policy.",
+    ),
+}
+
+
+def halt_reason_info(reason: HaltReason | str) -> tuple[str, str]:
+    """Return ``(short title, explanation)`` for a halt reason.
+
+    Unknown / free-text reasons fall back to a generic entry so the wire
+    value is never rendered bare.
+    """
+    try:
+        key = reason if isinstance(reason, HaltReason) else HaltReason(str(reason))
+    except ValueError:
+        return ("Safety policy violated",
+                "CRP halted the response because it violated your safety policy.")
+    return HALT_REASON_INFO[key]
 
 
 @dataclass
@@ -58,7 +129,10 @@ def build_halt_response(
         retry_after: optional ``CRP-Safety-Retry-After`` value (seconds or token).
 
     Returns:
-        :class:`HaltResponse` with ``http_status=451``.
+        :class:`HaltResponse` with ``http_status=451``. The body always
+        carries ``crp_halt_reason`` (wire contract, unchanged) plus the
+        optional ``crp_halt_explanation`` plain-English sentence derived
+        from the reason.
     """
     reason_value = reason.value if isinstance(reason, HaltReason) else str(reason)
 
@@ -67,6 +141,7 @@ def build_halt_response(
 
     body: dict[str, object] = {
         "crp_halt_reason": reason_value,
+        "crp_halt_explanation": halt_reason_info(reason_value)[1],
         "session_id": session_id,
         "audit_trail_uri": audit_trail_uri,
         "oversight_required": bool(oversight_required),

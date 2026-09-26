@@ -17,7 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # Min and max supported versions only — the full 4-version matrix
+        # quadrupled runner cost without catching version-specific failures
+        # in practice. Lint/type-check run on the max version only.
+        python-version: ["3.10", "3.13"]
+
+    env:
+      IS_MAX_PY: ${{ matrix.python-version == '3.13' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -33,9 +39,11 @@ jobs:
           pip install -e ".[full,mcp,dev]"
 
       - name: Lint with ruff
+        if: env.IS_MAX_PY == 'true'
         run: ruff check crp/ tests/
 
       - name: Type check with mypy
+        if: env.IS_MAX_PY == 'true'
         run: mypy crp/ --ignore-missing-imports
 
       - name: Run tests with coverage

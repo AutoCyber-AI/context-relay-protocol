@@ -68,12 +68,12 @@ packed into subsequent envelopes exactly like ingested documents.
 
 ## Positioned tool loop (v5)
 
-CRP v5 adds `dispatch_positioned()` — a **positioned** agentic loop for small and
+CRP v5 adds `dispatch_positioned()` - a **positioned** agentic loop for small and
 local models (SPEC-049/050). Instead of injecting the whole tool catalogue into the
 prompt, CRP classifies the request into operations and positions the model on **one
 operation at a time with only the 1–3 tools that operation needs**. Each tool result
 becomes a typed fact in a Cognitive State Object (CSO), so the working window stays
-**bounded** no matter how many tools run — *positioning, not injection*.
+**bounded** no matter how many tools run - *positioning, not injection*.
 
 ```python
 import crp
@@ -105,7 +105,7 @@ for e in result.event_stream:      # live visibility == audit
 ### Multi-turn (state relay)
 
 The easiest way to run a multi-turn agent is `client.conversation()`, which relays the
-Cognitive State Object forward automatically — no manual state threading:
+Cognitive State Object forward automatically - no manual state threading:
 
 ```python
 convo = client.conversation()
@@ -283,7 +283,7 @@ Reference implementations that run without an API key are in
 
 ### Multi-turn state relay
 
-Pass the previous result's CSO to the next turn, or use `agent.run()` repeatedly — the agent keeps the last CSO automatically.
+Pass the previous result's CSO to the next turn, or use `agent.run()` repeatedly - the agent keeps the last CSO automatically.
 
 ```python
 r1 = agent.run("What's the weather in Sydney?")
@@ -367,7 +367,7 @@ for event in agent.run_stream("What's the weather in Sydney?"):
 | Tool result extraction to CKF | ✅ Implemented | Via extraction pipeline |
 | Multi-turn `ask()` | ✅ Implemented | Session state persists |
 | Manual `call_tool()` | ✅ Implemented | For explicit tool execution |
-| Declarative `crp.Agent` | ✅ Implemented | SPEC-059 — tools + policy + model |
+| Declarative `crp.Agent` | ✅ Implemented | SPEC-059 - tools + policy + model |
 | Parallel tool calls | ⚠️ Partial | Sequential loop today |
 | Streaming tool events | ✅ Implemented | `agent.run_stream()` and TEL stream |
 

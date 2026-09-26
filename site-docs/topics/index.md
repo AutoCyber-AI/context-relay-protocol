@@ -63,6 +63,6 @@ Most AI safety, governance, and compliance work today is done in application cod
 - **Compliance evidence** is generated continuously from runtime audit data.
 - **Context state** is relayed between windows, sessions, and agents without vendor lock-in.
 
-The result is AI systems that are safer, more auditable, and easier to deploy under regulation — with one `base_url` change.
+The result is AI systems that are safer, more auditable, and easier to deploy under regulation - with one `base_url` change.
 
 [:octicons-arrow-right-24: Read why CRP exists](../why-crp.md)

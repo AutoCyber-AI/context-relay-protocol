@@ -1,7 +1,7 @@
 ---
 hide:
   - toc
-seo_title: Why CRP? — Agentic Positioning for SLM-first AI
+seo_title: Why CRP? - Agentic Positioning for SLM-first AI
 description: CRP is the agentic positioning layer for SLM-first AI. MCP exposes tools, A2A connects agents, CRP positions every agent on the right task with the right context and tools.
 ---
 
@@ -11,9 +11,9 @@ description: CRP is the agentic positioning layer for SLM-first AI. MCP exposes 
 
 Every AI application now faces three problems at once:
 
-1. **LLMs have finite context and output** — long tasks truncate and prior context degrades.
-2. **Agents need safety and grounding** — tool-using agents can take wrong actions, hallucinate sources, or leak data without visible controls.
-3. **Governance must be provable** — EU AI Act, ISO 42001, NIST AI RMF, and SOC 2-for-AI all require evidence that controls actually ran, not just that they exist on paper.
+1. **LLMs have finite context and output** - long tasks truncate and prior context degrades.
+2. **Agents need safety and grounding** - tool-using agents can take wrong actions, hallucinate sources, or leak data without visible controls.
+3. **Governance must be provable** - EU AI Act, ISO 42001, NIST AI RMF, and SOC 2-for-AI all require evidence that controls actually ran, not just that they exist on paper.
 
 Existing solutions each solve one piece:
 
@@ -24,7 +24,7 @@ Existing solutions each solve one piece:
 - **A2A** connects agents but doesn't position them on the right task with the right tools
 - **CRP** is the positioning and governance layer: it selects operations, loads only the tools each call needs, carries state forward, runs safety checks, and proves every step
 
-**CRP is the first protocol that manages the complete context lifecycle** — ingestion, extraction, packing, dispatch, continuation, quality assessment, safety verification, and cross-session persistence — as a single, coherent, auditable system.
+**CRP is the first protocol that manages the complete context lifecycle** - ingestion, extraction, packing, dispatch, continuation, quality assessment, safety verification, and cross-session persistence - as a single, coherent, auditable system.
 
 - **RAG** retrieves documents but doesn't manage output or continuation
 - **MemGPT/Letta** pages memory but burns tokens on self-management
@@ -271,11 +271,11 @@ MCP gives agents tools. A2A lets agents talk. **CRP gives every agent the contex
 7. **Reasoning amplification for small models.** ORC + ICML + RTL scaffolding can let a 770M model outperform a 540B model on structured tasks.
 8. **Elastic License 2.0 + open specification.** Free to use; specs submitted to IETF, IANA, IEEE SA, and ISO/IEC JTC 1/SC 42.
 9. **Four-tier memory hierarchy** (active context / hot state / warm state / cold CKF) with async persistence and in-memory hot path.
-10. **Agentic positioning + control-evidence layer** — positions every agent on the right task and emits HMAC-signed, tamper-evident proof that safety and security controls operate on every call, for EU AI Act, AIUC-1, ISO 42001, NIST AI RMF, and SOC 2-for-AI.
+10. **Agentic positioning + control-evidence layer** - positions every agent on the right task and emits HMAC-signed, tamper-evident proof that safety and security controls operate on every call, for EU AI Act, AIUC-1, ISO 42001, NIST AI RMF, and SOC 2-for-AI.
 11. **Re-grounding triggered by measured degradation**, not a fixed schedule - an honest, adaptive quality preservation mechanism.
 11. **HTTP sidecar for inter-LLM knowledge sharing** - structured fact sharing across different models/applications without API-key sharing or LLM-to-LLM chat.
 12. **Context-source enforcement pipeline** with manifest ledger, key rotation, provider hooks, and SIEM forwarding.
-13. **Honest boundaries** — we publish what CRP covers today, what it produces as evidence, and what requires accredited partner attestation.
+13. **Honest boundaries** - we publish what CRP covers today, what it produces as evidence, and what requires accredited partner attestation.
 
 ---
 

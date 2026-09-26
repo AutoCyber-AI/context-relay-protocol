@@ -1,5 +1,5 @@
 ---
-seo_title: AI Compliance & Governance Evidence — EU AI Act, ISO 42001, NIST, GDPR
+seo_title: AI Compliance & Governance Evidence - EU AI Act, ISO 42001, NIST, GDPR
 description: Generate regulator-ready compliance evidence for EU AI Act, ISO 42001, NIST AI RMF, and GDPR from runtime audit data.
 ---
 

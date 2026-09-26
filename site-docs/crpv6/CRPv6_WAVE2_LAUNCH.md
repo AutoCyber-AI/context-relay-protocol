@@ -1,6 +1,6 @@
-# CRPv6 Wave 2 — Protocol Launch Readiness
+# CRPv6 Wave 2 - Protocol Launch Readiness
 
-CRPv6 Wave 2 is the open-source protocol launch wave. It proves that a small local language model can execute real tools, call live public APIs, and emit runtime governance metadata — all without a cloud provider or paid API key.
+CRPv6 Wave 2 is the open-source protocol launch wave. It proves that a small local language model can execute real tools, call live public APIs, and emit runtime governance metadata - all without a cloud provider or paid API key.
 
 ---
 
@@ -19,10 +19,10 @@ CRPv6 Wave 2 is the open-source protocol launch wave. It proves that a small loc
 
 Both demos use these free, no-key public endpoints:
 
-- **Open-Meteo** — live weather
-- **CoinGecko** — live cryptocurrency prices
-- **Wikipedia REST** — article summaries
-- **Nominatim** — geocoding (used internally by the weather tool)
+- **Open-Meteo** - live weather
+- **CoinGecko** - live cryptocurrency prices
+- **Wikipedia REST** - article summaries
+- **Nominatim** - geocoding (used internally by the weather tool)
 
 ### Run the research agent
 

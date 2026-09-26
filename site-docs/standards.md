@@ -1,5 +1,5 @@
 ---
-seo_title: CRP Standards Track — IETF, IANA, IEEE SA & ISO/IEC Submissions
+seo_title: CRP Standards Track - IETF, IANA, IEEE SA & ISO/IEC Submissions
 description: CRP is submitted to IETF, IANA, IEEE SA, and ISO/IEC JTC 1/SC 42 as an open standard for AI context governance.
 ---
 

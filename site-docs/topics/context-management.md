@@ -1,5 +1,5 @@
 ---
-seo_title: Context Management for LLMs — Unbounded Context, Continuation & CKF
+seo_title: Context Management for LLMs - Unbounded Context, Continuation & CKF
 description: CRP provides context management for LLMs with automatic continuation, graph-structured knowledge, retrieval, and zero in-window protocol overhead.
 tags:
   - context-management

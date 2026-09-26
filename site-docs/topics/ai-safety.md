@@ -1,5 +1,5 @@
 ---
-seo_title: AI Safety Protocol — Hallucination Detection & LLM Safety
+seo_title: AI Safety Protocol - Hallucination Detection & LLM Safety
 description: Learn how CRP implements AI safety as a protocol layer with hallucination detection, fabrications, prompt injection shield, PII scanning, and safety budgets.
 tags:
   - ai-safety
@@ -19,15 +19,15 @@ Adversarial-Tested AI Safety.<br/>Signed, Verifiable, On Every Call.
 
 <p class="hero-sub">
 Your AI agents face prompt injection, jailbreak attempts, and data exfiltration attacks daily.
-CRP Protocol's 13-stage DPE safety pipeline doesn't just detect these threats — it emits
+CRP Protocol's 13-stage DPE safety pipeline doesn't just detect these threats - it emits
 HMAC-signed, tamper-evident proof that the safety control ran, what it decided, and who
 authorised it. The evidence the EU AI Act, AIUC-1, ISO 42001, and NIST AI RMF all demand.
 </p>
 
 <div class="aiuc-badge-list">
-<span class="aiuc-badge">AIUC-1 Security — Adversarial Robustness</span>
-<span class="aiuc-badge">AIUC-1 Security — Real-time Input Filtering</span>
-<span class="aiuc-badge">AIUC-1 Safety — Harmful Output Prevention</span>
+<span class="aiuc-badge">AIUC-1 Security - Adversarial Robustness</span>
+<span class="aiuc-badge">AIUC-1 Security - Real-time Input Filtering</span>
+<span class="aiuc-badge">AIUC-1 Safety - Harmful Output Prevention</span>
 </div>
 
 <div class="hero-buttons">
@@ -39,7 +39,7 @@ authorised it. The evidence the EU AI Act, AIUC-1, ISO 42001, and NIST AI RMF al
 
 **AI safety** is the discipline of designing, building, and operating AI systems so they behave reliably, avoid harmful outputs, and remain under human control. For production LLMs, AI safety means detecting hallucinations, contradictions, fabrications, prompt injection, and personal-data leakage before they reach users.
 
-Context Relay Protocol (CRP) implements AI safety at the **protocol layer** — every AI call is scored and annotated with standard HTTP headers, so safety signals are visible to applications, auditors, and downstream agents.
+Context Relay Protocol (CRP) implements AI safety at the **protocol layer** - every AI call is scored and annotated with standard HTTP headers, so safety signals are visible to applications, auditors, and downstream agents.
 
 ---
 

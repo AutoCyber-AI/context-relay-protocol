@@ -131,16 +131,16 @@ is identical**. The difference: CRP finishes the task.
 
 ## SQB Gate Results (SPEC-026)
 
-> **Measured run — local 8B, naive continuation harness.** The numbers below are a
+> **Measured run - local 8B, naive continuation harness.** The numbers below are a
 > real run of the Semantic Quality Benchmark against `meta-llama-3.1-8b-instruct`
 > (LM Studio), recorded 2026-06-30 with `crprotocol` 5.0.0. The SQB *gate* (strict
 > repetition < 1.5 % and multi-hop thresholds) is tuned for the full CDR/CDGR
 > frontier pipeline, so a small model on a plain continuation harness does **not**
 > clear every gate. What it does show is the property that matters most: **factual
-> recall holds flat across continuation windows** — facts established early survive
+> recall holds flat across continuation windows** - facts established early survive
 > to the end.
 
-The gating metric is cumulative `factual_recall` — monotonically non-decreasing,
+The gating metric is cumulative `factual_recall` - monotonically non-decreasing,
 testing that reference facts are preserved across continuation windows.
 
 | Case | Topic | recall W1 → WLast | F1 W1 → WLast | Recall held? |
@@ -153,16 +153,16 @@ testing that reference facts are preserved across continuation windows.
 **preserves every fact it established** as the document grows to ~5 700 words across
 five windows (the core continuation guarantee). F1 dips because added breadth
 introduces some unsupported detail; multi-hop and lexical repetition expose the
-small model's own limits — exactly the gap the v5 **positioned tool loop** is built
+small model's own limits - exactly the gap the v5 **positioned tool loop** is built
 to close on local models. Re-run it yourself:
 `python examples/crp_demos/sqb_benchmark.py --mode full`.
 
-## SQB — Positioned Loop (v5), local SLM vs. frontier judge
+## SQB - Positioned Loop (v5), local SLM vs. frontier judge
 
-> **Measured run — `crprotocol` (unreleased, post-5.0.0), recorded 2026-07-01.** This
+> **Measured run - `crprotocol` (unreleased, post-5.0.0), recorded 2026-07-01.** This
 > is a *different, newer* test from the one above: instead of the naive continuation
 > harness, this runs the SQB cases through the **real CRPv5 positioned loop**
-> (`run_positioned`, with output continuation and the anti-repetition fix — a
+> (`run_positioned`, with output continuation and the anti-repetition fix - a
 > `DocumentMap` covered-section table fed into every continuation window, plus an
 > n-gram repetition guard that retries a window once and then stops rather than
 > padding). Reproduce with `python examples/crp_demos/sqb_positioned.py`.
@@ -172,7 +172,7 @@ to close on local models. Re-run it yourself:
 | **Hosted frontier (`hosted-k2.6`)** | 10 | 0.332 | **3.66%** | 6.73/10 |
 | **Local 8B (`meta-llama-3.1-8b-instruct`)** | 6 | 0.531 | **20.58%** | n/a (judge rate-limited) |
 
-<small>All 3 SQB cases (technical, regulatory, multi-hop), full dataset — no cases
+<small>All 3 SQB cases (technical, regulatory, multi-hop), full dataset - no cases
 pending. The judge column shows `n/a` because the hosted judge API returned `0.0` for
 every one of the 3 calls in this run, immediately after the hosted-backend run above
 had already exhausted the same rate-limited quota; a `0.0` score across an *entire*
@@ -187,19 +187,19 @@ verdict, so it is reported as not-obtained rather than as a real 0/10.</small>
 | sqb-002 (regulatory) | 2 751 | 0.88 | 0.282 | 17.79% | 0.40 |
 | sqb-003 (multi-hop) | 2 967 | 0.80 | 0.471 | 28.44% | 0.00 |
 
-**Reading it honestly — does the local model reach the hosted model's repetition level?** **Not
+**Reading it honestly - does the local model reach the hosted model's repetition level?** **Not
 yet.** The anti-repetition mechanism (covered-section TOC + n-gram retry guard) is
 the *same code path* for both backends and measurably improved the naive-harness
 baseline (which spiked to 15–30% on individual windows) into a **consistently low
 3.66% mean on the hosted model**. On the local 8B, mean repetition across all 3 cases sits at
-**20.58%** — roughly 5–6× the hosted model's rate, and worst on the multi-hop case (28.44%),
+**20.58%** - roughly 5–6× the hosted model's rate, and worst on the multi-hop case (28.44%),
 which mirrors the same case's **0.00 topic coverage** in the naive-harness table
 above: multi-hop reasoning is consistently the local 8B's weakest domain across both
 harnesses, not just this one. This is an honest, model-capability finding, not a
 broken mechanism: an 8B model is measurably less reliable than a frontier model at
 following the "do not repeat these already-covered sections" instruction embedded in
 every continuation prompt, so it re-covers similar ground more often even though the
-guard retries once per window. **Recall still holds** (0.80–1.00 — established facts
+guard retries once per window. **Recall still holds** (0.80–1.00 - established facts
 are not lost) across all 3 cases, which is the CRPv5 continuation guarantee; the
 repetition gap is a **quality**, not a **correctness**, gap, and is the next tuning
 target (candidates: lowering the retry-trigger threshold below 0.6 for small models,

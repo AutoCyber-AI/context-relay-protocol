@@ -1,11 +1,11 @@
-# CRP — Context Relay Protocol (v4)
+# CRP - Context Relay Protocol (v4)
 
 > CRP is a sidecar governance protocol for AI inference. It sits between an application and
 > any LLM provider and governs every call: enforcing grounding and safety policy, scoring
 > hallucination/risk, halting unsafe responses, carrying tamper-evident provenance, and
 > producing compliance evidence (EU AI Act, ISO 42001, GDPR). It rides on HTTP headers so
 > existing proxies/gateways can read it; headers are stripped before reaching the provider.
-> CRP governs the inference call itself — the layer above MCP/A2A (transport) and distinct
+> CRP governs the inference call itself - the layer above MCP/A2A (transport) and distinct
 > from AIPREF (training preferences).
 
 ## For AI agents integrating CRP

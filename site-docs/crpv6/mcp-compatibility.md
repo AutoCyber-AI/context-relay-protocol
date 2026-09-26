@@ -1,4 +1,4 @@
-# CRPv6 — MCP Compatibility
+# CRPv6 - MCP Compatibility
 
 CRPv6 is designed to complement the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). MCP standardizes how LLMs discover and call tools; CRP standardizes how agents are positioned on the right task with the right context. The two are complementary.
 
@@ -42,7 +42,7 @@ CRP agents can consume any MCP server. This means a `crp.Agent` can use:
 
 ## Why this matters
 
-MCP solves tool *access*. CRP solves tool *context* — what the agent knows, what it should do next, and how to prove it was safe. Together they let a small local model use a universe of tools without drowning in schemas.
+MCP solves tool *access*. CRP solves tool *context* - what the agent knows, what it should do next, and how to prove it was safe. Together they let a small local model use a universe of tools without drowning in schemas.
 
 ## TODO
 

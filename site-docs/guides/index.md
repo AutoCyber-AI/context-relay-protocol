@@ -1,5 +1,5 @@
 ---
-seo_title: CRP Guides — SDK, Ingestion, Streaming, Sidecar & Self-Hosting
+seo_title: CRP Guides - SDK, Ingestion, Streaming, Sidecar & Self-Hosting
 description: Practical guides for using the CRP SDK, Gateway, ingestion, streaming, session persistence, and self-hosting.
 ---
 

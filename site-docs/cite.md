@@ -1,5 +1,5 @@
 ---
-seo_title: Cite CRP — Research Citations, BibTeX & References
+seo_title: Cite CRP - Research Citations, BibTeX & References
 description: How to cite the Context Relay Protocol (CRP), its IETF drafts, and documentation in academic papers, standards submissions, and blog posts.
 tags:
   - crp

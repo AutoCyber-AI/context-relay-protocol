@@ -1,5 +1,5 @@
 ---
-seo_title: "CRP Protocol Specification — Context, Safety & Compliance Architecture"
+seo_title: "CRP Protocol Specification - Context, Safety & Compliance Architecture"
 description: "Protocol architecture for CRP: context envelope, CKF, continuation, safety policy, provenance, and conformance."
 ---
 

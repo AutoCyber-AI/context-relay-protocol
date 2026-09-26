@@ -1,6 +1,6 @@
 # CRPv6 Roadmap & TODOs
 
-**Assumption:** [Phase A — ML-first local defaults](#phase-a-ml-first-local-defaults) is complete. Everything else is listed here with repo locations, AI components, skills, rationale, and implementation hints.
+**Assumption:** [Phase A - ML-first local defaults](#phase-a-ml-first-local-defaults) is complete. Everything else is listed here with repo locations, AI components, skills, rationale, and implementation hints.
 
 For the strategic rationale see the [Completeness Roadmap](completeness-roadmap.md). For training recipes see the [Model Training Guide](model-training-guide.md).
 
@@ -14,15 +14,15 @@ For the strategic rationale see the [Completeness Roadmap](completeness-roadmap.
 
 Each TODO includes:
 
-- **AI component** — the model or technique involved.
-- **Skill gained** — what you learn by doing it.
-- **Why needed** — why it blocks a complete ecosystem.
-- **Where** — file or directory in the repo.
-- **How** — high-level path.
+- **AI component** - the model or technique involved.
+- **Skill gained** - what you learn by doing it.
+- **Why needed** - why it blocks a complete ecosystem.
+- **Where** - file or directory in the repo.
+- **How** - high-level path.
 
 ---
 
-## Phase A — ML-First Local Defaults ✅
+## Phase A - ML-First Local Defaults ✅
 
 | # | TODO | AI Component | Skill Gained | Why Needed | Where | How |
 |---|------|--------------|--------------|------------|-------|-----|
@@ -37,7 +37,7 @@ Each TODO includes:
 
 ---
 
-## Phase B — SLM Runtime Excellence ⬜
+## Phase B - SLM Runtime Excellence ⬜
 
 | # | TODO | AI Component | Skill Gained | Why Needed | Where | How |
 |---|------|--------------|--------------|------------|-------|-----|
@@ -51,11 +51,11 @@ Each TODO includes:
 
 ---
 
-## Phase C — Hosted SaaS ⬜
+## Phase C - Hosted SaaS ⬜
 
 | # | TODO | AI Component | Skill Gained | Why Needed | Where | How |
 |---|------|--------------|--------------|------------|-------|-----|
-| C1 | Gateway auth + tenant isolation | — | Multi-tenant API design | Per-tenant boundaries | [`crp/gateway/api.py`](https://github.com/AutoCyber-AI/context-relay-protocol/blob/crpv6-agent-sdk/crp/gateway/api.py) | Clerk/Auth0 middleware, org-scoped sessions |
+| C1 | Gateway auth + tenant isolation | - | Multi-tenant API design | Per-tenant boundaries | [`crp/gateway/api.py`](https://github.com/AutoCyber-AI/context-relay-protocol/blob/crpv6-agent-sdk/crp/gateway/api.py) | Clerk/Auth0 middleware, org-scoped sessions |
 | C2 | Provider key vault | KMS encryption | Secrets management | Protect tenant LLM keys | [`crp/gateway/key_vault.py`](https://github.com/AutoCyber-AI/context-relay-protocol/blob/crpv6-agent-sdk/crp/gateway/key_vault.py) | Encrypt provider keys per tenant |
 | C3 | Rate limiting + quotas | Redis counters | Scalable API governance | Prevent abuse | `crp/gateway/rate_limit.py` | Redis-backed token buckets |
 | C4 | Console CDN build | Vite frontend | Frontend build pipelines | Cacheable console | [`crp/frontend/console.py`](https://github.com/AutoCyber-AI/context-relay-protocol/blob/crpv6-agent-sdk/crp/frontend/console.py) | Extract to `frontend/agent-console/`, CI upload to S3/R2+CloudFront |
@@ -66,7 +66,7 @@ Each TODO includes:
 
 ---
 
-## Phase D — Ecosystem Integrations ⬜
+## Phase D - Ecosystem Integrations ⬜
 
 | # | TODO | AI Component | Skill Gained | Why Needed | Where | How |
 |---|------|--------------|--------------|------------|-------|-----|
@@ -79,7 +79,7 @@ Each TODO includes:
 
 ---
 
-## Phase E — Standards & Adoption ⬜
+## Phase E - Standards & Adoption ⬜
 
 | # | TODO | Why Needed | Where | How |
 |---|------|------------|-------|-----|

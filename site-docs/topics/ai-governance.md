@@ -1,5 +1,5 @@
 ---
-seo_title: AI Governance Framework for LLMs — Policies, Oversight & Audit
+seo_title: AI Governance Framework for LLMs - Policies, Oversight & Audit
 description: CRP is an AI governance framework that enforces policies, human oversight, audit trails, and accountability for LLM systems through standard HTTP headers.
 tags:
   - ai-governance
@@ -19,15 +19,15 @@ Governance That Generates Audit-Ready Evidence.
 
 <p class="hero-sub">
 Declarative policies, identity headers, human-in-the-loop checkpoints, and tamper-evident
-audit — CRP Protocol's governance layer doesn't just control AI; it documents every decision
+audit - CRP Protocol's governance layer doesn't just control AI; it documents every decision
 for regulators. HMAC-signed audit chains prove what happened, when, and who authorised it.
 The evidence the EU AI Act, AIUC-1, ISO 42001, and NIST AI RMF all require.
 </p>
 
 <div class="aiuc-badge-list">
-<span class="aiuc-badge">AIUC-1 Accountability — Activity Logging</span>
-<span class="aiuc-badge">AIUC-1 Accountability — Quality Management</span>
-<span class="aiuc-badge">EU AI Act Art. 17 — QMS</span>
+<span class="aiuc-badge">AIUC-1 Accountability - Activity Logging</span>
+<span class="aiuc-badge">AIUC-1 Accountability - Quality Management</span>
+<span class="aiuc-badge">EU AI Act Art. 17 - QMS</span>
 </div>
 
 <div class="hero-buttons">
@@ -112,7 +112,7 @@ Every window extends an HMAC-SHA256 audit chain. Any tampering surfaces as `CRP-
 
 | Standard | CRP governance contribution |
 |---|---|
-| **AIUC-1** | One of CRP's strongest proof points: Accountability (assignment, activity logging, AI disclosure, acceptable-use policy) and Society (quality management) — mapped and enforced through headers, checkpoints, and audit export. [Full mapping →](../aiuc-1.md) |
+| **AIUC-1** | One of CRP's strongest proof points: Accountability (assignment, activity logging, AI disclosure, acceptable-use policy) and Society (quality management) - mapped and enforced through headers, checkpoints, and audit export. [Full mapping →](../aiuc-1.md) |
 | **EU AI Act** | Risk management, data governance, technical documentation, record-keeping, transparency, human oversight, accuracy, and quality management. |
 | **ISO/IEC 42001:2023** | AI management system context, leadership, planning, support, operations, and improvement evidence. |
 | **NIST AI RMF** | GOVERN function (risk culture, accountability, legal review) and MAP function (context establishment, categorisation). |

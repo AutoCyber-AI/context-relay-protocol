@@ -1,11 +1,11 @@
 ---
-seo_title: "CRP Capabilities — Agentic Positioning, Safety, Provenance & Compliance"
+seo_title: "CRP Capabilities - Agentic Positioning, Safety, Provenance & Compliance"
 description: "Full capability reference for CRP: agentic positioning for SLM-first AI, unbounded context, 6-stage extraction, CKF, DPE safety, provenance, and compliance evidence."
 ---
 
 # CRP Capabilities & Benefits
 
-Context Relay Protocol (CRP) is the **agentic positioning layer** for SLM-first AI. It wraps existing LLM calls to give every agent operation its own curated context window and the exact tools it needs — while preserving knowledge, state, and auditability across an unlimited number of windows.
+Context Relay Protocol (CRP) is the **agentic positioning layer** for SLM-first AI. It wraps existing LLM calls to give every agent operation its own curated context window and the exact tools it needs - while preserving knowledge, state, and auditability across an unlimited number of windows.
 
 !!! tip "In one sentence"
     CRP selects the right operation for the agent, loads only the 1–3 tools the call needs, extracts atomic facts, stores them in a graph-structured knowledge fabric, and packs the most relevant scored facts into each dedicated window. It continues generation automatically, scores every response for safety and grounding, and emits a tamper-evident audit chain that feeds directly into compliance evidence.

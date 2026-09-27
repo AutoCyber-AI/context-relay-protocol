@@ -200,6 +200,17 @@ def test_agent_run_stream() -> None:
     assert any(e.kind is AgentEventKind.FINAL for e in events)
 
 
+def test_agent_emits_model_reasoning_event() -> None:
+    """Providers exposing ``last_reasoning_content`` surface native thinking as an event."""
+    provider = _make_provider(["Sunny and 22 °C."])
+    provider.last_reasoning_content = "Thinking: Sydney weather, answer directly."
+    agent = crp.Agent(provider=provider, tools=[])
+    events = list(agent.run_stream("Weather in Sydney?"))
+    reasoning = [e for e in events if e.kind is AgentEventKind.MODEL_REASONING]
+    assert reasoning, "expected at least one MODEL_REASONING event"
+    assert all("Sydney weather" in e.detail for e in reasoning)
+
+
 def test_policy_builder() -> None:
     """Policy compiles into a TCF PolicyContext and safety overrides."""
     policy = Policy.strict().block("dangerous_tool").domain("eu_ai_act")

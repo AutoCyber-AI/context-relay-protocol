@@ -1351,6 +1351,14 @@ following renders live (this is the exact verified sequence):
 8. **Raw events pane** — the unfiltered AG-UI/TEL stream for developers. *Why:* the same
    stream any custom frontend consumes.
 
+> **Model-native thinking (Qwen3 / DeepSeek-R1).** If you run Demo G with a hybrid-thinking
+> model (`--model local/qwen3-8b`), the console renders the model's own reasoning as a
+> separate **"Model reasoning"** narrative step, distinct from CRP's orchestration notes
+> ("CRP reasoning"). CRP captures the provider's `reasoning_content` after every model call
+> and forwards it to the transparency stream — so viewers see *both* what the protocol
+> decided and how the model thought about it. Use `--model local/meta-llama-3.1-8b-instruct`
+> if you want the leaner non-thinking stream for a shorter take.
+
 ### 12D.4 Recording script (3 questions, one take each)
 
 | # | You type | What to point at | Why |

@@ -27,6 +27,7 @@ class AgentEventKind(str, Enum):
     HALT = "halt"
     CLARIFICATION_REQUESTED = "clarification_requested"
     TRUST_DECISION = "trust_decision"
+    MODEL_REASONING = "model_reasoning"
     KILL_SWITCH_FIRED = "kill_switch_fired"
     CHECKPOINT_REQUESTED = "checkpoint_requested"
     CHECKPOINT_RESOLVED = "checkpoint_resolved"

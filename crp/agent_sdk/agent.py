@@ -915,7 +915,27 @@ class Agent:
             # hit clarify_handler/checkpoint below.
 
         provider = self._resolve_provider()
-        model_call = build_model_call(provider, temperature=self.temperature, max_tokens=self.max_tokens)
+        inner_model_call = build_model_call(
+            provider, temperature=self.temperature, max_tokens=self.max_tokens
+        )
+
+        def model_call(prompt: str, schema: Any = None) -> str:
+            text = inner_model_call(prompt, schema)
+            # Surface the model's native thinking (Qwen3, DeepSeek-R1, o-series)
+            # as a transparency event so consoles can display it alongside
+            # CRP's own orchestration reasoning.
+            reasoning = getattr(provider, "last_reasoning_content", None)
+            if reasoning:
+                reasoning_event = AgentEvent(
+                    kind=AgentEventKind.MODEL_REASONING,
+                    detail=reasoning,
+                    data={"chars": len(reasoning)},
+                )
+                events.append(reasoning_event)
+                if event_callback is not None:
+                    event_callback(reasoning_event)
+            return text
+
         fabric, executor = self._ensure_fabric_and_executor()
 
         trust_kill_decision: Any | None = None

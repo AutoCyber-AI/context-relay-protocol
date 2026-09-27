@@ -165,6 +165,24 @@ class TestAgentEventMapping:
         assert custom[0].payload["name"] == "crp.trust"
         assert custom[0].payload["value"]["score"] == 0.55
 
+    def test_model_reasoning_maps_to_reasoning_events(self) -> None:
+        ae = AgentEvent(
+            kind=AgentEventKind.MODEL_REASONING,
+            detail="Let me think about the weather...",
+        )
+        mapped = map_agent_event(ae)
+        types = [e.type for e in mapped]
+        assert EventType.REASONING_START in types
+        assert EventType.REASONING_CONTENT in types
+        assert EventType.REASONING_END in types
+        delta = [e for e in mapped if e.type == EventType.REASONING_CONTENT][0]
+        assert delta.payload["messageId"] == "model"
+        assert delta.payload["delta"] == "Let me think about the weather..."
+
+    def test_model_reasoning_empty_detail_maps_nothing(self) -> None:
+        ae = AgentEvent(kind=AgentEventKind.MODEL_REASONING, detail="")
+        assert map_agent_event(ae) == []
+
     def test_kill_switch_maps_to_custom(self) -> None:
         ae = AgentEvent(
             kind=AgentEventKind.KILL_SWITCH_FIRED,

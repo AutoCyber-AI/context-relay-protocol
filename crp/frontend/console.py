@@ -523,18 +523,33 @@ def agent_console_html(
           }} else if (type === 'TEXT_MESSAGE_CONTENT') {{
             appendAgentToken(payload.content || '');
           }} else if (type === 'REASONING_CONTENT') {{
-            // Surface reasoning tokens as narrative detail when available
+            // Surface reasoning tokens as narrative detail when available.
+            // ``messageId`` separates the model's native thinking ("model")
+            // from CRP's own orchestration notes ("reasoning").
             const delta = payload.delta || payload.content || '';
             if (delta) {{
-              // We accumulate reasoning in a lightweight way: only create a step once
-              let last = narrative.querySelector('.narrative-step.reasoning:last-child');
+              const mid = payload.messageId || 'reasoning';
+              const title = mid === 'model' ? 'Model reasoning' : 'CRP reasoning';
+              let last = narrative.querySelector('.narrative-step.reasoning[data-mid="' + mid + '"]:last-child');
               if (!last) {{
-                addNarrative('reasoning', 'Model reasoning', delta);
+                emptyIfNeeded(narrative);
+                last = document.createElement('div');
+                last.className = 'narrative-step reasoning';
+                last.setAttribute('data-mid', mid);
+                const titleEl = document.createElement('div');
+                titleEl.className = 'narrative-title';
+                titleEl.textContent = title;
+                last.appendChild(titleEl);
+                const detailEl = document.createElement('div');
+                detailEl.className = 'narrative-detail';
+                detailEl.textContent = delta;
+                last.appendChild(detailEl);
+                narrative.appendChild(last);
               }} else {{
                 const d = last.querySelector('.narrative-detail');
                 if (d) d.textContent += delta;
-                narrative.scrollTop = narrative.scrollHeight;
               }}
+              narrative.scrollTop = narrative.scrollHeight;
             }}
           }} else if (type === 'TOOL_CALL_START') {{
             addNarrative('tool-select', 'Tool selected — ' + (payload.toolCallName || ''), payload.reason || '', payload);

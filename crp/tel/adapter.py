@@ -215,6 +215,12 @@ def map_agent_event(event: AgentEvent) -> list[ev.Event]:
             )
         )
 
+    elif kind == AgentEventKind.MODEL_REASONING:
+        if detail:
+            out.append(ev.reasoning_start(messageId="model"))
+            out.append(ev.reasoning_delta(messageId="model", delta=detail))
+            out.append(ev.reasoning_end(messageId="model"))
+
     elif kind == AgentEventKind.KILL_SWITCH_FIRED:
         out.append(
             ev.custom(

@@ -148,6 +148,9 @@ async function analyze() {
   el("verdict").innerHTML = `<p class="muted"><span class="spinner"></span> Detecting model, streaming generation, scoring, enforcing…</p>`;
   el("answer").innerHTML = `<div class="msg bot" style="max-width:100%"><span id="live-answer"></span><div class="meta" id="live-meta">streaming…</div></div>`;
   el("thinking").innerHTML = "";
+  const thinkWrap = el("thinking-wrap");
+  if (thinkWrap) thinkWrap.open = true;
+  el("thinking-summary").textContent = "Model thinking (streaming…)";
   const payload = {
     system_prompt: el("system").value,
     question: el("question").value,
@@ -164,6 +167,14 @@ async function analyze() {
   if (!r || r.error) {
     el("verdict").innerHTML = `<p class="pill red">${esc((r && r.error) || "stream ended without a verdict")}</p>`;
     setBusy(btn, false); return;
+  }
+  // Stream done: collapse the reasoning panel behind a size summary so the
+  // answer stays the primary output; expand to read the full chain of thought.
+  const tWrap = el("thinking-wrap");
+  if (tWrap) {
+    el("thinking-summary").textContent =
+      `Model thinking (${el("thinking").textContent.length.toLocaleString()} chars)`;
+    tWrap.open = false;
   }
   renderVerdict(r);
   renderAnswer(r);

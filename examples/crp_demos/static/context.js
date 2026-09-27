@@ -137,30 +137,40 @@ async function sendTurn() {
   pushMsg("user", msg);
   el("message").value = "";
 
-  // Live bot bubble: thinking line, then the streamed reply.
+  // Live bot bubble: collapsible thinking panel, then the streamed reply.
   const wrap = document.createElement("div");
   wrap.className = "msg bot";
-  const think = document.createElement("div");
-  think.className = "meta";
-  think.style.fontStyle = "italic";
+  const thinkWrap = document.createElement("details");
+  thinkWrap.className = "thinking";
+  thinkWrap.open = true;
+  const thinkSum = document.createElement("summary");
+  thinkSum.className = "meta";
+  thinkSum.style.fontStyle = "italic";
+  thinkSum.textContent = "Model thinking (streaming…)";
+  const thinkBody = document.createElement("div");
+  thinkWrap.appendChild(thinkSum);
+  thinkWrap.appendChild(thinkBody);
   const live = document.createElement("span");
   const meta = document.createElement("div");
   meta.className = "meta";
   meta.textContent = "streaming…";
-  wrap.appendChild(think);
+  wrap.appendChild(thinkWrap);
   wrap.appendChild(live);
   wrap.appendChild(meta);
   el("chat").appendChild(wrap);
   el("chat").scrollTop = el("chat").scrollHeight;
 
   try {
-    const r = await streamTurn({ session_id: sessionId, message: msg }, live, think, meta);
+    const r = await streamTurn({ session_id: sessionId, message: msg }, live, thinkBody, meta);
     if (!r || r.error) {
       meta.textContent = "";
       live.textContent = r && r.error ? "Error: " + r.error : "Stream ended without a result.";
     } else {
+      thinkSum.textContent =
+        `Model thinking (${thinkBody.textContent.length.toLocaleString()} chars)`;
+      thinkWrap.open = false;
       meta.textContent = `window ${r.turn.window_number} · ${r.turn.latency_ms} ms`;
-      if (!r.turn.reply) live.textContent = "(no model output — chain, CKF and token signals still updated)";
+      if (!r.turn.reply) live.textContent = "(no model output - chain, CKF and token signals still updated)";
       applyTurn(r, /* replyAlreadyShown */ true);
     }
   } catch (e) {

@@ -550,7 +550,8 @@ class ContextSessionStore:
             "guidance": _context_guidance(primary),
         }
 
-    def turn(self, session_id: str, message: str) -> dict[str, Any]:
+    def turn(self, session_id: str, message: str,
+             token_sink: Any = None) -> dict[str, Any]:
         sess = self._get(session_id)
         report = discover_local_llms(timeout=2.5)
         primary = report.primary_model()
@@ -583,8 +584,21 @@ class ContextSessionStore:
         messages += sess.history[-6:]
         messages.append({"role": "user", "content": message})
         t0 = time.time()
-        reply, finish_reason = _generate(provider, messages)
-        gen_ms = round((time.time() - t0) * 1000)
+        if token_sink is not None:
+            reply, finish_reason, gen_ms = "", "stop", 0
+            for kind, delta in stream_generate(primary, messages):
+                if kind == "done":
+                    reply = delta["text"]
+                    finish_reason = delta["finish_reason"]
+                    gen_ms = delta["gen_ms"]
+                else:
+                    try:
+                        token_sink(kind, delta)
+                    except Exception:  # noqa: BLE001 — display sink is best-effort
+                        pass
+        else:
+            reply, finish_reason = _generate(provider, messages)
+            gen_ms = round((time.time() - t0) * 1000)
         sess.history.append({"role": "user", "content": message})
         if reply:
             sess.history.append({"role": "assistant", "content": reply})

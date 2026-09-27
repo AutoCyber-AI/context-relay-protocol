@@ -70,9 +70,11 @@ function pushMsg(role, text, meta) {
   el("chat").scrollTop = el("chat").scrollHeight;
 }
 
-function applyTurn(r) {
+function applyTurn(r, replyAlreadyShown) {
   lastResult = r;
-  if (r.turn.reply) pushMsg("bot", r.turn.reply, `window ${r.turn.window_number} · ${r.turn.latency_ms} ms`);
+  if (!replyAlreadyShown && r.turn.reply) {
+    pushMsg("bot", r.turn.reply, `window ${r.turn.window_number} · ${r.turn.latency_ms} ms`);
+  }
   el("ckf-total").textContent = r.ckf.total_facts;
   el("ckf-window").textContent = r.ckf.facts_this_window;
   el("ckf-retrieved").textContent = r.ckf.retrieved;
@@ -86,6 +88,47 @@ function applyTurn(r) {
   el("headers").innerHTML = renderHeaders(r.headers);
 }
 
+/* Stream one turn over SSE: token frames fill the live bubble, the final
+   "turn" frame carries the full result. Returns the result or throws. */
+async function streamTurn(payload, liveSpan, thinkDiv, metaDiv) {
+  const resp = await fetch("/api/context/turn/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "", result = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let sep;
+    while ((sep = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, sep);
+      buf = buf.slice(sep + 2);
+      const line = frame.split("\n").find(l => l.startsWith("data:"));
+      if (!line) continue;
+      let evt;
+      try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+      if (evt.type === "token") {
+        if (evt.kind === "reasoning") {
+          thinkDiv.textContent += evt.delta;
+        } else {
+          liveSpan.textContent += evt.delta;
+        }
+        el("chat").scrollTop = el("chat").scrollHeight;
+      } else if (evt.type === "turn") {
+        result = evt.result;
+        await reader.cancel().catch(() => {});
+        return result;
+      }
+    }
+  }
+  return result;
+}
+
 async function sendTurn() {
   const msg = el("message").value.trim();
   if (!msg || !sessionId) return;
@@ -93,11 +136,37 @@ async function sendTurn() {
   setBusy(btn, true, "Thinking…");
   pushMsg("user", msg);
   el("message").value = "";
+
+  // Live bot bubble: thinking line, then the streamed reply.
+  const wrap = document.createElement("div");
+  wrap.className = "msg bot";
+  const think = document.createElement("div");
+  think.className = "meta";
+  think.style.fontStyle = "italic";
+  const live = document.createElement("span");
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = "streaming…";
+  wrap.appendChild(think);
+  wrap.appendChild(live);
+  wrap.appendChild(meta);
+  el("chat").appendChild(wrap);
+  el("chat").scrollTop = el("chat").scrollHeight;
+
   try {
-    const r = await apiPost("/api/context/turn", { session_id: sessionId, message: msg });
-    if (r.error) pushMsg("bot", "Error: " + r.error);
-    else applyTurn(r);
-  } catch (e) { pushMsg("bot", "Request failed: " + e); }
+    const r = await streamTurn({ session_id: sessionId, message: msg }, live, think, meta);
+    if (!r || r.error) {
+      meta.textContent = "";
+      live.textContent = r && r.error ? "Error: " + r.error : "Stream ended without a result.";
+    } else {
+      meta.textContent = `window ${r.turn.window_number} · ${r.turn.latency_ms} ms`;
+      if (!r.turn.reply) live.textContent = "(no model output — chain, CKF and token signals still updated)";
+      applyTurn(r, /* replyAlreadyShown */ true);
+    }
+  } catch (e) {
+    meta.textContent = "";
+    live.textContent = "Request failed: " + e;
+  }
   setBusy(btn, false);
 }
 

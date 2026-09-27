@@ -22,6 +22,8 @@ JSON API (all POST bodies are JSON):
   then the full governance verdict
 * ``POST /api/context/new``       → start a context session
 * ``POST /api/context/turn``      → send a message (multi-window)
+* ``POST /api/context/turn/stream`` → same, but SSE: live model tokens,
+  then the full turn result
 * ``POST /api/context/tamper``    → corrupt a window → chain BROKEN
 * ``POST /api/context/state``     → full session state
 * ``POST /api/compare/start``     → start a 4-strategy benchmark run
@@ -205,31 +207,33 @@ class _Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
+    def _sse_headers(self) -> None:
+        """Open an SSE response; the socket is closed after the final frame."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self._send_cors_headers()
+        self.end_headers()
+
+    def _sse_frame(self, obj: dict[str, Any]) -> bool:
+        """Write one SSE frame; False when the client disconnected."""
+        try:
+            self.wfile.write(f"data: {json.dumps(obj, default=str)}\n\n".encode())
+            self.wfile.flush()
+            return True
+        except (OSError, BrokenPipeError, ConnectionAbortedError):
+            return False
+
     def _safety_analyze_stream(self, body: dict[str, Any]) -> None:
         """Run App 1 with live token streaming over SSE.
 
         Token frames arrive while the model generates; the final frame is the
         full governance verdict (identical shape to /api/safety/analyze).
         """
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache")
-        # No "Connection: keep-alive": the stream ends with the verdict frame
-        # and the server closes the socket (see close_connection below).
-        self._send_cors_headers()
-        self.end_headers()
-
-        def _frame(obj: dict[str, Any]) -> bool:
-            """Write one SSE frame; False when the client disconnected."""
-            try:
-                self.wfile.write(f"data: {json.dumps(obj, default=str)}\n\n".encode())
-                self.wfile.flush()
-                return True
-            except (OSError, BrokenPipeError, ConnectionAbortedError):
-                return False
+        self._sse_headers()
 
         def _sink(kind: str, delta: str) -> None:
-            _frame({"type": "token", "kind": kind, "delta": delta})
+            self._sse_frame({"type": "token", "kind": kind, "delta": delta})
 
         result = run_safety_pipeline(
             system_prompt=str(body.get("system_prompt", "")),
@@ -238,10 +242,29 @@ class _Handler(BaseHTTPRequestHandler):
             policy_str=str(body.get("policy", "") or DEFAULT_SAFETY_POLICY),
             token_sink=_sink,
         )
-        _frame({"type": "verdict", "result": result})
+        self._sse_frame({"type": "verdict", "result": result})
         # Explicitly close the connection after the verdict: some clients
         # (fetch readers) only complete when the socket closes, and the
         # keep-alive response header otherwise leaves them hanging.
+        self.close_connection = True
+
+    def _context_turn_stream(self, body: dict[str, Any]) -> None:
+        """Run an App 2 turn with live token streaming over SSE.
+
+        Token frames arrive while the model generates; the final frame is the
+        full turn result (identical shape to /api/context/turn).
+        """
+        self._sse_headers()
+
+        def _sink(kind: str, delta: str) -> None:
+            self._sse_frame({"type": "token", "kind": kind, "delta": delta})
+
+        result = _SESSIONS.turn(
+            str(body.get("session_id", "")),
+            str(body.get("message", "")),
+            token_sink=_sink,
+        )
+        self._sse_frame({"type": "turn", "result": result})
         self.close_connection = True
 
     def _serve_static(self, path: str) -> None:
@@ -315,6 +338,9 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/safety/analyze/stream":
                 self._safety_analyze_stream(body)
+                return
+            if path == "/api/context/turn/stream":
+                self._context_turn_stream(body)
                 return
             if path == "/api/safety/analyze":
                 result = run_safety_pipeline(

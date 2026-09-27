@@ -34,6 +34,11 @@ class AttributionType(str, Enum):
     PARAMETRIC = "PARAMETRIC"               # Likely from model training data
     MIXED = "MIXED"                         # Partial context + parametric
     UNCERTAIN = "UNCERTAIN"                 # Low-confidence attribution
+    NOT_REQUIRED = "NOT_REQUIRED"           # Claim type not subject to grounding
+                                            # (OPINION/PROCEDURAL/CONNECTIVE).
+                                            # Distinct from UNCERTAIN so policy
+                                            # source-trust checks never treat an
+                                            # unscored claim as an untrusted source.
 
 
 # ---------------------------------------------------------------------------

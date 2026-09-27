@@ -401,6 +401,37 @@ class TestPolicyEnforcement:
         # With 60% grounding and only MIXED+grounded claims, we expect PASS or WARN.
         assert EnforcementAction.HALT not in {v.action for v in decision.violations}
 
+    def test_not_required_claims_do_not_trigger_source_not_trusted(self):
+        """Non-scorable claims (OPINION/CONNECTIVE) must not count as uncertain
+        sources under default-src — otherwise a fully grounded answer that
+        happens to contain an opinion sentence halts as 'untrusted source'."""
+        from crp.envelope.packer import PackedFact
+        from crp.policy.model import ViolationType
+        from crp.provenance import DecisionProvenanceEngine, ProvenanceConfig
+
+        engine = DecisionProvenanceEngine(config=ProvenanceConfig(entailment_enabled=False))
+        facts = [PackedFact(fact_id="f1",
+                            text="Acme Cloud guarantees a 99.95% uptime SLA for Enterprise plans.",
+                            score=0.95, tokens=12)]
+        report = engine.analyse(
+            "Acme Cloud guarantees a 99.95% uptime SLA for Enterprise plans. "
+            "Overall, this is an excellent offer.",
+            packed_facts=facts,
+            session_id="s", window_id="w1", query="What is the SLA?",
+            window_number=1,
+        )
+        assert report.context_grounded_count >= 1
+        assert report.uncertain_count == 0, (
+            "non-scorable claims must be NOT_REQUIRED, not UNCERTAIN"
+        )
+        policy = SafetyPolicy(default_src=["context"])
+        signals = extract_signals(provenance=report)
+        decision = enforce_policy(policy, signals)
+        assert not any(
+            v.violation_type == ViolationType.SOURCE_NOT_TRUSTED
+            for v in decision.violations
+        )
+
 
 # ---------------------------------------------------------------------------
 # 7. Gateway lightweight DPE vs full DPE

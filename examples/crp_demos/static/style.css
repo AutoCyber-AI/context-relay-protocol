@@ -59,7 +59,8 @@ a:hover { text-decoration: underline; }
 .grid { display: grid; gap: 1.2rem; }
 .grid.cols-2 { grid-template-columns: 1fr 1fr; }
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 880px) { .grid.cols-2, .grid.cols-3 { grid-template-columns: 1fr; } }
+.grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 880px) { .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; } }
 
 .card {
   background: var(--bg-panel); border: 1px solid var(--border);

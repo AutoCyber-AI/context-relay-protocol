@@ -677,6 +677,12 @@ The page has a form with four inputs and three quick-fill buttons:
 Below the form, result sections render: **Verdict**, **Answer**, **Injection signals**,
 **Provenance**, **Audit trail**, **Response headers**.
 
+> **Live streaming (6.1.5+):** "Analyze with CRP" now streams the model's output as it
+> generates — reasoning models (Qwen3, DeepSeek-R1) show their native thinking in a
+> "Model thinking" panel before the answer tokens arrive, and the verdict sections fill
+> in as soon as generation completes. For the camera this is the money shot: you see the
+> model *think*, then CRP *judge*, in one continuous take — no waiting for a spinner.
+
 ### 11.1 Act 1 — the safe answer (HTTP 200 · PASS)
 
 **What it proves:** "When the answer is grounded in trusted context and clears policy, CRP

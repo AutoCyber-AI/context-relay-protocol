@@ -21,6 +21,7 @@ are no mocks.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import threading
@@ -29,8 +30,8 @@ import uuid
 from typing import Any
 
 from crp.ckf.fabric import CKFConfig, ContextualKnowledgeFabric
-from crp.core.context_source import ContextSource, SourceKind, TrustLevel
 from crp.core.context_enforcer import detect_injection_signals
+from crp.core.context_source import ContextSource, SourceKind, TrustLevel
 from crp.envelope.packer import PackedFact
 from crp.extraction.types import Fact
 from crp.headers.emit import emit_headers
@@ -56,13 +57,18 @@ from crp.security.session_token import format_set_session_header, issue_token
 
 
 def _package_version() -> str:
-    """Protocol version label — always tracks the installed crprotocol package."""
+    """Protocol version label — tracks the live ``crp`` package version.
+
+    ``crp.__version__`` is checked first so editable installs report the
+    current source tree; ``importlib.metadata`` is the fallback for regular
+    installs (where it matches the installed distribution).
+    """
     try:
-        from importlib.metadata import version
-        return version("crprotocol")
-    except Exception:  # noqa: BLE001 — source-tree fallback when not installed
         from crp._version import __version__
         return __version__
+    except Exception:  # noqa: BLE001 — fall back to installed distribution
+        from importlib.metadata import version
+        return version("crprotocol")
 
 
 PROTOCOL_VERSION = _package_version()
@@ -140,6 +146,77 @@ def _generate(provider: Any | None, messages: list[dict[str, str]]) -> tuple[str
         return (text or "", reason or "stop")
     except Exception as exc:  # noqa: BLE001 — demo must degrade gracefully
         return (f"[generation failed: {exc}]", "error")
+
+
+def stream_generate(
+    primary: DetectedModel | None,
+    messages: list[dict[str, str]],
+    *,
+    max_tokens: int = 512,
+) -> Any:
+    """Stream a chat completion from the detected runtime.
+
+    A generator yielding ``("reasoning", delta)`` and ``("content", delta)``
+    tuples as tokens arrive, then a final ``("done", {text, finish_reason,
+    gen_ms})`` tuple. Falls back to non-streaming for runtimes without an
+    OpenAI-compatible SSE endpoint (Ollama's native API) or when no model is
+    loaded, so callers can treat every runtime uniformly.
+    """
+    if primary is None:
+        yield ("done", {"text": "", "finish_reason": "no-model", "gen_ms": 0})
+        return
+    if primary.runtime.value == "ollama":
+        t0 = time.time()
+        text, reason = _generate(_provider_for(primary), messages)
+        yield ("done", {"text": text, "finish_reason": reason,
+                        "gen_ms": round((time.time() - t0) * 1000)})
+        return
+    import urllib.request
+
+    base = primary.endpoint.rstrip("/")
+    url = base + "/v1/chat/completions"
+    payload = json.dumps({
+        "model": primary.id, "messages": messages,
+        "stream": True, "max_tokens": max_tokens,
+    }).encode("utf-8")
+    t0 = time.time()
+    text_parts: list[str] = []
+    finish_reason = "stop"
+    try:
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            for raw in resp:
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except ValueError:
+                    continue
+                for choice in chunk.get("choices") or []:
+                    delta = choice.get("delta") or {}
+                    reasoning = delta.get("reasoning_content")
+                    content = delta.get("content")
+                    if reasoning:
+                        yield ("reasoning", reasoning)
+                    if content:
+                        text_parts.append(content)
+                        yield ("content", content)
+                    if choice.get("finish_reason"):
+                        finish_reason = choice["finish_reason"]
+    except Exception as exc:  # noqa: BLE001 — degrade to an error finish
+        yield ("done", {"text": f"[generation failed: {exc}]",
+                        "finish_reason": "error",
+                        "gen_ms": round((time.time() - t0) * 1000)})
+        return
+    yield ("done", {"text": "".join(text_parts), "finish_reason": finish_reason,
+                    "gen_ms": round((time.time() - t0) * 1000)})
 
 
 # ───────────────────────── shared helpers ───────────────────────────────────
@@ -245,8 +322,13 @@ def run_safety_pipeline(
     question: str,
     context_facts: list[str],
     policy_str: str,
+    token_sink: Any = None,
 ) -> dict[str, Any]:
-    """App 1 — run a full governed generation and return every CRP signal."""
+    """App 1 — run a full governed generation and return every CRP signal.
+
+    When *token_sink* is provided it is called as ``token_sink(kind, delta)``
+    with live ``"reasoning"``/``"content"`` tokens as the model generates;
+    governance still runs on the complete output afterwards."""
     session_id = f"sess-{uuid.uuid4().hex[:12]}"
     signing_key = os.urandom(32)
     audit = ComplianceAuditTrail(signing_key=signing_key, session_id=session_id)
@@ -291,8 +373,21 @@ def run_safety_pipeline(
         {"role": "user", "content": question},
     ]
     t0 = time.time()
-    output, finish_reason = _generate(provider, messages)
-    gen_ms = round((time.time() - t0) * 1000)
+    if token_sink is not None:
+        output, finish_reason, gen_ms = "", "stop", 0
+        for kind, delta in stream_generate(primary, messages):
+            if kind == "done":
+                output = delta["text"]
+                finish_reason = delta["finish_reason"]
+                gen_ms = delta["gen_ms"]
+            else:
+                try:
+                    token_sink(kind, delta)
+                except Exception:  # noqa: BLE001 — the display sink is best-effort
+                    pass
+    else:
+        output, finish_reason = _generate(provider, messages)
+        gen_ms = round((time.time() - t0) * 1000)
     audit.record(ComplianceEventType.LLM_CALL_COMPLETED,
                  data={"model": primary.id if primary else None,
                        "finish_reason": finish_reason, "latency_ms": gen_ms})

@@ -83,7 +83,7 @@
 10. [Demo A — Live LLM Detection (the landing page)](#10-demo-a--live-llm-detection-the-landing-page)
 11. [Demo B — AI Safety & Governance Console (App 1)](#11-demo-b--ai-safety--governance-console-app-1)
 12. [Demo C — Context Management & Provenance Explorer (App 2)](#12-demo-c--context-management--provenance-explorer-app-2)
-12A. [Demo D — Long-Context Document Generation (CRPv3 stitch proof)](#12a-demo-d--long-context-document-generation-crpv3-stitch-proof)
+12A. [Demo D — Long-Context Document Generation (CRP continuation / stitch proof)](#12a-demo-d--long-context-document-generation-crp-continuation--stitch-proof)
 12B. [Demo E — 4-Strategy Context Management Comparison](#12b-demo-e--4-strategy-context-management-comparison)
 12C. [Demo F — CRP Agent vs Raw LLM (side-by-side, real Wikipedia API)](#12c-demo-f--crp-agent-vs-raw-llm-side-by-side-real-wikipedia-api)
 12D. [Demo G — The Agent Console (the visibility layer)](#12d-demo-g--the-agent-console-the-visibility-layer)
@@ -134,13 +134,14 @@ back-to-back without re-learning the format:
 
 ## 2. The three things you are demonstrating
 
-There are three demo surfaces, all served from one server on `http://127.0.0.1:8770`:
+There are four demo surfaces, all served from one server on `http://127.0.0.1:8770`:
 
 | Surface | URL | The headline claim |
 |---------|-----|--------------------|
 | **Landing / Detection** | `/` | "CRP can see exactly which model you're running and what it can do." |
 | **App 1 — Safety & Governance** | `/safety.html` | "CRP decides whether an answer is safe to ship — and refuses with HTTP 451 when it isn't." |
 | **App 2 — Context & Provenance** | `/context.html` | "CRP gives the model durable memory and makes tampering impossible to hide." |
+| **App 3 — 4-Strategy Comparison** | `/comparison.html` | "Same model, same task — bare LLM vs prompt stuffing vs RAG vs full CRP, scored side by side." |
 
 All three run **entirely locally**. No cloud calls. The only network traffic is between the
 demo server and your local LLM runtime on `127.0.0.1`. This is itself a selling point: you
@@ -876,10 +877,11 @@ Expected: `status` indicates broken, `broken_at` is `1`.
 
 ---
 
-## 12A. Demo D — Long-Context Document Generation (CRPv3 stitch proof)
+## 12A. Demo D — Long-Context Document Generation (CRP continuation / stitch proof)
 
-This is the **headline proof that CRPv3 can drive a small local model far past its context
-window** to produce a single, long, non-repetitive deliverable — the capability that
+This is the **headline proof that CRP v6 can drive a small local model far past its context
+window** (the continuation & state-relay engine, SPEC-004, matured through CRPv3) to produce
+a single, long, non-repetitive deliverable — the capability that
 distinguishes CRP from a plain chat call. A 7B model loaded at only 4,096 tokens of context
 cannot "hold" a 10,000-word document in its head; CRP's continuation engine extracts facts,
 maintains a rolling document map, and stitches dozens of windows into one coherent whole.

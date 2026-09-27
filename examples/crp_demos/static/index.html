@@ -15,12 +15,13 @@
       <a href="/" class="active">Detection</a>
       <a href="/safety.html">Safety Console</a>
       <a href="/context.html">Context Explorer</a>
+      <a href="/comparison.html">Comparison</a>
     </nav>
   </div>
 
   <div class="wrap">
     <div class="hero">
-      <div class="badge">Context Relay Protocol v3 · governing a real local LLM</div>
+      <div class="badge">Context Relay Protocol v6 · governing a real local LLM</div>
       <h1>Watch CRP govern the model on your machine</h1>
       <p>These demos drive a <strong>local</strong> LLM (LM Studio, Ollama or llama.cpp)
         through the Context Relay Protocol and surface every governance signal it
@@ -45,7 +46,7 @@
       <div id="runtimes" class="flex"></div>
     </div>
 
-    <div class="grid cols-2" style="margin-top:1.4rem">
+    <div class="grid cols-3" style="margin-top:1.4rem">
       <a class="card app-card" href="/safety.html">
         <div class="num">APP 1</div>
         <h2>AI Safety &amp; Governance Console</h2>
@@ -68,6 +69,18 @@
           <li>Per-window HMAC provenance chain</li>
           <li>"Tamper" a window → chain turns <span class="pill red">BROKEN</span></li>
           <li>Session tokens + ETag + CRP headers</li>
+        </ul>
+      </a>
+      <a class="card app-card" href="/comparison.html">
+        <div class="num">APP 3</div>
+        <h2>4-Strategy Context Comparison</h2>
+        <p class="sub">Run the same task through bare LLM, prompt stuffing,
+          RAG and full CRP positioning — side by side, with live scoring.</p>
+        <ul>
+          <li>Same model, same task, four context strategies</li>
+          <li>Grounding, hallucination and quality scores per strategy</li>
+          <li>Live SSE progress while the run executes</li>
+          <li>The "with vs without CRP" proof, quantified</li>
         </ul>
       </a>
     </div>

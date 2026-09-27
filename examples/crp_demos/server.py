@@ -117,7 +117,7 @@ def exposure_warning(host: str, token: str | None) -> str | None:
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server_version = "CRP-Demo/3.0"
+    server_version = "CRP-Demo/6.1"
 
     # ── helpers ──────────────────────────────────────────────────────────
     def _allowlisted_origin(self) -> str | None:

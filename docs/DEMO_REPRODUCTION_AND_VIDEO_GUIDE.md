@@ -86,6 +86,7 @@
 12A. [Demo D — Long-Context Document Generation (CRPv3 stitch proof)](#12a-demo-d--long-context-document-generation-crpv3-stitch-proof)
 12B. [Demo E — 4-Strategy Context Management Comparison](#12b-demo-e--4-strategy-context-management-comparison)
 12C. [Demo F — CRP Agent vs Raw LLM (side-by-side, real Wikipedia API)](#12c-demo-f--crp-agent-vs-raw-llm-side-by-side-real-wikipedia-api)
+12D. [Demo G — The Agent Console (the visibility layer)](#12d-demo-g--the-agent-console-the-visibility-layer)
 13. [Programmatic verification (no browser, for B-roll and CI proof)](#13-programmatic-verification-no-browser-for-b-roll-and-ci-proof)
 14. [The full HTTP API reference for the demos](#14-the-full-http-api-reference-for-the-demos)
 15. [Video production: gear, capture settings, and project setup](#15-video-production-gear-capture-settings-and-project-setup)
@@ -1170,7 +1171,7 @@ Git Bash / WSL:
 ```bash
 cd /c/Users/User/Desktop/context-relay-protocol
 CRP_DEMO_REAL_SEARCH=1 \
-CRP_LMSTUDIO_URL=http://192.168.0.6:1234 \
+CRP_LMSTUDIO_URL=http://localhost:1234 \
 CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct \
 .venv/Scripts/python examples/crp_demos/live_llm_vs_crp.py --real-search
 ```
@@ -1180,10 +1181,14 @@ Windows cmd:
 ```cmd
 cd c:\Users\User\Desktop\context-relay-protocol
 set CRP_DEMO_REAL_SEARCH=1
-set CRP_LMSTUDIO_URL=http://192.168.0.6:1234
+set CRP_LMSTUDIO_URL=http://localhost:1234
 set CRP_LMSTUDIO_MODEL=meta-llama-3.1-8b-instruct
 .venv\Scripts\python.exe examples\crp_demos\live_llm_vs_crp.py --real-search
 ```
+
+Use `http://localhost:1234` — after the 2026-09-27 LM Studio state reset the server
+binds loopback only (the safer default; re-enable LAN in LM Studio's server settings if
+you specifically need it).
 
 Optional: append your own question as the last argument, e.g.
 `"...What is the capital of Norway and its current population?"` (three different questions
@@ -1269,6 +1274,129 @@ A clean server answers `OK`. A poisoned one answers `{"name": "print", "paramete
 Also review **Developer → MCP** in the LM Studio UI — an unrelated MCP server (e.g. a
 pentest bridge) that is enabled will inject its own tool definitions; disable it for
 recordings.
+
+---
+
+## 12D. Demo G — The Agent Console (the visibility layer)
+
+> **What it proves in one sentence:** CRP doesn't just govern the agent — it *shows you
+> what the agent is doing*, live: the operation plan, each tool call with its real
+> arguments and real API payload, the trust and quality verdicts, the hash-chained
+> provenance, and the raw event stream — all from one URL.
+
+This is the demo for the second selling point: **visibility**. Demos B and C showed
+governance over HTTP; Demo F showed orchestration in a terminal. This one shows the
+developer-facing console that any CRP deployment can mount, and that any frontend can
+embed the same events into.
+
+### 12D.1 What runs
+
+`examples/self_hosted_console.py` starts a FastAPI server that:
+
+- serves the **CRP Agent Console** UI at `http://127.0.0.1:8000/crp/console`,
+- exposes an OpenAI-compatible chat endpoint backed by `crp.Agent` (three demo tools:
+  `get_weather` — **real Open-Meteo API**, `get_time`, `calculate`),
+- streams every step as **AG-UI / TEL events** over SSE at `/v1/tel/stream`.
+
+Prerequisites: LM Studio running with `meta-llama-3.1-8b-instruct` (§6), CRP installed
+(§5). No API keys needed — Open-Meteo is free and keyless.
+
+### 12D.2 Start it (exact commands)
+
+```cmd
+cd c:\Users\User\Desktop\context-relay-protocol
+.venv\Scripts\python.exe examples\self_hosted_console.py
+```
+
+Expected output:
+
+```
+CRP self-hosted console starting at http://127.0.0.1:8000/crp/console
+Stream endpoint: http://127.0.0.1:8000/v1/tel/stream
+```
+
+Open `http://127.0.0.1:8000/crp/console` in your browser. (Verified live 2026-09-27
+against `crprotocol` 6.1.3.)
+
+**Alternative — the CDN console driving your local backend:** leave the same server
+running, open `https://console.crprotocol.io` in your browser, and paste
+`http://127.0.0.1:8000` into the console's *Backend URL* connect bar. The browser then
+talks directly to your local server (that origin is in the CORS allowlist by default).
+Use this variant in the video if you want to show "zero-install console, your machine
+keeps the data".
+
+### 12D.3 What is on screen (verified event-by-event)
+
+Send: **"What is the weather in Sydney?"** and point the camera at the console while the
+following renders live (this is the exact verified sequence):
+
+1. **Run start + trust check** — `crp.trust: score 1.0, action allow`. *Why show it:*
+   the trust monitor runs *before* anything executes.
+2. **Intent plan** — `crp.intent: plan=['RETRIEVE']`, shown in the reasoning pane.
+   *Why:* the protocol plans the operation before spending a single model token.
+3. **Step + narrative** — `STEP_STARTED RETRIEVE`, narrative stream
+   "Positioning RETRIEVE...". *Why:* this is the chain-of-thought-style narrative users
+   can embed in their own apps.
+4. **Real tool call** — `TOOL_CALL_START get_weather` with parsed arguments
+   `{"city": "Sydney"}`. *Why:* capability selection and argument extraction are the
+   protocol's, not the model's free text.
+5. **Real API payload** — `TOOL_CALL_RESULT` carries the live Open-Meteo observation
+   (verified: `temperature_c 14.6`, `weather_code 51`, `windspeed_kmh 13.1`).
+   *Why:* proof the call actually happened, with the raw observation preserved as a
+   governed fact.
+6. **Quality + governance cards** — `crp.quality: tier A`, then the governance card
+   (risk, grounded, chain validity). *Why:* the receipt, per run, on screen.
+7. **Provenance chain** — the HMAC-linked entries. *Why:* tamper-evidence is visible,
+   not a promise.
+8. **Raw events pane** — the unfiltered AG-UI/TEL stream for developers. *Why:* the same
+   stream any custom frontend consumes.
+
+### 12D.4 Recording script (3 questions, one take each)
+
+| # | You type | What to point at | Why |
+|---|----------|------------------|-----|
+| 1 | `What is the weather in Sydney?` | Full console: narrative → tool call → real weather payload → governance card | The flagship flow: real API tool use with live visibility (≈30 s on the 8B; speed-ramp per §18.2) |
+| 2 | `What time is it in Tokyo right now?` | Tool-call pane | Second capability, different arg shape; shows the capability router generalizes (≈20 s) |
+| 3 | `What is 128 times 46?` | The tool arguments as they stream in | `calculate` normalizes natural language ("times" → `*`) before safe evaluation; shows argument normalization (≈20 s) |
+
+Close each take on the governance card, then cut to the next question. Three different
+questions in one continuous screen recording makes the footage obviously unscripted.
+
+### 12D.5 Narration (word-for-word, ~40 s)
+
+> "This is the part nobody else gives you: the agent's dashboard is the protocol's output.
+>
+> I ask one question. Before a single token is spent, CRP plans the operation — retrieve.
+> It selects the capability, extracts the arguments, and calls a real weather API — watch
+> the payload come back. Every step is scored: trust, quality, grounding. The provenance
+> chain is hash-linked, so this trail can't be quietly edited afterwards.
+>
+> And all of this — every event you just watched — is a stream your own app can render.
+> The console isn't a separate product. It's what the protocol emits."
+
+### 12D.6 How to film it
+
+1. Browser window maximized, console at `http://127.0.0.1:8000/crp/console`, zoom to
+   125–150 % so the cards read on a phone screen (§15.3).
+2. Keep the terminal that launched the server visible in the first frame — the startup
+   line names the URL and stream endpoint; it's the credibility shot ("this is a local
+   server on my machine").
+3. Type question 1 yourself, live; do not paste. Typing speed is human and the wait for
+   the tool call is the suspense beat.
+4. Punch in on the `TOOL_CALL_RESULT` payload when it lands (§18.3) — the real weather
+   numbers are the money shot.
+5. If you use the CDN variant (§12D.2), open with the address bar showing
+   `console.crprotocol.io`, then paste `http://127.0.0.1:8000` into the connect bar —
+   that single paste is the whole "hosted console, local data" story.
+
+### 12D.7 Security notes (say these if asked)
+
+- The server binds **127.0.0.1 by default** on purpose: any website in your browser can
+  otherwise drive your local LLM via CSRF. LAN exposure (`--host 0.0.0.0`) prints a loud
+  warning unless you set `--token` / `CRP_CONSOLE_TOKEN`.
+- CORS is an explicit allowlist (`https://console.crprotocol.io`, localhost origins) —
+  never `*`.
+- `/v1/*` endpoints can require `Authorization: Bearer <token>`.
 
 ---
 

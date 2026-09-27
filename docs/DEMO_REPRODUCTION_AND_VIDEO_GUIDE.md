@@ -358,15 +358,70 @@ curl -s http://127.0.0.1:1234/v1/chat/completions \
   -d '{"model":"meta-llama-3.1-8b-instruct","messages":[{"role":"user","content":"Say OK"}],"max_tokens":30}'
 ```
 
-- Clean server → answers `OK`.
-- Poisoned server → answers `{"name": "print", "parameters": {}}`.
+- Clean server → answers `OK`, and `usage.prompt_tokens` is small (mid-30s for a bare
+  "Say OK" on Llama 3.1).
+- Poisoned server → answers `{"name": "print", "parameters": {}}`, and
+  `usage.prompt_tokens` is ~93 for the same request — that ~60-token gap is the hidden
+  injection, whatever its source. Use the token count as your quantitative canary.
 
 If poisoned: **quit LM Studio completely** (the preset is cached in memory — deleting the
 file alone is not enough), quarantine the offending `.preset.json` out of
 `~/.lmstudio/config-presets/`, reopen LM Studio, reload the model, and re-probe. Also
 check **Developer → MCP** for enabled MCP servers whose tool definitions get injected, and
-disable them for recordings. Full remediation walkthrough with the exact file contents
-found on the demo machine: §12C.7.
+disable them for recordings (their config lives in `~/.lmstudio/mcp.json`). Full
+remediation walkthrough with the exact file contents found on the demo machine: §12C.7.
+
+### 6.7 The deeper trap — Llama 3.1's stock chat template (found 2026-09-27)
+
+If §6.6 checks out (no preset, no MCP) and the server *still* answers every chat request
+with hallucinated tool-call JSON, the injection may be in the **model file itself** —
+specifically the embedded Jinja `chat_template` in the GGUF.
+
+Meta's *original* Llama 3.1 template (which the widely used
+`lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF` release still ships) contains this
+pre-fix guard:
+
+```jinja
+{%- if builtin_tools is defined or tools is not none %}
+    {{- "Environment: ipython\n" }}
+{%- endif %}
+...
+{%- if tools_in_user_message and not tools is none %}
+    {{- "Given the following functions, please respond with a JSON for a function call " }}
+```
+
+In Jinja2, an **undefined** `tools` is *not none* — so renderers that don't pass an
+explicit `tools=none` (LM Studio's OpenAI-compatible endpoint among them) trigger both
+blocks. Every request silently becomes *"Given the following functions, please respond
+with a JSON for a function call…"* with **zero** actual functions listed, and the model
+hallucinates tool names (`print`, `say`, `getCountry`). Meta later fixed the template by
+adding `{%- if not tools is defined %}{%- set tools = none %}{%- endif %}`; the GGUF
+release above predates the fix.
+
+**Diagnosis on the demo machine (2026-09-27):**
+
+- Symptom: `{"name": "print", "parameters": {}}` for "Say OK", `prompt_tokens` 93.
+- Per-model: `qwen2.5-7b-instruct` on the *same server* answered cleanly (31 tokens) —
+  pointed at the template, not the server.
+- Raw `POST /v1/completions` (bypasses chat template) answered cleanly — model weights
+  are fine.
+- Full LM Studio state reset (fresh `.internal`, no presets, no `mcp.json`) did **not**
+  cure it — the poison is in the GGUF.
+- The GGUF was nonetheless bit-for-bit identical to the official Hugging Face release
+  (SHA-256 `f2be3e1a…55e44`) — i.e. **unmodified**, just shipping the buggy pre-fix
+  template.
+
+**Fix applied on the demo machine:** patched the GGUF metadata in place — replaced
+`tokenizer.chat_template` with the same template plus Meta's `{%- set tools = none %}`
+guard. Tensor data untouched (offsets verified). The original file is kept at
+`QUARANTINED-lmstudio-preset/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf.orig`; after patching,
+"Say OK" returns a plain `OK.` at 37 prompt tokens. Note the patched file no longer
+matches the official SHA — only the `tokenizer.chat_template` key differs from the
+release; if you re-download the model from Hugging Face you must re-apply the patch (or
+use a GGUF converted after Meta's fix, e.g. recent bartowski/unsloth builds).
+
+**Takeaway for recordings:** the §6.6 probe is your gate. If token count is ~93 on a bare
+request with clean state, it's this template bug, not a preset.
 
 ---
 

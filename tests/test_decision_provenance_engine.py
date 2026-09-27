@@ -311,7 +311,7 @@ class TestScoreAllClaims:
         facts = [_make_packed_fact("f1", "I think this is great.")]
         results = score_all_claims(claims, facts)
         assert len(results) == 1
-        assert results[0].attribution_type == AttributionType.UNCERTAIN
+        assert results[0].attribution_type == AttributionType.NOT_REQUIRED
         assert results[0].top_score == 0.0
 
     def test_connective_not_scored(self):

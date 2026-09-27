@@ -70,7 +70,12 @@ def generate_markdown_report(report: ProvenanceReport) -> str:
     for i, attr in enumerate(report.attributions, 1):
         preview = attr.claim_text[:60] + "..." if len(attr.claim_text) > 60 else attr.claim_text
         preview = preview.replace("|", "\\|")
-        source = attr.attribution_type.value if attr.attribution_type != AttributionType.UNCERTAIN else "—"
+        source = (
+            attr.attribution_type.value
+            if attr.attribution_type
+            not in (AttributionType.UNCERTAIN, AttributionType.NOT_REQUIRED)
+            else "—"
+        )
         score = f"{attr.top_score:.2f}" if attr.top_score > 0 else "—"
         conf = f"{attr.confidence:.2f}" if attr.confidence > 0 else "—"
         lines.append(f"| {i} | {preview} | {attr.claim_type.value} | {source} | {score} | {conf} |")

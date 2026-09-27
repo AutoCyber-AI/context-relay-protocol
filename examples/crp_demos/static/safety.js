@@ -54,11 +54,10 @@ function renderVerdict(r) {
 
 function renderAnswer(r) {
   const g = r.generation;
+  const meta = el("live-meta");
+  if (meta) meta.textContent = `finish: ${esc(g.finish_reason)} · ${g.latency_ms} ms`;
   if (!g.output) {
     el("answer").innerHTML = `<p class="muted">No model output (is a model loaded in LM Studio?).</p>`;
-  } else {
-    el("answer").innerHTML = `<div class="msg bot" style="max-width:100%">${esc(g.output)}
-      <div class="meta">finish: ${esc(g.finish_reason)} · ${g.latency_ms} ms</div></div>`;
   }
   const sig = r.injection_signals || [];
   el("injection").innerHTML = sig.length
@@ -77,10 +76,11 @@ function renderProvenance(r) {
       <div class="kpi ${p.fabrication_count?'bad':'good'}"><div class="v">${p.fabrication_count}</div><div class="k">Fabrications</div></div>
       <div class="kpi ${p.distortion_count?'warn':'good'}"><div class="v">${p.distortion_count}</div><div class="k">Distortions</div></div>
     </div>
-    <div class="grid cols-3" style="margin-top:0.6rem">
+    <div class="grid cols-4" style="margin-top:0.6rem">
       <div class="kpi"><div class="v">${p.total_claims}</div><div class="k">Claims</div></div>
       <div class="kpi"><div class="v">${p.context_grounded_count}</div><div class="k">Grounded</div></div>
       <div class="kpi ${p.parametric_count?'warn':''}"><div class="v">${p.parametric_count}</div><div class="k">Parametric</div></div>
+      <div class="kpi ${p.uncertain_count?'warn':''}"><div class="v">${p.uncertain_count}</div><div class="k">Uncertain</div></div>
     </div>
     <h3>Hallucination risk</h3>
     <div class="flex">${pill(p.risk_level, riskClass(p.risk_level))}
@@ -103,24 +103,64 @@ function renderAudit(r) {
       <pre class="json">${esc(JSON.stringify((a.ocsf_sample||[])[0] || {}, null, 2))}</pre></details>`;
 }
 
+async function streamAnalyze(payload) {
+  /* POST to /api/safety/analyze/stream and consume the SSE frames.
+     "token" frames stream the model's reasoning/content live into the page;
+     the final "verdict" frame carries the full governance result. */
+  const resp = await fetch("/api/safety/analyze/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "", verdict = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let sep;
+    while ((sep = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, sep);
+      buf = buf.slice(sep + 2);
+      const line = frame.split("\n").find(l => l.startsWith("data:"));
+      if (!line) continue;
+      let evt;
+      try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+      if (evt.type === "token") {
+        const node = document.getElementById(
+          evt.kind === "reasoning" ? "thinking" : "live-answer");
+        if (node) node.textContent += evt.delta;
+      } else if (evt.type === "verdict") {
+        verdict = evt.result;
+      }
+    }
+  }
+  return verdict;
+}
+
 async function analyze() {
   const btn = el("run");
   setBusy(btn, true, "Analyzing…");
-  el("verdict").innerHTML = `<p class="muted"><span class="spinner"></span> Detecting model, generating, scoring, enforcing…</p>`;
+  el("verdict").innerHTML = `<p class="muted"><span class="spinner"></span> Detecting model, streaming generation, scoring, enforcing…</p>`;
+  el("answer").innerHTML = `<div class="msg bot" style="max-width:100%"><span id="live-answer"></span><div class="meta" id="live-meta">streaming…</div></div>`;
+  el("thinking").innerHTML = "";
+  const payload = {
+    system_prompt: el("system").value,
+    question: el("question").value,
+    context_facts: el("facts").value.split("\n").map(s => s.trim()).filter(Boolean),
+    policy: el("policy").value,
+  };
   let r;
   try {
-    r = await apiPost("/api/safety/analyze", {
-      system_prompt: el("system").value,
-      question: el("question").value,
-      context_facts: el("facts").value.split("\n").map(s => s.trim()).filter(Boolean),
-      policy: el("policy").value,
-    });
+    r = await streamAnalyze(payload);
   } catch (e) {
     el("verdict").innerHTML = `<p class="pill red">Request failed: ${esc(e)}</p>`;
     setBusy(btn, false); return;
   }
-  if (r.error) {
-    el("verdict").innerHTML = `<p class="pill red">${esc(r.error)}</p>`;
+  if (!r || r.error) {
+    el("verdict").innerHTML = `<p class="pill red">${esc((r && r.error) || "stream ended without a verdict")}</p>`;
     setBusy(btn, false); return;
   }
   renderVerdict(r);

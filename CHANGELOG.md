@@ -2,6 +2,32 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.5] — Source-Trust Accuracy & Live Streaming Demos
+
+### Fixed
+- **Non-scorable claims no longer trip source-trust policies** — OPINION,
+  PROCEDURAL and CONNECTIVE claims were attributed `UNCERTAIN`, which the
+  policy layer counted as an untrusted source: a fully context-grounded answer
+  that happened to contain an opinion sentence halted with
+  `SOURCE_NOT_TRUSTED` ("untrusted source: uncertain") despite 100% grounding.
+  These claims now get the distinct `AttributionType.NOT_REQUIRED` and are
+  excluded from `uncertain_count`, so `default-src context` only halts on
+  genuinely ungrounded factual claims. Verified live: the Acme SLA scenario
+  that halted in 6.1.4 now ships with zero violations.
+- **Demo server connection noise** — client aborts (browser navigating away
+  mid-request) no longer dump `ConnectionAbortedError` tracebacks; favicon 404
+  eliminated.
+- **Stale protocol version in demo headers** — `PROTOCOL_VERSION` now prefers
+  the live `crp.__version__` so editable installs report the current source
+  tree (was reading stale distribution metadata).
+
+### Added
+- **Streaming safety console** — `POST /api/safety/analyze/stream` streams the
+  model's tokens (including native `reasoning_content` from Qwen3/DeepSeek-R1)
+  over SSE while generation runs, then delivers the full governance verdict.
+  The safety console renders both live, with an "Uncertain" KPI now shown in
+  the provenance panel.
+
 ## [6.1.4] — Model-Native Reasoning in the Transparency Stream
 
 ### Added

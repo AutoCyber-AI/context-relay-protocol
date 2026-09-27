@@ -485,5 +485,5 @@ class TestPipelineAdversarial:
         results = score_all_claims(claims, facts)
         assert len(results) == 3
         assert results[0].attribution_type != AttributionType.UNCERTAIN  # Factual should score
-        assert results[1].attribution_type == AttributionType.UNCERTAIN  # Opinion = uncertain
-        assert results[2].attribution_type == AttributionType.UNCERTAIN  # Connective = uncertain
+        assert results[1].attribution_type == AttributionType.NOT_REQUIRED  # Opinion = not scored
+        assert results[2].attribution_type == AttributionType.NOT_REQUIRED  # Connective = not scored

@@ -250,14 +250,16 @@ def score_all_claims(
                 _embedder_override=_embedder_override,
             )
         else:
-            # Non-factual claims don't need source attribution
+            # Non-factual claims don't need source attribution. Marked
+            # NOT_REQUIRED (not UNCERTAIN) so downstream policy source-trust
+            # checks don't treat an unscored claim as an untrusted source.
             attr = ClaimAttribution(
                 claim_text=claim.text,
                 claim_index=claim.index,
                 claim_type=claim.claim_type,
                 attributed_facts=[],
                 top_score=0.0,
-                attribution_type=AttributionType.UNCERTAIN,
+                attribution_type=AttributionType.NOT_REQUIRED,
                 confidence=0.0,
             )
         attributions.append(attr)

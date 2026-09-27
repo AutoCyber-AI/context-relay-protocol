@@ -18,6 +18,8 @@ JSON API (all POST bodies are JSON):
 
 * ``GET  /api/detect``            → discovered runtimes + capabilities
 * ``POST /api/safety/analyze``    → run the governed-generation pipeline
+* ``POST /api/safety/analyze/stream`` → same, but SSE: live model tokens,
+  then the full governance verdict
 * ``POST /api/context/new``       → start a context session
 * ``POST /api/context/turn``      → send a message (multi-window)
 * ``POST /api/context/tamper``    → corrupt a window → chain BROKEN
@@ -54,13 +56,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from examples.crp_demos import comparison_backend as _cmp
 from examples.crp_demos.pipeline import (
     DEFAULT_SAFETY_POLICY,
     ContextSessionStore,
     detect_runtime,
     run_safety_pipeline,
 )
-from examples.crp_demos import comparison_backend as _cmp
 
 logger = logging.getLogger("crp.demos.server")
 
@@ -154,8 +156,12 @@ class _Handler(BaseHTTPRequestHandler):
             if val:
                 self.send_header(name, str(val))
         self._send_cors_headers()
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except (ConnectionAbortedError, BrokenPipeError, OSError):
+            # The browser navigated away or cancelled the fetch; nothing to fix.
+            pass
 
     def _read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", 0) or 0)
@@ -198,6 +204,40 @@ class _Handler(BaseHTTPRequestHandler):
             self.wfile.flush()
         except OSError:
             pass
+
+    def _safety_analyze_stream(self, body: dict[str, Any]) -> None:
+        """Run App 1 with live token streaming over SSE.
+
+        Token frames arrive while the model generates; the final frame is the
+        full governance verdict (identical shape to /api/safety/analyze).
+        """
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self._send_cors_headers()
+        self.end_headers()
+
+        def _frame(obj: dict[str, Any]) -> bool:
+            """Write one SSE frame; False when the client disconnected."""
+            try:
+                self.wfile.write(f"data: {json.dumps(obj, default=str)}\n\n".encode())
+                self.wfile.flush()
+                return True
+            except (OSError, BrokenPipeError, ConnectionAbortedError):
+                return False
+
+        def _sink(kind: str, delta: str) -> None:
+            _frame({"type": "token", "kind": kind, "delta": delta})
+
+        result = run_safety_pipeline(
+            system_prompt=str(body.get("system_prompt", "")),
+            question=str(body.get("question", "")),
+            context_facts=list(body.get("context_facts", []) or []),
+            policy_str=str(body.get("policy", "") or DEFAULT_SAFETY_POLICY),
+            token_sink=_sink,
+        )
+        _frame({"type": "verdict", "result": result})
 
     def _serve_static(self, path: str) -> None:
         rel = path.lstrip("/") or "index.html"
@@ -268,6 +308,9 @@ class _Handler(BaseHTTPRequestHandler):
             return
         body = self._read_json()
         try:
+            if path == "/api/safety/analyze/stream":
+                self._safety_analyze_stream(body)
+                return
             if path == "/api/safety/analyze":
                 result = run_safety_pipeline(
                     system_prompt=str(body.get("system_prompt", "")),
@@ -313,7 +356,10 @@ class _Handler(BaseHTTPRequestHandler):
                 return
         except Exception as exc:  # noqa: BLE001
             logger.exception("request failed: %s", path)
-            self._send_json({"error": str(exc)}, status=500)
+            try:
+                self._send_json({"error": str(exc)}, status=500)
+            except (ConnectionAbortedError, BrokenPipeError, OSError):
+                pass  # client already gone; the traceback above is enough
             return
         self.send_error(404, "Not found")
 

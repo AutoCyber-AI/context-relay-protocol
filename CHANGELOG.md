@@ -2,6 +2,25 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.4] — Model-Native Reasoning in the Transparency Stream
+
+### Added
+- **`AgentEventKind.MODEL_REASONING`** (`crp.agent_sdk.events`) — emitted by the
+  Agent SDK whenever the provider exposes `last_reasoning_content` (Qwen3 hybrid
+  thinking, DeepSeek-R1, o-series). The model's own thinking now reaches the
+  transparency stream alongside CRP's orchestration reasoning.
+- **TEL mapping** (`crp/tel/adapter.py`) — `MODEL_REASONING` maps to standard
+  AG-UI `REASONING_START`/`REASONING_CONTENT`/`REASONING_END` events with
+  `messageId="model"`, so any AG-UI consumer receives model-native thinking.
+- **Console renders both reasoning layers** (`crp/frontend/console.py`) —
+  reasoning narrative steps are keyed by `messageId` and titled separately
+  ("Model reasoning" vs "CRP reasoning") so the two never merge.
+
+### Fixed
+- **Demo server branding** (`examples/crp_demos/`) — landing page badge and
+  comparison console logo now read "v6" (were stale "v3"); the Comparison app
+  is linked from every nav bar and the landing page grid.
+
 ## [6.1.3] — OpenAI-Compatible Base URL Normalization
 
 ### Fixed

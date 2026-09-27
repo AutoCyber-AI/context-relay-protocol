@@ -214,7 +214,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
+        # No "Connection: keep-alive": the stream ends with the verdict frame
+        # and the server closes the socket (see close_connection below).
         self._send_cors_headers()
         self.end_headers()
 
@@ -238,6 +239,10 @@ class _Handler(BaseHTTPRequestHandler):
             token_sink=_sink,
         )
         _frame({"type": "verdict", "result": result})
+        # Explicitly close the connection after the verdict: some clients
+        # (fetch readers) only complete when the socket closes, and the
+        # keep-alive response header otherwise leaves them hanging.
+        self.close_connection = True
 
     def _serve_static(self, path: str) -> None:
         rel = path.lstrip("/") or "index.html"

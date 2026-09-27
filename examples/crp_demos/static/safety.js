@@ -134,6 +134,8 @@ async function streamAnalyze(payload) {
         if (node) node.textContent += evt.delta;
       } else if (evt.type === "verdict") {
         verdict = evt.result;
+        await reader.cancel().catch(() => {});
+        return verdict;
       }
     }
   }

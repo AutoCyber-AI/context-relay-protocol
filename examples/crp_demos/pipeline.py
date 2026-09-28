@@ -155,6 +155,7 @@ def stream_generate(
     messages: list[dict[str, str]],
     *,
     max_tokens: int | None = None,
+    extra_body: dict[str, Any] | None = None,
 ) -> Any:
     """Stream a chat completion from the detected runtime.
 
@@ -167,6 +168,8 @@ def stream_generate(
     No token budget is imposed: the server runs the model to its natural
     stop and reports ``finish_reason`` (``stop`` / ``length``), which is the
     honest behaviour for a protocol demo - CRP governs, it does not truncate.
+    ``extra_body`` is merged into the request payload (LM Studio extras such
+    as ``chat_template_kwargs`` ride through here).
     """
     if primary is None:
         yield ("done", {"text": "", "finish_reason": "no-model", "gen_ms": 0})
@@ -186,6 +189,8 @@ def stream_generate(
     }
     if max_tokens:
         request_body["max_tokens"] = max_tokens
+    if extra_body:
+        request_body.update(extra_body)
     payload = json.dumps(request_body).encode("utf-8")
     t0 = time.time()
     text_parts: list[str] = []

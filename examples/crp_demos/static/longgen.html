@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!-- Copyright © 2025 Constantinos Vidiniotis. All rights reserved. -->
+<!-- Licensed under Elastic License 2.0 — see LICENSE.md for details. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRP · Long-Context Document Generation</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">CR<span>P</span> · Demos</div>
+    <nav>
+      <a href="/">Detection</a>
+      <a href="/safety.html">Safety Console</a>
+      <a href="/context.html">Context Explorer</a>
+      <a href="/comparison.html">Comparison</a>
+      <a href="/longgen.html" class="active">Long-Gen</a>
+      <a href="/agent.html">Agent vs Raw</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="hero" style="padding-bottom:0.5rem">
+      <div class="badge">APP 4 · Long-Context Document Generation</div>
+      <h1>Long-Context Document Generation</h1>
+      <p>A small local model loaded with only a fraction of its context ceiling
+        cannot hold a long document in its head. CRP's continuation engine writes
+        window by window, relays the document state forward, and stitches every
+        window into one coherent deliverable. Watch it happen live, then check
+        the acceptance gate that proves the document is real: length, structure,
+        and near-zero repetition.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:1.2rem">
+      <h2>1 · Configure the run</h2>
+      <p class="sub">Model: <span id="model-tag" class="tag">scanning…</span></p>
+      <div class="grid cols-3">
+        <div>
+          <label for="sections">Sections (1-10)</label>
+          <input type="number" id="sections" min="1" max="10" value="3" />
+        </div>
+        <div>
+          <label for="words">Target words</label>
+          <input type="number" id="words" min="500" step="100" value="1500" />
+        </div>
+        <div>
+          <label for="tpw">Tokens per window</label>
+          <input type="number" id="tpw" min="200" step="50" value="700" />
+        </div>
+      </div>
+      <p class="muted" style="font-size:0.78rem">Each window writes up to its token
+        budget, then CRP extracts the document state and opens the next window -
+        that handoff is the demo. A non-thinking instruct model (e.g.
+        qwen2.5-7b-instruct) produces the most visible prose; reasoning models
+        spend part of each window on hidden thinking.</p>
+      <div class="btn-row">
+        <button id="start">Generate document</button>
+        <button id="cancel" class="secondary" disabled>Cancel</button>
+        <button id="download" class="secondary" disabled>Download document.md</button>
+      </div>
+    </div>
+
+    <div id="progress" class="card guidance hide" style="margin-bottom:1.2rem">
+      <div class="flex" style="gap:1.6rem">
+        <div><div class="tag">elapsed</div><b id="pg-elapsed">0s</b></div>
+        <div><div class="tag">words so far</div><b id="pg-words">0</b></div>
+        <div><div class="tag">windows done</div><b id="pg-windows">0</b></div>
+        <div><div class="tag">repetition (6-gram)</div><b id="pg-rep">0%</b></div>
+      </div>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>2 · Document (streaming)</h2>
+        <p class="sub">Assembled from every window, rendered as it is written.</p>
+        <div id="doc" class="doc-pane md"><p class="muted">Start a run to write here.</p></div>
+      </div>
+      <div class="card">
+        <h2>Windows</h2>
+        <p class="sub">One card per completed window - the stitch points of the document.</p>
+        <div id="windows" class="fact-list"><p class="muted">No windows yet.</p></div>
+      </div>
+    </div>
+
+    <div id="gate-card" class="card hide" style="margin-top:1.2rem">
+      <div class="flex-between">
+        <h2>3 · Acceptance gate</h2>
+        <span id="gate-verdict"></span>
+      </div>
+      <p class="sub">The run only counts as proof if every check passes: the model
+        really produced varied, structured, complete long-form text.</p>
+      <div id="gate"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="longgen.js"></script>
+</body>
+</html>

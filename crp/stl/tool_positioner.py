@@ -56,7 +56,9 @@ class ToolPositioningFrame:
         if not self.capabilities:
             return "\n".join(lines).rstrip()
         lines.append("Available tools for THIS operation (use at most "
-                     f"{self.max_calls}; or answer directly if none apply):")
+                     f"{self.max_calls}). If the answer depends on current or external "
+                     "facts, request a tool FIRST. Answer directly only when you "
+                     "already know the answer with certainty:")
         for i, slot in enumerate(self.capabilities, start=1):
             lines.append(f"{i}. {slot.capability_id} — {slot.assignment}")
             req = slot.input_schema.get("required", [])
@@ -65,7 +67,14 @@ class ToolPositioningFrame:
                 marked = [f"{p}*" if p in req else p for p in props]
                 lines.append(f"   args: {', '.join(marked)}  (* = required)")
             if slot.example_call:
-                lines.append(f"   example: {json.dumps(slot.example_call, default=str)}")
+                lines.append(
+                    "   example: "
+                    + json.dumps(
+                        {"capability_id": slot.capability_id,
+                         "arguments": slot.example_call},
+                        default=str,
+                    )
+                )
         lines.extend([
             "",
             "Respond with ONE JSON object and nothing else:",
@@ -229,6 +238,22 @@ def parse_tool_call(raw_output: str, frame: ToolPositioningFrame) -> ParsedToolC
     raw_cid = str(cid)
 
     if cid not in valid_ids:
+        # Numbered-list confusion: SLMs sometimes reply with the list position
+        # ("1", "2") instead of the capability_id. Snap in-range indices to the
+        # offered slot (the prompt numbers them 1..N), preserving the raw value.
+        _digits = raw_cid.strip()
+        if _digits.isdigit():
+            idx = int(_digits) - 1
+            if 0 <= idx < len(frame.capabilities):
+                args = obj.get("arguments", {})
+                if not isinstance(args, dict):
+                    args = {}
+                return ParsedToolCall(
+                    capability_id=frame.capabilities[idx].capability_id,
+                    arguments=args,
+                    requested_id=raw_cid,
+                )
+
         # Small local models sometimes echo the operation token ("RETRIEVE",
         # "CALCULATE") instead of the capability_id. If the token maps to an
         # operation and exactly one offered capability advertises that operation,

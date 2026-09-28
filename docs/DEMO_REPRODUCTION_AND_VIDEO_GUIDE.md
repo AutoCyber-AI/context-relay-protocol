@@ -942,6 +942,20 @@ Continuation window 1 done: finish=length, chars=5053
 PASS — 10,4xx words, NN headings, 6-gram repetition 0.x%, duplicates 0.x%
 ```
 
+**Browser version (preferred for recording):** the same benchmark now runs in the demo
+server with a live UI:
+
+```cmd
+.venv\Scripts\python.exe -m examples.crp_demos.server
+rem then open http://127.0.0.1:8770/longgen.html
+```
+
+Fill in sections / target words / tokens-per-window, press Start, and the document streams
+into the page window-by-window as each CRP continuation window completes. Window cards,
+per-window repetition metrics, the acceptance-gate table, and a download button all update
+live. Film this instead of the terminal if you want on-screen UI instead of log output —
+it is the identical `CRPStrategy` engine underneath.
+
 ### 12A.4 How to film it
 
 This is a **time-lapse + reveal** shot, not a real-time one:
@@ -1201,6 +1215,22 @@ you specifically need it).
 Optional: append your own question as the last argument, e.g.
 `"...What is the capital of Norway and its current population?"` (three different questions
 across takes makes the footage clearly unscripted).
+
+**Browser version (preferred for recording):** the same side-by-side comparison runs in
+the demo server:
+
+```cmd
+.venv\Scripts\python.exe -m examples.crp_demos.server
+rem then open http://127.0.0.1:8770/agent.html
+```
+
+Type a question, optionally tick "real web search" (needs internet; unticked uses the
+built-in synthetic tools), and press Run. The raw LLM arm streams into the left pane while
+the CRP agent arm runs in the right pane with a live event timeline (tool calls,
+observations), then both finish with their answers side by side: the CRP pane adds the
+governance table (risk, grounded, chain valid, operations, sources, audit URL). The CRP
+arm uses `crp.Agent` with the same tool definitions the raw arm only sees as plain text —
+that contrast is the point of the demo.
 
 ### 12C.4 What you will see (recorded live 2026-09-26 against the 8B on LM Studio)
 

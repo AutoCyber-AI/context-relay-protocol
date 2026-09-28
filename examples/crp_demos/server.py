@@ -13,6 +13,7 @@ Then open http://127.0.0.1:8770 in a browser:
 * ``/safety.html``    — App 1: AI Safety & Governance Console
 * ``/context.html``   — App 2: Context Management & Provenance Explorer
 * ``/comparison.html``— App 3: 4-Strategy Context Comparison
+* ``/longgen.html``   — App 4: Long-Context Document Generation (continuation)
 
 JSON API (all POST bodies are JSON):
 
@@ -26,11 +27,17 @@ JSON API (all POST bodies are JSON):
   then the full turn result
 * ``POST /api/context/tamper``    → corrupt a window → chain BROKEN
 * ``POST /api/context/state``     → full session state
+* ``POST /api/context/facts``     → every fact stored in the session CKF
 * ``POST /api/compare/start``     → start a 4-strategy benchmark run
 * ``GET  /api/compare/stream``    → SSE stream for a run
 * ``GET  /api/compare/status``    → current run state + partial results
 * ``POST /api/compare/cancel``    → cancel an in-progress run
 * ``POST /api/compare/poll``      → poll for pending events (non-SSE)
+* ``POST /api/longgen/start``     → start a long-generation run (Demo D)
+* ``GET  /api/longgen/stream``    → SSE stream: chunks, windows, gate
+* ``GET  /api/longgen/status``    → current run state
+* ``POST /api/longgen/cancel``    → cancel a run
+* ``POST /api/longgen/poll``      → poll for pending events (non-SSE)
 
 Security (defaults are safe for local use):
 
@@ -58,7 +65,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from examples.crp_demos import agent_backend as _agent
 from examples.crp_demos import comparison_backend as _cmp
+from examples.crp_demos import longgen_backend as _longgen
 from examples.crp_demos.pipeline import (
     DEFAULT_SAFETY_POLICY,
     ContextSessionStore,
@@ -174,9 +183,11 @@ class _Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError):
             return {}
 
-    def _sse_stream(self, run_id: str) -> None:
-        """Stream benchmark events as Server-Sent Events."""
+    def _sse_stream(self, run_id: str, drain_fn: Any = None) -> None:
+        """Stream benchmark/longgen events as Server-Sent Events."""
         import time as _time
+        if drain_fn is None:
+            drain_fn = _cmp.stream_events
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
@@ -186,7 +197,15 @@ class _Handler(BaseHTTPRequestHandler):
 
         deadline = _time.time() + 1800  # 30-minute max stream
         while _time.time() < deadline:
-            events = _cmp.stream_events(run_id, timeout=2.0)
+            events = drain_fn(run_id, timeout=2.0)
+            if not events:
+                # keepalive so idle generation gaps cannot trip client/proxy
+                # read timeouts mid-run
+                try:
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+                except (OSError, BrokenPipeError):
+                    return
             for evt in events:
                 data = json.dumps(evt, default=str)
                 try:
@@ -196,7 +215,11 @@ class _Handler(BaseHTTPRequestHandler):
                     return
                 if evt.get("type") in ("run_done", "run_error"):
                     return
-            run = _cmp.get_run(run_id)
+            run = None
+            for _backend in (_cmp, _longgen, _agent):
+                if drain_fn is _backend.stream_events:
+                    run = _backend.get_run(run_id)
+                    break
             if run and run.status in ("done", "cancelled", "error"):
                 break
 
@@ -327,6 +350,32 @@ class _Handler(BaseHTTPRequestHandler):
             run_id = params.get("run_id", "")
             self._send_json(_cmp.get_status(run_id))
             return
+        # Long-generation (Demo D) SSE stream + status
+        if path == "/api/longgen/stream":
+            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            run_id = params.get("run_id", "")
+            self._sse_stream(run_id, _longgen.stream_events)
+            return
+        if path == "/api/longgen/status":
+            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            run_id = params.get("run_id", "")
+            self._send_json(_longgen.get_status(run_id))
+            return
+        # Agent vs raw LLM (Demo F) SSE stream + status
+        if path == "/api/agent/stream":
+            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            run_id = params.get("run_id", "")
+            self._sse_stream(run_id, _agent.stream_events)
+            return
+        if path == "/api/agent/status":
+            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            run_id = params.get("run_id", "")
+            self._send_json(_agent.get_status(run_id))
+            return
         self._serve_static(path)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -388,6 +437,45 @@ class _Handler(BaseHTTPRequestHandler):
                 )
                 self._send_json({"events": events})
                 return
+            # Long-generation (Demo D) controls
+            if path == "/api/longgen/start":
+                cfg = dict(body)
+                # Fill endpoint/model/context from live detection unless given.
+                try:
+                    report = detect_runtime()
+                    primary = report.get("primary")
+                    if primary:
+                        cfg.setdefault("endpoint", primary["endpoint"])
+                        cfg.setdefault("model", primary["id"])
+                        cfg.setdefault("context_size",
+                                       primary.get("loaded_context_length") or 4096)
+                except Exception:  # noqa: BLE001 — detection failure must not block
+                    pass
+                self._send_json({"run_id": _longgen.start_run(cfg)})
+                return
+            if path == "/api/longgen/cancel":
+                ok = _longgen.cancel_run(str(body.get("run_id", "")))
+                self._send_json({"cancelled": ok})
+                return
+            if path == "/api/longgen/poll":
+                events = _longgen.stream_events(
+                    str(body.get("run_id", "")),
+                    timeout=float(body.get("timeout", 10.0)),
+                )
+                self._send_json({"events": events})
+                return
+            # Agent vs raw LLM (Demo F) controls
+            if path == "/api/agent/start":
+                run_id = _agent.start_run(
+                    question=str(body.get("question", "")),
+                    real_search=bool(body.get("real_search", True)),
+                )
+                self._send_json({"run_id": run_id})
+                return
+            if path == "/api/agent/cancel":
+                ok = _agent.cancel_run(str(body.get("run_id", "")))
+                self._send_json({"cancelled": ok})
+                return
         except Exception as exc:  # noqa: BLE001
             logger.exception("request failed: %s", path)
             try:
@@ -437,6 +525,7 @@ def main() -> None:
     print(f"    Safety console          : {url}/safety.html")
     print(f"    Context explorer        : {url}/context.html")
     print(f"    Context comparison      : {url}/comparison.html")
+    print(f"    Long-gen (continuation) : {url}/longgen.html")
     print("\n  Press Ctrl+C to stop.\n")
     try:
         httpd.serve_forever()

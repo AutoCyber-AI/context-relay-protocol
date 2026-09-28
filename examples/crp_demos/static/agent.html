@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- Copyright © 2025 Constantinos Vidiniotis. All rights reserved. -->
+<!-- Licensed under Elastic License 2.0 — see LICENSE.md for details. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRP · Agent vs Raw LLM</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">CR<span>P</span> · Demos</div>
+    <nav>
+      <a href="/">Detection</a>
+      <a href="/safety.html">Safety Console</a>
+      <a href="/context.html">Context Explorer</a>
+      <a href="/comparison.html">Comparison</a>
+      <a href="/longgen.html">Long-Gen</a>
+      <a href="/agent.html" class="active">Agent vs Raw</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="hero" style="padding-bottom:0.5rem">
+      <div class="badge">APP 5 · CRP Agent vs Raw LLM</div>
+      <h1>The same model. The same tools. The same question.</h1>
+      <p>Left: the model alone, with tool descriptions pasted into its prompt -
+        nothing executes whatever it prints. Right: a CRP agent with the same
+        tools declared natively, streaming every operation, tool call and
+        observation as it happens, with full governance at the end. Both arms
+        run <strong>at the same time</strong> against the same detected model.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:1.2rem">
+      <h2>1 · Task</h2>
+      <p class="sub">Model: <span id="model-tag" class="tag">scanning…</span></p>
+      <label for="question">Question (both arms receive exactly this)</label>
+      <textarea id="question" class="code" rows="2">Use the get_weather tool to check the weather in London, then use convert_temp to convert the Celsius temperature to Fahrenheit. Report both tool results.</textarea>
+      <div class="btn-row">
+        <label style="display:flex;gap:0.4rem;align-items:center;font-size:0.85rem">
+          <input type="checkbox" id="real-search" checked /> real Wikipedia Search API tools
+        </label>
+        <button id="run">Run both arms</button>
+        <button id="cancel" class="secondary" disabled>Cancel</button>
+      </div>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="flex-between">
+          <h2>Raw LLM</h2>
+          <span id="raw-status"></span>
+        </div>
+        <p class="sub">No protocol. Tools are prose in the system prompt; nothing executes.</p>
+        <div id="raw-out" class="doc-pane"><p class="muted">Waiting for run.</p></div>
+        <div id="raw-final" style="margin-top:0.6rem"></div>
+      </div>
+      <div class="card">
+        <div class="flex-between">
+          <h2>CRPv6 Agent</h2>
+          <span id="crp-status"></span>
+        </div>
+        <p class="sub">Native tool fabric - every lifecycle event, as it happens.</p>
+        <div id="crp-timeline" class="fact-list" style="max-height:220px"><p class="muted">Waiting for run.</p></div>
+        <div id="crp-out" style="margin-top:0.6rem"></div>
+      </div>
+    </div>
+
+    <div id="summary" class="card guidance hide" style="margin-top:1.2rem"></div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="agent.js"></script>
+</body>
+</html>

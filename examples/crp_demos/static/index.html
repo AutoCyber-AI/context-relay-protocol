@@ -17,6 +17,8 @@
       <a href="/safety.html">Safety Console</a>
       <a href="/context.html">Context Explorer</a>
       <a href="/comparison.html">Comparison</a>
+      <a href="/longgen.html">Long-Gen</a>
+      <a href="/agent.html">Agent vs Raw</a>
     </nav>
   </div>
 
@@ -82,6 +84,33 @@
           <li>Grounding, hallucination and quality scores per strategy</li>
           <li>Live SSE progress while the run executes</li>
           <li>The "with vs without CRP" proof, quantified</li>
+        </ul>
+      </a>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:1.4rem">
+      <a class="card app-card" href="/longgen.html">
+        <div class="num">APP 4</div>
+        <h2>Long-Context Document Generation</h2>
+        <p class="sub">A small model with a fraction of its context ceiling writes a
+          long document anyway - window by window, stitched by CRP's continuation
+          engine, with an acceptance gate that proves the text is real.</p>
+        <ul>
+          <li>Live per-window streaming of the growing document</li>
+          <li>Continuation + state relay across windows</li>
+          <li>Acceptance gate: length, structure, near-zero repetition</li>
+        </ul>
+      </a>
+      <a class="card app-card" href="/agent.html">
+        <div class="num">APP 5</div>
+        <h2>CRP Agent vs Raw LLM</h2>
+        <p class="sub">The same model, the same real tools, the same question -
+          run twice at the same time. The raw arm can only talk about tools;
+          the CRP agent executes them, live on screen.</p>
+        <ul>
+          <li>Side-by-side live streaming, both arms at once</li>
+          <li>Real Wikipedia Search API tool calls</li>
+          <li>Full lifecycle event timeline + governance metadata</li>
         </ul>
       </a>
     </div>

@@ -56,6 +56,10 @@
           <div class="kpi"><div class="v" id="ckf-retrieved">0</div><div class="k">Recalled</div></div>
         </div>
         <h3>Facts recalled for the last turn</h3>
+        <p class="muted" style="font-size:0.78rem;margin-top:0">Facts are split out of the conversation per turn and stored in the CKF.
+          <span class="pill blue">user</span> statements are what you told the agent (stored at high trust);
+          <span class="pill grey">assistant</span> claims are what the model asserted - candidates for verification,
+          never silently treated as ground truth. Model thinking is never stored as a fact.</p>
         <div id="recalled"><p class="muted"> - </p></div>
       </div>
     </div>

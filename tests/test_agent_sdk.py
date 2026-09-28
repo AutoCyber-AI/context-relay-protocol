@@ -538,6 +538,25 @@ def test_preset_reasoning_scaffold_compiled_into_system_prompt() -> None:
     assert "Answer briefly" in agent.system
 
 
+def test_agent_system_prompt_reaches_model_calls() -> None:
+    """The agent system prompt must reach every model call.
+
+    Regression: ``run_positioned`` took no ``system`` parameter, so the stored
+    system prompt (and any preset persona compiled into it) was dead code in
+    the STL path - the model never saw it.
+    """
+    provider, prompts = _make_recording_provider(["Done."])
+    agent = crp.Agent(
+        provider=provider,
+        tools=[],
+        system="You are a forensic accountant. Answer in one word.",
+    )
+    agent.run("What is 2+2?")
+    assert prompts, "expected at least one model call"
+    for prompt in prompts:
+        assert "forensic accountant" in prompt
+
+
 def test_preset_output_profile_short_format() -> None:
     """A preset output profile sets length/format hints on the compiled preset."""
     preset = {

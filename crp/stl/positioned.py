@@ -520,6 +520,7 @@ def run_positioned(
     phase_plan: PhasePlan | None = None,
     final_synthesis: bool = True,
     safeguard_engine: SafeguardEngine | None = None,
+    system: str | None = None,
 ) -> PositionedResult:
     """Run the positioned-tool-loop for a request (CRP-SPEC-049/050).
 
@@ -538,7 +539,18 @@ def run_positioned(
             step so raw payloads become natural-language prose.
         safeguard_engine: Optional preset safeguard engine; evaluates user input,
             tool selections, and generated output for declarative safeguard rules.
+        system: Optional system instruction prepended to every operation prompt.
+            The positioned loop talks to providers through a prompt-string
+            ``ModelCall`` (not message lists), so the system instruction is
+            realised as a leading instruction block - faithful to a system
+            message for every provider the adapter layer supports.
     """
+    if system:
+        inner_model_call = model_call
+
+        def model_call(prompt: str, schema: Any = None) -> str:  # type: ignore[misc]
+            return inner_model_call(f"{system}\n\n{prompt}", schema)
+
     phase_sm = phase_plan.copy() if phase_plan is not None else None
     if phase_sm is not None and phase_sm.phases:
         operations = phase_sm.to_operations()

@@ -43,6 +43,7 @@ from crp.provenance import (
     ProvenanceConfig,
     collect_quality_headers,
 )
+from crp.provenance.rqa_stages import detect_cross_window_contradictions
 from crp.provenance.window_chain import (
     WindowChainRecord,
     WindowHmacInput,
@@ -259,6 +260,104 @@ def _facts_from_text(text: str, category: str) -> list[Fact]:
                 continue  # a question the model asked is not a fact
             facts.append(Fact(text=chunk, category=category, confidence=confidence))
     return facts
+
+
+# Acronym-expansion pairs such as "CRP (Conflict Resolution Protocol)" or the
+# inverse "Context Relay Protocol (CRP)". A model confidently expanding an
+# acronym it was never told is the classic low-stakes hallucination; when the
+# user later supplies the real expansion, the stale claim must be reconciled.
+_ACRONYM_FIRST_RE = re.compile(
+    r"\b([A-Z]{2,12}(?:\s+[A-Z]{2,12}){0,3})"
+    r"\s*\(([A-Za-z][A-Za-z .&-]{2,48})\)")
+_NAME_FIRST_RE = re.compile(
+    r"\b([A-Z][a-z]+(?:\s+[A-Za-z][a-z]+){1,6})"
+    r"\s*\(([A-Z]{2,12})\)")
+
+
+def _clean_expansion(text: str) -> str:
+    """Strip leading interrogatives/articles an expansion may capture when the
+    pair appears inside a question, e.g. "What is the Context Relay Protocol"."""
+    return re.sub(r"^(?:(?:what|who|which)\s+(?:is|are|was|were)\s+)?(?:(?:the|a|an)\s+)",
+                  "", text.strip(), flags=re.IGNORECASE)
+
+
+def _norm_expansion(text: str) -> str:
+    return " ".join(_clean_expansion(text).lower().split())
+
+
+def _acronym_pairs(text: str) -> dict[str, str]:
+    """Map acronym -> expansion found in *text* (both word orders)."""
+    pairs: dict[str, str] = {}
+    for acronym, expansion in _ACRONYM_FIRST_RE.findall(text):
+        pairs.setdefault(acronym.strip(), _clean_expansion(expansion))
+    for name, acronym in _NAME_FIRST_RE.findall(text):
+        pairs.setdefault(acronym.strip(), _clean_expansion(name))
+    return pairs
+
+
+def _acronym_conflict(new_text: str, old_text: str) -> str | None:
+    """Return a human-readable conflict if both texts expand the same acronym
+    differently, else None."""
+    new_pairs, old_pairs = _acronym_pairs(new_text), _acronym_pairs(old_text)
+    for acronym, new_exp in new_pairs.items():
+        old_exp = old_pairs.get(acronym)
+        if old_exp and _norm_expansion(new_exp) != _norm_expansion(old_exp):
+            return f"acronym '{acronym}' redefined: '{old_exp}' -> '{new_exp}'"
+    return None
+
+
+def _reconcile_turn(sess: _Session, new_facts: list[Fact],
+                    window_number: int) -> list[dict[str, Any]]:
+    """Self-correction: a high-trust user statement overrides earlier
+    low-trust model claims it contradicts.
+
+    Two protocol-native checks run per (new user fact, old model claim) pair:
+    the cross-window contradiction detector (numeric / temporal / stance) and
+    an acronym-redefinition check for definition-swap hallucinations the rule
+    engine does not cover. Conflicting claims are marked superseded via the
+    CKF's own supersession primitive - kept in the fabric for provenance,
+    excluded from recall - and the correction is audit-logged."""
+    corrections: list[dict[str, Any]] = []
+    if not sess.fact_ids:
+        return corrections
+    by_text = {sf.fact.text: sf for sf in sess.ckf._warm.get_facts()}  # noqa: SLF001
+    for nf in new_facts:
+        if nf.category != "user_statement":
+            continue
+        new_sf = by_text.get(nf.text)
+        if new_sf is None:
+            continue
+        for sf in sess.ckf._warm.get_facts():  # noqa: SLF001 — demo introspection
+            if sf.fact.category != "assistant_claim" or sf.is_superseded:
+                continue
+            old_window = sf.fact.source_window_id or ""
+            if old_window == f"w{window_number}":
+                continue  # only reconcile against earlier windows' claims
+            reason = _acronym_conflict(nf.text, sf.fact.text)
+            if reason is None:
+                try:
+                    coherence = detect_cross_window_contradictions(
+                        nf.text, [sf.fact.text])
+                except Exception:  # noqa: BLE001 — reconciliation is best-effort
+                    coherence = None
+                if coherence is None or not coherence.contradictions:
+                    continue
+                reason = (f"cross-window contradiction "
+                          f"({coherence.contradictions[0].contradiction_type})")
+            sf.supersede(by_fact_id=new_sf.id, confidence=nf.confidence or 0.9)
+            sess.superseded[sf.id] = {
+                "by_window": window_number,
+                "by_text": nf.text,
+                "old_text": sf.fact.text,
+                "reason": reason,
+            }
+            sess.audit.record(ComplianceEventType.CONTRADICTION_DETECTED,
+                              data={"superseded_fact": sf.fact.text[:120],
+                                    "reason": reason, "window": window_number})
+            corrections.append({"superseded_text": sf.fact.text,
+                                "correction": nf.text, "reason": reason,
+                                "window": window_number})
+    return corrections
 
 
 def _packed_from_facts(facts: list[Fact]) -> list[PackedFact]:
@@ -545,6 +644,7 @@ class _Session:
         self.records: list[WindowChainRecord] = []
         self.window_number = 0
         self.fact_ids: list[str] = []
+        self.superseded: dict[str, dict[str, Any]] = {}
         self.history: list[dict[str, str]] = []
         self.turns: list[dict[str, Any]] = []
         self.audit.record(ComplianceEventType.SESSION_CREATED,
@@ -589,10 +689,14 @@ class ContextSessionStore:
         window_id = f"w{wnum}"
 
         # 1) Retrieve prior facts from the CKF as grounding context.
+        # Superseded (corrected) facts stay in the fabric for provenance but
+        # are never recalled into a later window.
         retrieved: list[dict[str, Any]] = []
         if sess.fact_ids:
+            active_seed = [fid for fid in sess.fact_ids[-12:]
+                           if fid not in sess.superseded]
             merge = sess.ckf.retrieve(
-                seed_ids=set(sess.fact_ids[-12:]),
+                seed_ids=set(active_seed),
                 modes=["graph_walk", "pattern"],
                 budget=12,
             )
@@ -643,6 +747,12 @@ class ContextSessionStore:
             sess.fact_ids = [sf.id for sf in sess.ckf._warm.get_facts()]  # noqa: SLF001
             sess.audit.record(ComplianceEventType.FACTS_EXTRACTED,
                               data={"count": len(new_facts), "window": window_id})
+            corrections = _reconcile_turn(sess, new_facts, wnum)
+            # Re-sync: superseded facts stay in the fabric but leave the
+            # active set that recall, KPIs and ETag are computed over.
+            sess.fact_ids = [sf.id for sf in sess.ckf._warm.get_facts()]  # noqa: SLF001
+        else:
+            corrections = []
 
         # 4) Extend the HMAC window chain (tamper-evident provenance).
         response_hash = _sha256(reply or message)
@@ -697,6 +807,7 @@ class ContextSessionStore:
             "latency_ms": gen_ms,
             "retrieved_facts": retrieved,
             "new_facts": [{"text": f.text, "category": f.category} for f in new_facts],
+            "corrections": corrections,
             "window_hmac": whmac,
             "prev_window_hmac": prev_hmac,
             "response_hash": response_hash,
@@ -757,17 +868,18 @@ class ContextSessionStore:
     def facts(self, session_id: str) -> dict[str, Any]:
         """Every fact in the session's CKF - the full fabric, not a recall slice."""
         sess = self._get(session_id)
-        items = [
-            {
+        items = []
+        for sf in sess.ckf._warm.get_facts(include_superseded=True):  # noqa: SLF001 — demo introspection
+            correction = sess.superseded.get(sf.id)
+            items.append({
                 "id": sf.id,
                 "text": sf.fact.text,
                 "category": sf.fact.category,
                 "confidence": sf.fact.confidence,
                 "window": sf.fact.source_window_id or "",
                 "superseded": bool(getattr(sf, "is_superseded", False)),
-            }
-            for sf in sess.ckf._warm.get_facts()  # noqa: SLF001 — demo introspection
-        ]
+                "correction": correction,
+            })
         return {"session_id": session_id, "count": len(items), "facts": items}
 
 

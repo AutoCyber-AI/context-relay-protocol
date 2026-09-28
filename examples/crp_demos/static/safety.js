@@ -58,6 +58,9 @@ function renderAnswer(r) {
   if (meta) meta.textContent = `finish: ${esc(g.finish_reason)} · ${g.latency_ms} ms`;
   if (!g.output) {
     el("answer").innerHTML = `<p class="muted">No model output (is a model loaded in LM Studio?).</p>`;
+  } else {
+    const liveNode = el("live-answer");
+    if (liveNode) liveNode.innerHTML = mdToHtml(g.output);
   }
   const sig = r.injection_signals || [];
   el("injection").innerHTML = sig.length

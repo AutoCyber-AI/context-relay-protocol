@@ -147,12 +147,37 @@ details.thinking > div { max-height: 260px; overflow-y: auto; font-size: 0.82rem
   details.thinking > div { max-height: 180px; }
 }
 
-.chat { display: flex; flex-direction: column; gap: 0.7rem; max-height: 360px; overflow-y: auto;
-  padding: 0.4rem; }
-.msg { padding: 0.6rem 0.85rem; border-radius: 12px; max-width: 82%; font-size: 0.92rem; }
+.chat { display: flex; flex-direction: column; gap: 0.9rem; padding: 0.5rem 0; }
+.msg { padding: 0.7rem 0.95rem; border-radius: 14px; max-width: 82%; font-size: 0.92rem;
+  overflow-wrap: anywhere; }
 .msg.user { align-self: flex-end; background: var(--accent); color: white; }
-.msg.bot { align-self: flex-start; background: var(--bg-elev); border: 1px solid var(--border); }
-.msg .meta { font-size: 0.7rem; opacity: 0.7; margin-top: 0.3rem; }
+.msg.bot { align-self: stretch; max-width: 100%; background: var(--bg-elev);
+  border: 1px solid var(--border); }
+.msg .meta { font-size: 0.7rem; opacity: 0.7; margin-top: 0.35rem; }
+
+/* Rendered markdown inside model bubbles. */
+.md { line-height: 1.55; }
+.md p { margin: 0.3rem 0; }
+.md h4, .md h5 { margin: 0.75rem 0 0.3rem; color: var(--text); line-height: 1.3; }
+.md ul, .md ol { margin: 0.25rem 0 0.55rem; padding-left: 1.3rem; }
+.md li { margin: 0.18rem 0; }
+.md a { color: var(--accent); }
+.md code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.05rem 0.32rem; font-family: var(--mono); font-size: 0.85em; }
+
+/* Full-fabric fact browser: one clean scrollable column. */
+.fact-list { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 0.35rem; padding-right: 0.35rem; }
+.fact-list::-webkit-scrollbar { width: 6px; }
+.fact-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.fact-list::-webkit-scrollbar-track { background: transparent; }
+
+/* Category filter chips. */
+.chip-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.chip { padding: 0.22rem 0.75rem; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg-elev); color: var(--text-dim); cursor: pointer; font-size: 0.78rem; }
+.chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+.chip:hover { border-color: var(--accent); }
 
 .chain { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .chain .node { padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid var(--border);

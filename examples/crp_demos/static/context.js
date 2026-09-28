@@ -65,9 +65,38 @@ function renderToken(t) {
 function pushMsg(role, text, meta) {
   const div = document.createElement("div");
   div.className = "msg " + (role === "user" ? "user" : "bot");
-  div.innerHTML = esc(text) + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
+  const body = role === "bot" ? `<div class="md">${mdToHtml(text)}</div>` : esc(text);
+  div.innerHTML = body + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
   el("chat").appendChild(div);
-  el("chat").scrollTop = el("chat").scrollHeight;
+  scrollToNew(div);
+}
+
+// Stick-to-bottom: follow new content only while the reader is near the
+// bottom; scroll up and the page leaves you alone until you return.
+let stickToBottom = true;
+window.addEventListener("scroll", () => {
+  stickToBottom = window.innerHeight + window.scrollY >=
+    document.documentElement.scrollHeight - 160;
+}, { passive: true });
+function scrollToNew(node) {
+  if (stickToBottom && node) node.scrollIntoView({ block: "end", behavior: "smooth" });
+}
+
+// ── Full-fabric fact browser ────────────────────────────────────────────────
+let factFilter = "all";
+
+async function loadFacts() {
+  if (!sessionId) return;
+  const d = await apiPost("/api/context/facts", { session_id: sessionId });
+  el("all-facts-count").textContent = `(${d.count})`;
+  const items = (d.facts || [])
+    .filter(f => factFilter === "all" || f.category === factFilter)
+    .slice().reverse(); // newest first
+  el("all-facts").innerHTML = items.length
+    ? items.map(f =>
+        `<div class="fact">${factBadge(f.category)} ${esc(f.text)} ` +
+        `<span class="cat">W${esc((f.window || "").replace("w", ""))} · conf ${f.confidence}</span></div>`).join("")
+    : `<p class="muted">No facts in this category yet.</p>`;
 }
 
 function factBadge(category) {
@@ -93,6 +122,7 @@ function applyTurn(r, replyAlreadyShown) {
   renderToken(r.token);
   renderPressure(r.context_pressure, r.detected_model);
   el("headers").innerHTML = renderHeaders(r.headers);
+  loadFacts();
 }
 
 /* Stream one turn over SSE: token frames fill the live bubble, the final
@@ -125,7 +155,7 @@ async function streamTurn(payload, liveSpan, thinkDiv, metaDiv) {
         } else {
           liveSpan.textContent += evt.delta;
         }
-        el("chat").scrollTop = el("chat").scrollHeight;
+        scrollToNew(liveSpan.parentElement);
       } else if (evt.type === "turn") {
         result = evt.result;
         await reader.cancel().catch(() => {});
@@ -165,7 +195,7 @@ async function sendTurn() {
   wrap.appendChild(live);
   wrap.appendChild(meta);
   el("chat").appendChild(wrap);
-  el("chat").scrollTop = el("chat").scrollHeight;
+  scrollToNew(wrap);
 
   try {
     const r = await streamTurn({ session_id: sessionId, message: msg }, live, thinkBody, meta);
@@ -180,9 +210,11 @@ async function sendTurn() {
         ? ` · finish: ${r.turn.finish_reason}` : "";
       meta.textContent = `window ${r.turn.window_number} · ${r.turn.latency_ms} ms${fin}`;
       if (!r.turn.reply) live.textContent = r.turn.finish_reason === "length"
-        ? "(model used its full token budget while thinking and produced no answer - try a shorter question)"
+        ? "(model used the whole context window while thinking and produced no answer - try a shorter question)"
         : "(no model output - chain, CKF and token signals still updated)";
+      else live.innerHTML = mdToHtml(r.turn.reply); // raw stream -> rendered markdown
       applyTurn(r, /* replyAlreadyShown */ true);
+      stashSession(r);
     }
   } catch (e) {
     meta.textContent = "";
@@ -198,10 +230,16 @@ async function tamper(windowNumber) {
 }
 
 async function newSession() {
+  sessionStorage.removeItem("crp-demo-session");
+  sessionId = null;
+  lastResult = null;
   el("chat").innerHTML = "";
   el("chain").innerHTML = `<p class="muted">No windows yet.</p>`;
   el("chain-status").innerHTML = "";
   el("tamper-row").innerHTML = "";
+  el("recalled").innerHTML = `<p class="muted"> - </p>`;
+  el("all-facts").innerHTML = `<p class="muted">No facts yet - send a turn.</p>`;
+  el("all-facts-count").textContent = "";
   el("pressure").innerHTML = `<span class="spinner"></span> Starting session…`;
   const d = await apiPost("/api/context/new", {});
   sessionId = d.session_id;
@@ -210,10 +248,43 @@ async function newSession() {
   el("pressure").innerHTML = (d.guidance || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
+// ── Session persistence: survive reloads within the browser session ──────────
+function stashSession(result) {
+  try {
+    sessionStorage.setItem("crp-demo-session", JSON.stringify({
+      session_id: sessionId,
+      chat: el("chat").innerHTML,
+      last: result,
+    }));
+  } catch { /* storage full or blocked - persistence is best-effort */ }
+}
+
+async function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem("crp-demo-session");
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s.session_id || !s.last) return false;
+    sessionId = s.session_id;
+    el("chat").innerHTML = s.chat || "";
+    const m = s.last.detected_model;
+    el("model-tag").textContent = m ? `${m.id} via ${m.runtime}` : "no model loaded";
+    applyTurn(s.last, /* replyAlreadyShown */ true);
+    return true;
+  } catch { return false; }
+}
+
 el("send").addEventListener("click", sendTurn);
 el("reset").addEventListener("click", newSession);
 el("message").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendTurn();
 });
+el("fact-filters").querySelectorAll(".chip").forEach(c =>
+  c.addEventListener("click", () => {
+    el("fact-filters").querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+    c.classList.add("active");
+    factFilter = c.dataset.cat;
+    loadFacts();
+  }));
 
-newSession();
+(async () => { if (!(await restoreSession())) newSession(); })();

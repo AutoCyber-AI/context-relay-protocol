@@ -29,15 +29,19 @@ import time
 import uuid
 from typing import Any
 
+from crp.agent.budget import AgentSafetyBudget
 from crp.ckf.fabric import CKFConfig, ContextualKnowledgeFabric
+from crp.core.app_profile import ContextStrategy
 from crp.core.context_enforcer import detect_injection_signals
 from crp.core.context_source import ContextSource, SourceKind, TrustLevel
 from crp.envelope.packer import PackedFact
 from crp.extraction.types import Fact
+from crp.headers.conditional import compute_etag
 from crp.headers.emit import emit_headers
 from crp.headers.halt import HaltReason, build_halt_response
 from crp.policy.enforce import enforce_policy, extract_signals
 from crp.policy.grammar import parse_policy
+from crp.policy.model import RiskLevel
 from crp.provenance import (
     DecisionProvenanceEngine,
     ProvenanceConfig,
@@ -79,6 +83,10 @@ PROTOCOL_VERSION = _package_version()
 # "clone and run" with zero heavyweight ML dependencies. Grounding,
 # fabrication and risk are all still computed from lexical attribution.
 _DEMO_DPE_CONFIG = ProvenanceConfig(entailment_enabled=False)
+
+# App 2 replays the last turns (sliding window) AND grounds each new window
+# from the CKF fabric - the protocol's own name for that is HYBRID.
+_CONTEXT_STRATEGY = ContextStrategy.HYBRID.value
 
 
 # ───────────────────────────── LLM detection ────────────────────────────────
@@ -645,6 +653,7 @@ class _Session:
         self.window_number = 0
         self.fact_ids: list[str] = []
         self.superseded: dict[str, dict[str, Any]] = {}
+        self.safety_budget = AgentSafetyBudget()
         self.history: list[dict[str, str]] = []
         self.turns: list[dict[str, Any]] = []
         self.audit.record(ComplianceEventType.SESSION_CREATED,
@@ -754,9 +763,44 @@ class ContextSessionStore:
         else:
             corrections = []
 
+        # 3b) Real risk assessment (heuristic DPE, same engine as App 1)
+        # drives the protocol's safety-budget accountant.
+        risk_level: RiskLevel | None = None
+        dpe_report_hash = _sha256("")
+        if reply and finish_reason not in ("error", "no-model"):
+            try:
+                dpe = DecisionProvenanceEngine(config=_DEMO_DPE_CONFIG)
+                packed = [
+                    PackedFact(fact_id=_sha256(r["text"]), text=r["text"],
+                               score=r["score"],
+                               tokens=max(1, len(r["text"]) // 4))
+                    for r in retrieved
+                ]
+                dpe_report = dpe.analyse(
+                    reply, packed, session_id=session_id, window_id=window_id,
+                    query=message, window_number=wnum,
+                )
+                level = str(getattr(
+                    getattr(dpe_report.risk_report, "window_risk_level", None),
+                    "value", "")).upper()
+                if level in RiskLevel._value2member_map_:
+                    risk_level = RiskLevel(level)
+                dpe_report_hash = _sha256(json.dumps({
+                    "grounding": dpe_report.grounding_ratio,
+                    "risk": level,
+                    "fabrications": getattr(dpe_report.fidelity,
+                                            "fabrication_count", 0),
+                }, sort_keys=True))
+                sess.audit.record(ComplianceEventType.RISK_ASSESSMENT, data={
+                    "grounding_ratio": dpe_report.grounding_ratio,
+                    "risk_level": level, "window": window_id,
+                })
+            except Exception:  # noqa: BLE001 — budget accounting is best-effort
+                pass
+        budget_decision = sess.safety_budget.account(risk_level)
+
         # 4) Extend the HMAC window chain (tamper-evident provenance).
         response_hash = _sha256(reply or message)
-        dpe_report_hash = _sha256(f"{wnum}:{len(new_facts)}:{len(retrieved)}")
         timestamp = f"{time.time():.3f}"
         prev_hmac = sess.records[-1].hmac if sess.records else ""
         whmac = build_window_hmac(
@@ -782,16 +826,17 @@ class ContextSessionStore:
         ckf_hash = _sha256(",".join(sess.fact_ids))[:23]
         token, payload = issue_token(
             session_id=session_id, master_key=sess.master_key, window=wnum,
-            chain_tip=whmac, ckf_hash=ckf_hash, strategy="incremental",
-            safety_budget=round(max(0.0, 1.0 - wnum * 0.05), 2),
+            chain_tip=whmac, ckf_hash=ckf_hash, strategy=_CONTEXT_STRATEGY,
+            safety_budget=sess.safety_budget.budget,
         )
         set_session = format_set_session_header(token, payload)
 
-        # 6) ETag over the CKF state + full CRP header set.
-        etag = '"' + hashlib.sha256(",".join(sess.fact_ids).encode()).hexdigest()[:16] + '"'
+        # 6) ETag over the CKF state (SPEC-002 §4.8 canonical form) + headers.
+        active_facts = sess.ckf._warm.get_facts()  # noqa: SLF001 — demo introspection
+        etag = compute_etag((sf.id, _sha256(sf.fact.text)) for sf in active_facts)
         headers = emit_headers(
             session_id=session_id, window=wnum,
-            protocol_version=PROTOCOL_VERSION, strategy="incremental",
+            protocol_version=PROTOCOL_VERSION, strategy=_CONTEXT_STRATEGY,
             etag=etag, window_hmac=whmac,
             chain_integrity=verification.status.value,
             audit_trail_id=session_id,
@@ -830,6 +875,8 @@ class ContextSessionStore:
                 "set_session_header": set_session,
                 "window": payload.win,
                 "safety_budget": payload.sb,
+                "budget_health": budget_decision.health.value,
+                "circuit_state": budget_decision.circuit_state.value,
                 "chain_tip": payload.ct[:23] + "…",
             },
             "headers": headers,

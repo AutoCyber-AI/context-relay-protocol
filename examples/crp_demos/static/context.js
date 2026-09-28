@@ -52,12 +52,18 @@ function renderChain(chain) {
 }
 
 function renderToken(t) {
+  const healthColors = { HEALTHY: "green", CAUTION: "amber", LOW: "amber",
+                         DEPLETED: "red", EXHAUSTED: "red" };
+  const hc = healthColors[t.budget_health] || "grey";
   el("token").innerHTML = `
     <div class="grid cols-3">
       <div class="kpi"><div class="v">${t.window}</div><div class="k">Window</div></div>
       <div class="kpi"><div class="v">${t.safety_budget}</div><div class="k">Safety budget</div></div>
       <div class="kpi"><div class="v" style="font-size:0.9rem">${esc(t.chain_tip)}</div><div class="k">Chain tip</div></div>
     </div>
+    <p style="margin:0.5rem 0 0">Budget health: ${pill(t.budget_health || "UNKNOWN", hc)}
+      <span class="muted" style="font-size:0.78rem">decremented per window by the DPE's
+      risk verdict (AgentSafetyBudget, SPEC-012)</span></p>
     <h3>CRP-Set-Session header</h3>
     <pre class="json">${esc(t.set_session_header)}</pre>`;
 }

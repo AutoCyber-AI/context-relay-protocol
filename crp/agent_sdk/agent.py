@@ -991,6 +991,7 @@ class Agent:
             safeguard_engine=(
                 self._compiled_preset.safeguard_engine if self._compiled_preset else None
             ),
+            system=self.system or None,
         )
 
         # If trust monitor ordered a kill during the positioned loop, halt now.

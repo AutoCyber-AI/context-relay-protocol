@@ -93,9 +93,17 @@ async function loadFacts() {
     .filter(f => factFilter === "all" || f.category === factFilter)
     .slice().reverse(); // newest first
   el("all-facts").innerHTML = items.length
-    ? items.map(f =>
-        `<div class="fact">${factBadge(f.category)} ${esc(f.text)} ` +
-        `<span class="cat">W${esc((f.window || "").replace("w", ""))} · conf ${f.confidence}</span></div>`).join("")
+    ? items.map(f => {
+        const sup = f.superseded && f.correction;
+        const badge = sup
+          ? `<span class="pill amber" title="${esc(f.correction.reason)}">superseded W${f.correction.by_window}</span> `
+          : "";
+        const note = sup
+          ? ` <span class="cat">corrected by: ${esc(f.correction.by_text.slice(0, 90))}${f.correction.by_text.length > 90 ? "…" : ""}</span>`
+          : "";
+        return `<div class="fact${sup ? " super" : ""}">${badge}${factBadge(f.category)} <span class="fact-text">${esc(f.text)}</span> ` +
+          `<span class="cat">W${esc((f.window || "").replace("w", ""))} · conf ${f.confidence}</span>${note}</div>`;
+      }).join("")
     : `<p class="muted">No facts in this category yet.</p>`;
 }
 

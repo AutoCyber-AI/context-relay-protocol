@@ -34,7 +34,7 @@
 
     <div id="pressure" class="card guidance" style="margin-bottom:1.2rem">Starting session…</div>
 
-    <div class="grid cols-2">
+    <div class="grid cols-2 panes">
       <!-- CHAT -->
       <div class="card">
         <h2>Conversation</h2>
@@ -61,7 +61,10 @@
         <p class="muted" style="font-size:0.78rem;margin-top:0">Facts are split out of the conversation per turn and stored in the CKF.
           <span class="pill blue">user</span> statements are what you told the agent (stored at high trust);
           <span class="pill grey">assistant</span> claims are what the model asserted - candidates for verification,
-          never silently treated as ground truth. Model thinking is never stored as a fact.</p>
+          never silently treated as ground truth. Model thinking is never stored as a fact.
+          When you correct a claim, the stale model claim is marked
+          <span class="pill amber">superseded</span> - kept in the fabric for provenance,
+          excluded from what the next window recalls.</p>
         <div id="recalled"><p class="muted"> - </p></div>
         <h3>Full fabric <span id="all-facts-count" class="tag"></span></h3>
         <div class="chip-row" id="fact-filters">

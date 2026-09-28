@@ -135,7 +135,7 @@ def _provider_for(primary: DetectedModel | None) -> Any | None:
     # LM Studio + llama.cpp + generic OpenAI-compatible all speak the
     # OpenAI chat API that LlamaCppAdapter's HTTP mode targets.
     ctx = primary.loaded_context_length or 4096
-    return LlamaCppAdapter(server_url=primary.endpoint, context_size=ctx, max_tokens=512)
+    return LlamaCppAdapter(server_url=primary.endpoint, context_size=ctx, max_tokens=2048)
 
 
 def _generate(provider: Any | None, messages: list[dict[str, str]]) -> tuple[str, str]:
@@ -152,7 +152,7 @@ def stream_generate(
     primary: DetectedModel | None,
     messages: list[dict[str, str]],
     *,
-    max_tokens: int = 512,
+    max_tokens: int = 2048,
 ) -> Any:
     """Stream a chat completion from the detected runtime.
 
@@ -221,16 +221,30 @@ def stream_generate(
 
 # ───────────────────────── shared helpers ───────────────────────────────────
 
-_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
+_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+_CLAUSE_RE = re.compile(r";\s+")
 
 
 def _facts_from_text(text: str, category: str) -> list[Fact]:
-    """Split text into coarse 'facts' — one per sentence — for the demos."""
+    """Split text into coarse 'facts' — one per sentence — for the demos.
+
+    Trust is distinguished, not flattened: a user's statement is stored at
+    high confidence, while a model's own claim is a *candidate* fact at
+    lower confidence (it asserts, CRP does not take its word for it).
+    Questions the model asks and thinking-style filler are not facts and
+    are dropped."""
     facts: list[Fact] = []
-    for chunk in _SENTENCE_RE.split(text.strip()):
-        chunk = chunk.strip()
-        if len(chunk) >= 12:
-            facts.append(Fact(text=chunk, category=category, confidence=0.9))
+    confidence = 0.9 if category == "user_statement" else 0.5
+    for sentence in _SENTENCE_RE.split(text.strip()):
+        # A very long sentence carries several claims; split at clause breaks.
+        chunks = _CLAUSE_RE.split(sentence) if len(sentence) > 240 else [sentence]
+        for chunk in chunks:
+            chunk = chunk.strip(" \t-")
+            if len(chunk) < 12:
+                continue
+            if category == "assistant_claim" and chunk.rstrip().endswith("?"):
+                continue  # a question the model asked is not a fact
+            facts.append(Fact(text=chunk, category=category, confidence=confidence))
     return facts
 
 
@@ -570,7 +584,8 @@ class ContextSessionStore:
                 budget=12,
             )
             retrieved = [
-                {"text": mf.fact.text, "score": round(mf.score, 4)}
+                {"text": mf.fact.text, "score": round(mf.score, 4),
+                 "category": mf.fact.category}
                 for mf in merge.facts[:8]
             ]
 
@@ -586,7 +601,9 @@ class ContextSessionStore:
         t0 = time.time()
         if token_sink is not None:
             reply, finish_reason, gen_ms = "", "stop", 0
-            for kind, delta in stream_generate(primary, messages):
+            # Reasoning models can spend thousands of tokens thinking before
+            # answering; 512 truncates them to an empty reply. Give headroom.
+            for kind, delta in stream_generate(primary, messages, max_tokens=4096):
                 if kind == "done":
                     reply = delta["text"]
                     finish_reason = delta["finish_reason"]

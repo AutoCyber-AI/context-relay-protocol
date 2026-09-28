@@ -70,6 +70,13 @@ function pushMsg(role, text, meta) {
   el("chat").scrollTop = el("chat").scrollHeight;
 }
 
+function factBadge(category) {
+  const labels = { user_statement: "user", assistant_claim: "assistant", context: "context" };
+  const colors = { user_statement: "blue", assistant_claim: "grey", context: "green" };
+  const c = colors[category] || "grey";
+  return `<span class="pill ${c}">${esc(labels[category] || "fact")}</span>`;
+}
+
 function applyTurn(r, replyAlreadyShown) {
   lastResult = r;
   if (!replyAlreadyShown && r.turn.reply) {
@@ -80,7 +87,7 @@ function applyTurn(r, replyAlreadyShown) {
   el("ckf-retrieved").textContent = r.ckf.retrieved;
   el("recalled").innerHTML = (r.turn.retrieved_facts || []).length
     ? r.turn.retrieved_facts.map(f =>
-        `<div class="fact">${esc(f.text)} <span class="cat">score ${f.score}</span></div>`).join("")
+        `<div class="fact">${factBadge(f.category)} ${esc(f.text)} <span class="cat">score ${f.score}</span></div>`).join("")
     : `<p class="muted">Nothing recalled yet (first turn).</p>`;
   renderChain(r.chain);
   renderToken(r.token);
@@ -169,8 +176,12 @@ async function sendTurn() {
       thinkSum.textContent =
         `Model thinking (${thinkBody.textContent.length.toLocaleString()} chars)`;
       thinkWrap.open = false;
-      meta.textContent = `window ${r.turn.window_number} · ${r.turn.latency_ms} ms`;
-      if (!r.turn.reply) live.textContent = "(no model output - chain, CKF and token signals still updated)";
+      const fin = r.turn.finish_reason && r.turn.finish_reason !== "stop"
+        ? ` · finish: ${r.turn.finish_reason}` : "";
+      meta.textContent = `window ${r.turn.window_number} · ${r.turn.latency_ms} ms${fin}`;
+      if (!r.turn.reply) live.textContent = r.turn.finish_reason === "length"
+        ? "(model used its full token budget while thinking and produced no answer - try a shorter question)"
+        : "(no model output - chain, CKF and token signals still updated)";
       applyTurn(r, /* replyAlreadyShown */ true);
     }
   } catch (e) {

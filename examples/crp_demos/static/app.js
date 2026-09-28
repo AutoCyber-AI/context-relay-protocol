@@ -145,3 +145,68 @@ function setBusy(btn, busy, label) {
     btn.innerHTML = btn.dataset.label;
   }
 }
+
+// ── Minimal safe Markdown renderer ──────────────────────────────────────────
+// Model output is escaped first, then typography is applied - no raw HTML
+// from the model can reach the DOM. Supports: fenced code, inline code,
+// headings, bold/italic, ordered/unordered lists, links (http/https/mailto
+// only) and paragraphs.
+
+function mdToHtml(src) {
+  let text = esc(src == null ? "" : src);
+  const blocks = [];
+  const stash = (html) => { blocks.push(html); return `%%CB${blocks.length - 1}BC%%`; };
+
+  // Fenced code blocks first (their contents stay verbatim).
+  text = text.replace(/```[a-zA-Z]*\n?([\s\S]*?)(?:```|$)/g,
+    (m, code) => stash(`<pre class="json">${code.replace(/\n$/, "")}</pre>`));
+  // Inline code.
+  text = text.replace(/`([^`\n]+)`/g, (m, c) => stash(`<code>${c}</code>`));
+  // Headings (capped at h4 so chat bubbles stay readable).
+  text = text.replace(/^#### (.*)$/gm, "<h5>$1</h5>")
+             .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+             .replace(/^## (.*)$/gm, "<h4>$1</h4>")
+             .replace(/^# (.*)$/gm, "<h4>$1</h4>");
+  // Horizontal rules disappear (they read as noise in bubbles).
+  text = text.replace(/^\s*---+\s*$/gm, "");
+  // Bold, then italic.
+  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+             .replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  // Links: only safe schemes survive.
+  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => {
+    const safe = /^(https?:\/\/|mailto:)/i.test(u) ? u : "#";
+    return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${t}</a>`;
+  });
+
+  // Lists: group consecutive item lines, keep everything else as flow lines.
+  const lines = text.split("\n");
+  let html = "", list = "";
+  const flushList = () => {
+    if (list) {
+      html += list + (list.startsWith("<ul") ? "</ul>" : "</ol>") + "\n";
+      list = "";
+    }
+  };
+  for (const line of lines) {
+    let m;
+    if ((m = /^\s*[-*] (.*)$/.exec(line))) {
+      if (!list.startsWith("<ul")) { flushList(); list = "<ul>"; }
+      list += `<li>${m[1]}</li>`;
+    } else if ((m = /^\s*\d+[.)] (.*)$/.exec(line))) {
+      if (!list.startsWith("<ol")) { flushList(); list = "<ol>"; }
+      list += `<li>${m[1]}</li>`;
+    } else {
+      flushList();
+      html += line + "\n";
+    }
+  }
+  flushList();
+
+  // Paragraphs: blank-line separated chunks; single newlines become <br>.
+  return html.split(/\n{2,}/).map((chunk) => {
+    const c = chunk.trim();
+    if (!c) return "";
+    if (/^(<ul>|<ol>|<h[45]>|%%CB)/.test(c)) return c;
+    return `<p>${c.replace(/\n/g, "<br>")}</p>`;
+  }).join("").replace(/%%CB(\d+)BC%%/g, (m, i) => blocks[+i]);
+}

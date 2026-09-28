@@ -135,7 +135,9 @@ def _provider_for(primary: DetectedModel | None) -> Any | None:
     # LM Studio + llama.cpp + generic OpenAI-compatible all speak the
     # OpenAI chat API that LlamaCppAdapter's HTTP mode targets.
     ctx = primary.loaded_context_length or 4096
-    return LlamaCppAdapter(server_url=primary.endpoint, context_size=ctx, max_tokens=2048)
+    # Generous ceiling for the non-streaming fallback path only; the streaming
+    # path sends no cap at all and lets the server stop naturally.
+    return LlamaCppAdapter(server_url=primary.endpoint, context_size=ctx, max_tokens=8192)
 
 
 def _generate(provider: Any | None, messages: list[dict[str, str]]) -> tuple[str, str]:
@@ -152,7 +154,7 @@ def stream_generate(
     primary: DetectedModel | None,
     messages: list[dict[str, str]],
     *,
-    max_tokens: int = 2048,
+    max_tokens: int | None = None,
 ) -> Any:
     """Stream a chat completion from the detected runtime.
 
@@ -161,6 +163,10 @@ def stream_generate(
     gen_ms})`` tuple. Falls back to non-streaming for runtimes without an
     OpenAI-compatible SSE endpoint (Ollama's native API) or when no model is
     loaded, so callers can treat every runtime uniformly.
+
+    No token budget is imposed: the server runs the model to its natural
+    stop and reports ``finish_reason`` (``stop`` / ``length``), which is the
+    honest behaviour for a protocol demo - CRP governs, it does not truncate.
     """
     if primary is None:
         yield ("done", {"text": "", "finish_reason": "no-model", "gen_ms": 0})
@@ -175,10 +181,12 @@ def stream_generate(
 
     base = primary.endpoint.rstrip("/")
     url = base + "/v1/chat/completions"
-    payload = json.dumps({
-        "model": primary.id, "messages": messages,
-        "stream": True, "max_tokens": max_tokens,
-    }).encode("utf-8")
+    request_body: dict[str, Any] = {
+        "model": primary.id, "messages": messages, "stream": True,
+    }
+    if max_tokens:
+        request_body["max_tokens"] = max_tokens
+    payload = json.dumps(request_body).encode("utf-8")
     t0 = time.time()
     text_parts: list[str] = []
     finish_reason = "stop"
@@ -601,9 +609,9 @@ class ContextSessionStore:
         t0 = time.time()
         if token_sink is not None:
             reply, finish_reason, gen_ms = "", "stop", 0
-            # Reasoning models can spend thousands of tokens thinking before
-            # answering; 512 truncates them to an empty reply. Give headroom.
-            for kind, delta in stream_generate(primary, messages, max_tokens=4096):
+            # No token cap: the model stops when it is done and the server
+            # says so via finish_reason.
+            for kind, delta in stream_generate(primary, messages):
                 if kind == "done":
                     reply = delta["text"]
                     finish_reason = delta["finish_reason"]
@@ -625,7 +633,9 @@ class ContextSessionStore:
         new_facts += _facts_from_text(reply, "assistant_claim")
         if new_facts:
             sess.ckf.store(new_facts, window_id=window_id)
-            sess.fact_ids.extend(f.id for f in new_facts)
+            # Sync with what the fabric actually holds: the CKF dedupes
+            # identical facts, so fact_ids must not count re-stated ones.
+            sess.fact_ids = [sf.id for sf in sess.ckf._warm.get_facts()]  # noqa: SLF001
             sess.audit.record(ComplianceEventType.FACTS_EXTRACTED,
                               data={"count": len(new_facts), "window": window_id})
 
@@ -738,6 +748,22 @@ class ContextSessionStore:
             "chain": _chain_view(sess, verification),
             "ckf": {"total_facts": len(sess.fact_ids)},
         }
+
+    def facts(self, session_id: str) -> dict[str, Any]:
+        """Every fact in the session's CKF - the full fabric, not a recall slice."""
+        sess = self._get(session_id)
+        items = [
+            {
+                "id": sf.id,
+                "text": sf.fact.text,
+                "category": sf.fact.category,
+                "confidence": sf.fact.confidence,
+                "window": sf.fact.source_window_id or "",
+                "superseded": bool(getattr(sf, "is_superseded", False)),
+            }
+            for sf in sess.ckf._warm.get_facts()  # noqa: SLF001 — demo introspection
+        ]
+        return {"session_id": session_id, "count": len(items), "facts": items}
 
 
 def _chain_view(sess: _Session, verification: Any) -> dict[str, Any]:

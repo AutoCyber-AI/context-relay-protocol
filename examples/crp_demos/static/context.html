@@ -61,6 +61,13 @@
           <span class="pill grey">assistant</span> claims are what the model asserted - candidates for verification,
           never silently treated as ground truth. Model thinking is never stored as a fact.</p>
         <div id="recalled"><p class="muted"> - </p></div>
+        <h3>Full fabric <span id="all-facts-count" class="tag"></span></h3>
+        <div class="chip-row" id="fact-filters">
+          <button class="chip active" data-cat="all">All</button>
+          <button class="chip" data-cat="user_statement">user</button>
+          <button class="chip" data-cat="assistant_claim">assistant</button>
+        </div>
+        <div id="all-facts" class="fact-list"><p class="muted">No facts yet - send a turn.</p></div>
       </div>
     </div>
 

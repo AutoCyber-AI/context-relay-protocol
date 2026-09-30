@@ -55,6 +55,19 @@
         <label for="section-titles">Section titles — one per line (blank = built-in topic)</label>
         <textarea id="section-titles" rows="3" placeholder="Leave blank for the built-in 'Distributed Systems' topic, or write your own, e.g.&#10;The economics of renewable energy&#10;Grid storage technologies&#10;Policy instruments"></textarea>
       </div>
+      <div style="margin-top:0.6rem">
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;cursor:pointer">
+          <input type="checkbox" id="real-search" />
+          Ground sections with Wikipedia research (needs internet; slower start, much less repetition)
+        </label>
+      </div>
+      <p class="muted" style="font-size:0.78rem;margin-top:0.6rem"><strong>Why repetition happens:</strong>
+        this demo asks the model to write from its own pretrained memory alone. A 7B
+        quantized model has a few thousand words of coherent, varied prose on any topic -
+        past that it starts recycling phrasing, and the acceptance gate will catch it
+        (that is the gate working, not a broken demo). For longer documents, enable
+        Wikipedia grounding above so each section is written from retrieved source
+        material, or keep the target at ~1,500-2,500 words.</p>
       <p class="muted" style="font-size:0.78rem">Each window writes up to its token
         budget, then CRP extracts the document state and opens the next window -
         that handoff is the demo. A non-thinking instruct model (e.g.

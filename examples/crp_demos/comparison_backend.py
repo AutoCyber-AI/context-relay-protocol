@@ -23,7 +23,7 @@ import time
 import uuid
 from typing import Any
 
-from .strategies.base import BENCHMARK_SECTIONS
+from .strategies.base import BENCHMARK_SECTIONS, word_count
 from .strategies.crp_strategy import CRPStrategy
 from .strategies.hierarchical_strategy import HierarchicalSummarizationStrategy
 from .strategies.injection_strategy import InjectionStrategy
@@ -134,7 +134,7 @@ def _run_benchmark(run: _BenchmarkRun) -> None:
             run.emit("window_done", {
                 "strategy": _s.name,
                 "window": window,
-                "words_in_window": len(text.split()),
+                "words_in_window": word_count(text),
                 "metrics": metrics,
             })
 

@@ -2,6 +2,31 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.8] — Telemetry Serialization Fix
+
+### Fixed
+- **`continuation_termination_reason` missing from dispatch telemetry** — the
+  field added in 6.1.7 was present on `WindowMetrics` but absent from its
+  explicit `to_dict()` field list, so `QualityReport.telemetry` never carried
+  it and consumers (e.g. the long-gen demo UI) always saw an empty stop
+  reason. The field is now serialized.
+
+## [6.1.7] — Continuation Near-Duplicate Termination
+
+### Fixed
+- **Continuation loops accumulating paraphrased repetition** — the existing
+  repetition guard only fired on a near-verbatim copy of the *immediately
+  preceding* window. Small models that exhaust their instructed content
+  instead rephrase an *earlier* window (e.g. rewriting an already-completed
+  section with altered wording), and each such window passed the guard and
+  added more duplicate material. The continuation manager now computes 6-gram
+  overlap against every prior window and terminates with
+  `repetition_detected` when one window shares ≥30% of its 6-grams with any
+  single earlier window.
+- **Opaque continuation stops** — `WindowMetrics.continuation_termination_reason`
+  now records why the loop ended (`gap_fulfilled`, `repetition_detected`,
+  `max_continuations`, …) in dispatch telemetry.
+
 ## [6.1.6] — Continuation Anti-Rewrite Guard
 
 ### Fixed

@@ -138,6 +138,7 @@ class StrategyResult:
     avg_unique_word_ratio: float
     sections_completed: int
     context_efficiency: float            # output tokens / total tokens
+    termination_reason: str = ""         # why the continuation loop stopped
     window_metrics: list[WindowMetrics] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -154,6 +155,7 @@ class StrategyResult:
             "avg_unique_word_ratio": round(self.avg_unique_word_ratio, 4),
             "sections_completed": self.sections_completed,
             "context_efficiency": round(self.context_efficiency, 4),
+            "termination_reason": self.termination_reason,
             "errors": self.errors,
             "window_metrics": [
                 {

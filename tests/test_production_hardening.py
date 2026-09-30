@@ -241,6 +241,106 @@ class TestContinuationManagerCleanup:
         assert len(mgr._accumulated_facts) <= 10
 
 
+class TestNearDuplicateTermination:
+    """A window that rewrites an EARLIER window (paraphrase, not verbatim)
+    must terminate the loop — regression for the long-gen demo where a
+    7B model out of instructed content rephrased section 5 across four
+    windows, pushing 6-gram repetition to ~40%."""
+
+    _ORIGINAL = (
+        "### 5. Caching Strategies and Their Benefits\n"
+        "Key Concepts\n"
+        "Caching is a fundamental technique for improving the performance of "
+        "distributed systems by storing frequently accessed data in a "
+        "fast-access location, thus reducing latency and load on backend "
+        "resources. Effective caching strategies can significantly enhance "
+        "system responsiveness.\n"
+        "In-Memory Caching: Stores frequently accessed data in memory to "
+        "minimize disk I/O operations. Tools like Redis and Memcached are "
+        "popular choices for this purpose.\n"
+        "Disk-Based Caching: Stores frequently accessed data on disk with "
+        "read caching and write-through or write-back strategies."
+    )
+
+    _PARAPHRASE_REWRITE = (
+        "### 5. Caching Strategies and Their Benefits\n"
+        "Key Concepts\n"
+        "Caching is a fundamental technique for improving the performance of "
+        "distributed systems by storing frequently accessed data in a "
+        "fast-access location, thus reducing latency and load on backend "
+        "resources. There are several types of caches including in-memory, "
+        "disk-based, and hierarchical caches.\n"
+        "In-Memory Caching: Stores frequently accessed data in memory to "
+        "minimize disk I/O operations.\n"
+        "Disk-Based Caching: Stores frequently accessed data on disk with "
+        "read caching and write-through or write-back strategies."
+    )
+
+    _NEW_SECTION = (
+        "### 6. Security and Access Control\n"
+        "Key Concepts\n"
+        "Security is essential in distributed systems to protect data and "
+        "prevent unauthorized access. Common mechanisms include "
+        "authentication, authorization, and encryption.\n"
+        "Authentication: Verifies the identity of users or services, "
+        "typically using tokens, certificates, or credentials.\n"
+        "Encryption: Protects data in transit using TLS and at rest using "
+        "AES-256."
+    )
+
+    def _process(self, mgr, text: str, window_id: str):
+        from crp.continuation.manager import ContinuationManager  # noqa: F811
+        from crp.extraction.types import Fact
+
+        # Each window must yield at least one fact so the info-flow guard
+        # (which fires at exactly zero flow) stays out of the way — this
+        # test targets the near-duplicate guard specifically.
+        facts = [Fact(text=f"{window_id} fact", confidence=0.8)]
+        mgr.process_window(
+            task_intent="write a technical reference guide",
+            output=text,
+            finish_reason="length",
+            output_tokens=200,
+            facts=facts,
+            window_id=window_id,
+        )
+
+    def test_near_duplicate_of_earlier_window_terminates(self):
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        self._process(mgr, self._ORIGINAL, "w-1")
+        self._process(mgr, self._NEW_SECTION, "w-2")
+        assert not mgr._state.finished
+
+        # Window 3 rewrites window 1 with lightly altered wording
+        self._process(mgr, self._PARAPHRASE_REWRITE, "w-3")
+        assert mgr._state.finished
+        assert mgr._state.termination_reason == "repetition_detected"
+
+    _ANOTHER_NEW = (
+        "### 7. Observability and Monitoring\n"
+        "Key Concepts\n"
+        "Observability is the ability to understand the internal state of a "
+        "distributed system from its external outputs. It rests on three "
+        "pillars: metrics, logs, and traces.\n"
+        "Metrics: Numerical measurements aggregated over time, such as "
+        "request rates, error rates, and latency percentiles.\n"
+        "Tracing: Follows a single request across service boundaries, "
+        "correlating spans with a shared trace identifier."
+    )
+
+    def test_genuinely_new_content_does_not_terminate(self):
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        self._process(mgr, self._ORIGINAL, "w-1")
+        self._process(mgr, self._NEW_SECTION, "w-2")
+        self._process(mgr, self._ANOTHER_NEW, "w-3")
+        assert not mgr._state.finished
+        assert mgr._state.termination_reason != "repetition_detected"
+
+
 # ── H9: Structured logging ──────────────────────────────────────────
 
 class TestStructuredLogging:

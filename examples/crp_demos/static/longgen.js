@@ -48,6 +48,7 @@ function setRunning(running) {
   el("words").disabled = running;
   el("tpw").disabled = running;
   el("section-titles").disabled = running;
+  el("real-search").disabled = running;
 }
 
 function windowCard(w) {
@@ -98,6 +99,7 @@ async function startRun() {
     sections: parseInt(el("sections").value, 10) || 3,
     words: parseInt(el("words").value, 10) || 1500,
     tokens_per_window: parseInt(el("tpw").value, 10) || 700,
+    real_search: el("real-search").checked,
   };
   if (customTitles.length) payload.section_titles = customTitles;
   const d = await apiPost("/api/longgen/start", payload);
@@ -111,7 +113,10 @@ async function startRun() {
     try { evt = JSON.parse(msg.data); } catch { return; }
     if (evt.type === "run_started") {
       el("doc").innerHTML = `<p class="muted">run started - ${esc(evt.data.model)}, ` +
-        `${evt.data.section_titles.length} sections, target ${evt.data.target_words.toLocaleString()} words</p>`;
+        `${evt.data.section_titles.length} sections, target ${evt.data.target_words.toLocaleString()} words` +
+        (evt.data.grounding ? ` · grounding: ${esc(evt.data.grounding)}` : "") + `</p>`;
+    } else if (evt.type === "run_note") {
+      el("doc").innerHTML = `<p class="muted">${esc(evt.data.note)}</p>`;
     } else if (evt.type === "chunk") {
       docText += evt.data.text;
       scheduleRender();
@@ -128,6 +133,15 @@ async function startRun() {
       el("doc").innerHTML = mdToHtml(docText);
       el("pg-words").textContent = (evt.data.result.total_words || 0).toLocaleString();
       el("pg-windows").textContent = String(evt.data.result.windows || 0);
+      const why = evt.data.result.termination_reason
+        || (evt.data.result.telemetry || {}).continuation_termination_reason;
+      if (why) {
+        const w = document.createElement("p");
+        w.className = "muted";
+        w.style.fontSize = "0.78rem";
+        w.textContent = "continuation stopped: " + why;
+        el("gate-card").parentNode.insertBefore(w, el("gate-card"));
+      }
       renderGate(evt.data.acceptance || { pass: false, checks: [] });
       enableDownload();
       closeStream();

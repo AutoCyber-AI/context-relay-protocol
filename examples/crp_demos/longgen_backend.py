@@ -21,6 +21,7 @@ run_done {result, full_text, acceptance}, run_error {error}.
 
 from __future__ import annotations
 
+import json
 import logging
 import queue
 import threading
@@ -41,6 +42,54 @@ logger = logging.getLogger("crp.demos.longgen")
 
 _RUNS: dict[str, _LongGenRun] = {}
 _RUNS_LOCK = threading.Lock()
+
+
+def _wiki_research(section_titles: list[str], per_source_chars: int = 600) -> list[str]:
+    """Fetch Wikipedia intro extracts for each section title.
+
+    Grounds the run in retrieved source material so the model writes from
+    facts instead of recycling parametric memory. Best-effort: any failure
+    (offline, timeout, missing article) yields fewer sources, never an error.
+    """
+    import urllib.parse
+    import urllib.request
+
+    # Wikimedia policy requires a descriptive User-Agent; generic or
+    # contact-less UAs get 403 on the REST endpoints, and the deprecated
+    # opensearch action is unreliable for programmatic clients. The stable
+    # path is the query API: list=search to resolve the title, then
+    # prop=extracts with redirects=1 (section titles like "Foundations of
+    # Distributed Systems" land on redirects such as "Distributed computing").
+    _UA = "crp-demos/6.1.7 (https://crprotocol.io; contact@crprotocol.io)"
+
+    def _get(url: str) -> dict[str, Any]:
+        req = urllib.request.Request(url, headers={"User-Agent": _UA})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    snippets: list[str] = []
+    for title in section_titles[:6]:
+        try:
+            search = _get(
+                "https://en.wikipedia.org/w/api.php?action=query&list=search"
+                "&srlimit=1&format=json&srsearch=" + urllib.parse.quote(title)
+            )
+            hits = search.get("query", {}).get("search", [])
+            if not hits:
+                continue
+            found = hits[0]["title"]
+            query = _get(
+                "https://en.wikipedia.org/w/api.php?action=query&prop=extracts"
+                f"&exintro&explaintext&exchars={per_source_chars}"
+                "&format=json&redirects=1&titles=" + urllib.parse.quote(found)
+            )
+            pages = query.get("query", {}).get("pages", {})
+            extract = (next(iter(pages.values()), {}).get("extract") or "").strip()
+            if extract:
+                snippets.append(f"{found}: {extract[:per_source_chars]}")
+        except Exception as exc:  # noqa: BLE001 — grounding is best-effort
+            logger.info("wikipedia research miss for %r: %s", title, exc)
+    return snippets
 
 
 class _LongGenRun:
@@ -116,7 +165,17 @@ def _run_longgen(run: _LongGenRun) -> None:
     chosen_sections = custom_sections[:sections_n] if custom_sections \
         else BENCHMARK_SECTIONS[:sections_n]
 
-    strategy = CRPStrategy(
+    # Optional Wikipedia grounding: retrieved intros give the model source
+    # material so it writes facts instead of recycling parametric memory.
+    research: list[str] = []
+    if cfg.get("real_search"):
+        research = _wiki_research(chosen_sections)
+        if not research:
+            run.emit("run_note", {"note":
+                "Wikipedia grounding requested but no sources were retrieved "
+                "(offline or no matching articles) - running on parametric "
+                "memory alone"})
+    strategy_kwargs: dict[str, Any] = dict(
         endpoint=endpoint,
         model=model,
         context_size=context_size,
@@ -124,11 +183,16 @@ def _run_longgen(run: _LongGenRun) -> None:
         target_words=target_words,
         sections=chosen_sections,
     )
+    if research:
+        strategy_kwargs["research"] = research
+
+    strategy = CRPStrategy(**strategy_kwargs)
     run.emit("run_started", {
         "run_id": run.run_id, "model": model, "context_size": context_size,
         "sections": len(chosen_sections), "target_words": target_words,
         "tokens_per_window": tokens_per_window,
         "section_titles": chosen_sections,
+        "grounding": f"wikipedia ({len(research)} sources)" if research else "parametric only",
     })
 
     def on_chunk(chunk: str) -> None:
@@ -141,7 +205,7 @@ def _run_longgen(run: _LongGenRun) -> None:
     def on_window_done(window: int, text: str, metrics: dict) -> None:
         run.emit("window_done", {
             "window": window,
-            "words_in_window": len(text.split()),
+            "words_in_window": word_count(text),
             "metrics": metrics,
         })
 

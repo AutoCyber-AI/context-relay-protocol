@@ -16,7 +16,6 @@ comparable results. Each strategy streams progress via Server-Sent Events.
 
 from __future__ import annotations
 
-import json
 import logging
 import queue
 import threading
@@ -26,15 +25,15 @@ from typing import Any
 
 from .strategies.base import BENCHMARK_SECTIONS
 from .strategies.crp_strategy import CRPStrategy
-from .strategies.rag_strategy import RAGStrategy
-from .strategies.injection_strategy import InjectionStrategy
 from .strategies.hierarchical_strategy import HierarchicalSummarizationStrategy
+from .strategies.injection_strategy import InjectionStrategy
+from .strategies.rag_strategy import RAGStrategy
 
 logger = logging.getLogger("crp.demos.comparison")
 
 # ── Run registry ─────────────────────────────────────────────────────────────
 
-_RUNS: dict[str, "_BenchmarkRun"] = {}
+_RUNS: dict[str, _BenchmarkRun] = {}
 _RUNS_LOCK = threading.Lock()
 
 
@@ -85,7 +84,14 @@ def _run_benchmark(run: _BenchmarkRun) -> None:
     max_tokens_per_window = int(cfg.get("max_tokens_per_window", 800))
     selected = cfg.get("strategies", list(_STRATEGY_META.keys()))
     sections_slice = int(cfg.get("sections", len(BENCHMARK_SECTIONS)))
-    sections = BENCHMARK_SECTIONS[:sections_slice]
+    # Optional user-defined section titles (one per line from the UI). When
+    # provided they replace the built-in benchmark topic entirely.
+    custom_sections = [
+        str(s).strip() for s in (cfg.get("section_titles") or [])
+        if str(s).strip()
+    ]
+    sections = custom_sections[:sections_slice] if custom_sections \
+        else BENCHMARK_SECTIONS[:sections_slice]
 
     strategy_kwargs = dict(
         endpoint=endpoint,

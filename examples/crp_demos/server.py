@@ -418,6 +418,9 @@ class _Handler(BaseHTTPRequestHandler):
             if path == "/api/context/state":
                 self._send_json(_SESSIONS.state(str(body.get("session_id", ""))))
                 return
+            if path == "/api/context/lookup":
+                self._send_json({"known": _SESSIONS.known(str(body.get("session_id", "")))})
+                return
             if path == "/api/context/facts":
                 self._send_json(_SESSIONS.facts(str(body.get("session_id", ""))))
                 return

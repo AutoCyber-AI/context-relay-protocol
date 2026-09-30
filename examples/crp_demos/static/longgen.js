@@ -47,16 +47,21 @@ function setRunning(running) {
   el("sections").disabled = running;
   el("words").disabled = running;
   el("tpw").disabled = running;
+  el("section-titles").disabled = running;
 }
 
 function windowCard(w) {
   const m = w.metrics || {};
+  // Window 1 has no predecessor — coherence with the previous window is
+  // undefined, not zero.
+  const coherence = w.window > 1 && m.coherence_with_prev != null
+    ? (m.coherence_with_prev * 100).toFixed(1) + "%" : " - ";
   const div = document.createElement("div");
   div.className = "fact";
   div.innerHTML = `${pill("window " + w.window, "blue")}
     <span class="cat">${w.words_in_window.toLocaleString()} words ·
     ${(m.latency_s || 0).toFixed(1)}s · rep ${((m.repetition_6gram || 0) * 100).toFixed(2)}% ·
-    coherence ${(m.coherence_with_prev != null ? (m.coherence_with_prev * 100).toFixed(1) : " - ")}%</span>
+    coherence ${coherence}</span>
     ${m.section_title ? `<div class="cat">section: ${esc(m.section_title)}</div>` : ""}`;
   return div;
 }
@@ -87,11 +92,15 @@ async function startRun() {
   el("pg-elapsed").textContent = "0s";
   el("download").disabled = true;
 
-  const d = await apiPost("/api/longgen/start", {
+  const customTitles = el("section-titles").value
+    .split("\n").map(s => s.trim()).filter(Boolean);
+  const payload = {
     sections: parseInt(el("sections").value, 10) || 3,
     words: parseInt(el("words").value, 10) || 1500,
     tokens_per_window: parseInt(el("tpw").value, 10) || 700,
-  });
+  };
+  if (customTitles.length) payload.section_titles = customTitles;
+  const d = await apiPost("/api/longgen/start", payload);
   runId = d.run_id;
   setRunning(true);
   startElapsed();

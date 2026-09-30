@@ -2,6 +2,19 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.6] — Continuation Anti-Rewrite Guard
+
+### Fixed
+- **Continuation windows re-opening completed sections** — small local models
+  frequently ignored the document-map TOC and re-wrote already-completed
+  sections on each continuation window, inflating 6-gram repetition and
+  burning the continuation budget. `ContinuationManager` now counts every
+  heading that re-announces a section the document map already holds
+  (`ContinuationState.section_rewrites`, detected against the pre-update map
+  so a section is never counted against itself) and the continuation envelope
+  carries an explicit `[COMPLETED - DO NOT REWRITE]` block naming every
+  finished section verbatim, plus a warning when prior windows rewrote any.
+
 ## [6.1.5] — Source-Trust Accuracy & Live Streaming Demos
 
 ### Fixed

@@ -279,6 +279,14 @@ async function restoreSession() {
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (!s.session_id || !s.last) return false;
+    // The server keeps sessions only for the life of the process. A restored
+    // id from a previous server run must not resurrect its conversation -
+    // validate before replaying anything.
+    const lookup = await apiPost("/api/context/lookup", { session_id: s.session_id });
+    if (!lookup.known) {
+      sessionStorage.removeItem("crp-demo-session");
+      return false;
+    }
     sessionId = s.session_id;
     el("chat").innerHTML = s.chat || "";
     const m = s.last.detected_model;

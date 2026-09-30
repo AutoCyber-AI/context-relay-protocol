@@ -226,6 +226,32 @@
     </p>
   </div>
 
+  <!-- How to read this comparison -->
+  <section class="config-panel" style="margin-bottom:1rem">
+    <h2>How to read this comparison</h2>
+    <div style="font-size:.85rem;line-height:1.55;color:var(--text,#ddd)">
+      <p><strong>Fairness.</strong> All four strategies use the <em>same model</em>, the
+      <em>same section titles</em>, the <em>same per-window token budget</em> and the
+      <em>same target word count</em>, run one after another. Only the context
+      management differs.</p>
+      <p><strong>"Window" is not CRP-specific.</strong> Every strategy writes the document
+      in bounded chunks (one LLM call per chunk). Each chunk is a window. What is
+      CRP-specific is what travels between windows: a curated envelope of facts with an
+      HMAC chain, a document map and continuation directives - instead of a raw transcript.</p>
+      <p><strong>Metrics.</strong> <em>Context efficiency</em> = output tokens ÷ (prompt +
+      output tokens) - how much of the traffic is usable prose. <em>6-gram repetition</em>
+      and <em>duplicate sentences</em> measure verbatim reuse (lower is better).
+      <em>Window coherence</em> = bigram overlap with the previous window, a proxy for
+      topical continuity (higher is better; window 1 has no predecessor, so it shows "-").
+      <em>Prompt tokens</em> are the input cost of each call, summed in the final table.</p>
+      <p><strong>Why strategies differ.</strong> Context Injection replays the entire
+      prior transcript into every window: near-zero repetition, but prompt tokens grow
+      linearly. RAG retrieves similar prior passages. Hierarchical Summary compresses
+      prior windows into a rolling summary. CRP sends only a compact, fact-ranked
+      envelope - which is why its prompt-token total stays flat while others climb.</p>
+    </div>
+  </section>
+
   <!-- Config panel -->
   <section class="config-panel">
     <h2>Benchmark Configuration</h2>
@@ -253,6 +279,10 @@
       <div class="config-field">
         <label>Target Words (total)</label>
         <input id="cfg-words" type="number" value="2500" min="500" max="15000"/>
+      </div>
+      <div class="config-field" style="grid-column:1/-1">
+        <label>Section titles — one per line (blank = built-in topic)</label>
+        <textarea id="cfg-section-titles" rows="3" placeholder="Leave blank for the built-in 'Distributed Systems' topic, or write your own, e.g.&#10;History of the Roman Empire&#10;Military organisation&#10;Law and governance"></textarea>
       </div>
     </div>
     <div style="margin-top:1rem">
@@ -363,6 +393,7 @@ function createPanels(strategies) {
   grid.innerHTML = '';
   STATE.windowTexts = {};
   STATE.windowMetrics = {};
+  STATE.promptTokens = {};
 
   strategies.forEach(s => {
     const meta = STRATEGY_META[s] || { label: s, color: '#888', short: s };
@@ -399,8 +430,13 @@ function makeMetricChip(label, value) {
 function updatePanelMetrics(s, metrics) {
   const row = document.getElementById(`metrics-row-${s}`);
   if (!row) return;
+  // Running prompt-token total across windows (CRP reports window-1 input
+  // only from the engine; later windows add 0, the final table has the total).
+  STATE.promptTokens = STATE.promptTokens || {};
+  STATE.promptTokens[s] = (STATE.promptTokens[s] || 0) + (metrics.tokens_prompt || 0);
   row.innerHTML = `
     ${chip('words', (metrics.running_words||0).toLocaleString())}
+    ${chip('prompt', (STATE.promptTokens[s]||0).toLocaleString() + ' in')}
     ${chip('efficiency', metrics.tokens_output ? ((metrics.tokens_output/(Math.max(1,(metrics.tokens_prompt||0)+(metrics.tokens_output||0))))*100).toFixed(1)+'%' : ' - ')}
     ${chip('repetition', ((metrics.repetition_6gram||0)*100).toFixed(2)+'%')}
     ${chip('unique', ((metrics.unique_word_ratio||0)*100).toFixed(1)+'%')}
@@ -426,6 +462,9 @@ async function startBenchmark() {
     target_words:        parseInt(document.getElementById('cfg-words').value) || 2500,
     strategies,
   };
+  const customTitles = document.getElementById('cfg-section-titles').value
+    .split('\n').map(s => s.trim()).filter(Boolean);
+  if (customTitles.length) config.section_titles = customTitles;
 
   // Auto-detect model if blank
   if (!config.model) {
@@ -637,6 +676,7 @@ function updateCharts(results) {
       if (cm.fromMetrics) {
         const metrics = STATE.windowMetrics[s] || [];
         if (metrics.length) {
+          if (cm.key === 'coherence_with_prev' && metrics.length < 2) return; // window 1 has no predecessor
           vals[s] = metrics[metrics.length-1][cm.key] || 0;
         } else if (results[s]) {
           vals[s] = results[s][cm.key.replace('running_', 'total_')] || 0;

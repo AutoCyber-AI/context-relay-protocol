@@ -274,6 +274,7 @@ class WindowMetrics:
     sections_covered: int = 0                # unique sections detected
     total_output_tokens: int = 0             # sum of all window output tokens
     continuation_termination_reason: str = ""  # why the continuation loop stopped
+    duplicate_blocks_collapsed: int = 0      # within-window rewrite blocks removed
 
     # Tool-mediated context relay telemetry (§20)
     tool_rounds: int = 0                      # number of tool call round-trips
@@ -350,6 +351,7 @@ class WindowMetrics:
             # Per-window continuation detail
             "continuation_windows_detail": self.continuation_windows_detail,
             "continuation_termination_reason": self.continuation_termination_reason,
+            "duplicate_blocks_collapsed": self.duplicate_blocks_collapsed,
             # Gap / flow
             "final_gap_score": self.final_gap_score,
             "sections_covered": self.sections_covered,

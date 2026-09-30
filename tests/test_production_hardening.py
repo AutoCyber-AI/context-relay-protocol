@@ -341,6 +341,157 @@ class TestNearDuplicateTermination:
         assert mgr._state.termination_reason != "repetition_detected"
 
 
+class TestDuplicateBlockCollapse:
+    """Within-window duplication: the model rewrites a whole section block
+    inside ONE window. The cross-window near-duplicate guard cannot see it;
+    collapse_duplicate_blocks removes it before ingestion. Calibrated on a
+    real qwen2.5-7b artifact (rewrite measured 0.37 6-gram overlap)."""
+
+    _BLOCK_A = (
+        "## Section 3: Data Modeling and Storage\n"
+        "Data modeling is crucial in software engineering as it defines the "
+        "structure, relationships, and attributes of data within an "
+        "information system. This section delves into various data models "
+        "and storage strategies used in distributed systems.\n"
+        "Key Concepts\n"
+        "Relational Data Model: This model uses tables to represent entities "
+        "and their relationships through primary keys and foreign keys. In a "
+        "distributed environment, relational databases often use sharding "
+        "techniques to distribute data across multiple nodes.\n"
+        "NoSQL Data Models: These models include document stores such as "
+        "MongoDB, key-value stores such as Redis, column-family databases, "
+        "and graph databases. Each model is optimized for different types of "
+        "workloads, making them suitable for various use cases in distributed "
+        "systems.\n"
+        "Sharding: This technique involves partitioning data across multiple "
+        "nodes to improve scalability, using consistent hashing or "
+        "range-based techniques.\n"
+        "Storage Strategies\n"
+        "Replication: To ensure high availability and fault tolerance, data "
+        "is often replicated across multiple nodes. Techniques such as "
+        "multi-master replication and master-slave replication are used."
+    )
+
+    _BLOCK_B_REWRITE = (
+        "### Section 3: Data Modeling and Storage\n"
+        "Key Concepts\n"
+        "In the realm of distributed systems, data modeling and storage play "
+        "a critical role in ensuring that applications can operate "
+        "efficiently and reliably. The choice of model affects performance, "
+        "scalability, and fault tolerance. Common models include relational "
+        "databases, NoSQL databases, and hybrid approaches.\n"
+        "Relational Databases: These are based on the relational model, "
+        "which uses tables to represent entities and their relationships "
+        "through primary keys and foreign keys. In a distributed "
+        "environment, these databases often use sharding techniques to "
+        "distribute data across multiple nodes.\n"
+        "NoSQL Databases: These models include document stores such as "
+        "MongoDB, key-value stores such as Redis, column-family databases, "
+        "and graph databases. Each model is optimized for different types "
+        "of workloads, making them suitable for various use cases in "
+        "distributed systems.\n"
+        "Storage Strategies\n"
+        "To manage the vast amounts of data in distributed systems, various "
+        "storage strategies are employed. Replication ensures high "
+        "availability and fault tolerance across multiple nodes. Sharding "
+        "partitions data across nodes using consistent hashing."
+    )
+
+    _PRIOR_DOC = (
+        "## 2. Service Architecture Patterns\n"
+        "Microservices decompose applications into independently deployable "
+        "services. Event-driven architecture reacts to events. Circuit "
+        "breakers prevent cascading failures by isolating faulty services."
+    )
+
+    def test_in_window_section_rewrite_is_dropped(self):
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        window = self._BLOCK_A + "\n\n" + self._BLOCK_B_REWRITE
+        cleaned, dropped = collapse_duplicate_blocks(window, self._PRIOR_DOC)
+        assert dropped == 1
+        assert cleaned.startswith("## Section 3: Data Modeling and Storage")
+        assert "In the realm of distributed systems" not in cleaned
+
+    def test_repeated_subheading_with_fresh_content_survives(self):
+        """'Key Concepts' / 'Trade-offs' style subheadings recur in every
+        section of a guide — a heading match with low overlap must NOT drop
+        the block."""
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        prior = (
+            "## 1. Foundations\n"
+            "### Key Concepts\n"
+            "Distributed systems are collections of autonomous nodes. "
+            "Concurrency is managed through locks and semaphores. The lack "
+            "of a global clock requires vector clocks and logical time."
+        )
+        fresh = (
+            "## 2. Service Architecture\n"
+            "### Key Concepts\n"
+            "Microservices decompose applications into independently "
+            "deployable services. Event-driven architecture reacts to "
+            "events instead of direct invocation. Circuit breakers prevent "
+            "cascading failures by isolating faulty services and routing "
+            "requests to fallbacks."
+        )
+        cleaned, dropped = collapse_duplicate_blocks(fresh, prior)
+        assert dropped == 0
+        assert "Microservices decompose" in cleaned
+
+    def test_process_window_ingests_collapsed_output(self):
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        mgr.process_window(
+            task_intent="write a technical reference guide",
+            output=self._BLOCK_A + "\n\n" + self._BLOCK_B_REWRITE,
+            finish_reason="length",
+            output_tokens=200,
+            facts=[],
+            window_id="w1",
+        )
+        assert mgr._state.blocks_collapsed == 1
+        stitched = mgr._state.stitched_output
+        assert "In the realm of distributed systems" not in stitched
+
+
+class TestContinuationDirectiveTitles:
+    """Continuation directives must name missing sections by TITLE. A bare
+    'section 3' leaves a small model to guess the topic — observed live: a
+    window tasked with '3. API Design and Versioning' wrote 'Data Modeling
+    and Storage' instead, and the next window skipped section 3 entirely."""
+
+    _TASK = (
+        "Write a guide covering ALL of the following 3 sections, in order:\n\n"
+        "1. Foundations of Distributed Systems\n"
+        "2. Service Architecture Patterns\n"
+        "3. API Design and Versioning\n\n"
+        "Begin immediately."
+    )
+
+    def test_missing_sections_named_by_title(self):
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        mgr.process_window(
+            task_intent=self._TASK,
+            output=(
+                "# Guide\n\n## 1. Foundations of Distributed Systems\n"
+                "Alpha beta gamma delta epsilon zeta eta theta iota kappa "
+                "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi."
+            ),
+            finish_reason="length",
+            output_tokens=100,
+            facts=[],
+            window_id="w1",
+        )
+        env = mgr.build_continuation_envelope(task_intent=self._TASK)
+        assert "2. Service Architecture Patterns" in env
+        assert "3. API Design and Versioning" in env
+        assert "'## 2. Service Architecture Patterns'" in env
+
+
 # ── H9: Structured logging ──────────────────────────────────────────
 
 class TestStructuredLogging:

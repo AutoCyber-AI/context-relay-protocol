@@ -4684,6 +4684,9 @@ class DispatchMixin:
             generation_speed=total_output_tokens / (total_llm_ms / 1000) if total_llm_ms > 0 else 0.0,
             wall_time_ms=int(total_llm_ms),
             finish_reason=final_finish_reason,
+            continuation_termination_reason=(
+                cont_state.termination_reason if cont_state is not None else ""
+            ),
             facts_extracted=extraction.total_facts,
             continuation_triggered=continuation_windows > 0,
             continuation_index=continuation_windows,

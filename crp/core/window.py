@@ -273,6 +273,7 @@ class WindowMetrics:
     final_gap_score: float = 0.0             # last gap_score from continuation
     sections_covered: int = 0                # unique sections detected
     total_output_tokens: int = 0             # sum of all window output tokens
+    continuation_termination_reason: str = ""  # why the continuation loop stopped
 
     # Tool-mediated context relay telemetry (§20)
     tool_rounds: int = 0                      # number of tool call round-trips
@@ -348,6 +349,7 @@ class WindowMetrics:
             "crp_overhead_pct": round(self.crp_overhead_pct, 1),
             # Per-window continuation detail
             "continuation_windows_detail": self.continuation_windows_detail,
+            "continuation_termination_reason": self.continuation_termination_reason,
             # Gap / flow
             "final_gap_score": self.final_gap_score,
             "sections_covered": self.sections_covered,

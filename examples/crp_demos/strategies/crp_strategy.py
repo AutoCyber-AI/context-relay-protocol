@@ -110,6 +110,13 @@ class CRPStrategy(BaseStrategy):
     )
     color = "#3b82f6"  # blue
 
+    def __init__(self, *args: Any, research: list[str] | None = None, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        # Optional retrieved source material (e.g. Wikipedia intros per
+        # section). Kept in the system prompt so every continuation window
+        # sees it; grounded material counters parametric-memory drift.
+        self.research = research or []
+
     def run(
         self,
         on_chunk: Callable[[str], None] | None = None,
@@ -138,9 +145,18 @@ class CRPStrategy(BaseStrategy):
             context_size=self.context_size,
             max_tokens=self.max_tokens_per_window,
         )
+        # Bound the continuation budget to the word target: estimate ~1.4
+        # tokens per word and allow the planned sections plus a small margin.
+        # Without this the loop keeps opening windows on word-count gaps the
+        # model can only fill by rephrasing earlier sections.
+        est_words_per_window = max(150, int(self.max_tokens_per_window / 1.4))
+        planned_windows = max(
+            len(self.sections) + 1,
+            -(-self.target_words // est_words_per_window) + 2,
+        )
         orch = CRPOrchestrator(
             provider=provider,
-            max_continuations=len(self.sections) + 4,
+            max_continuations=planned_windows - 1,
         )
 
         per_section = max(300, self.target_words // len(self.sections))
@@ -151,11 +167,22 @@ class CRPStrategy(BaseStrategy):
             "depth, with concrete implementation details, trade-offs, and "
             "real-world patterns. Never rewrite a completed section."
         )
+        if self.research:
+            source_block = "\n\n".join(
+                f"[Source {i+1}]\n{snippet}" for i, snippet in enumerate(self.research[:6])
+            )
+            system += (
+                "\n\nREFERENCE MATERIAL retrieved for this guide. Ground the "
+                "content in these sources; use specific facts from them instead "
+                "of restating general knowledge:\n" + source_block
+            )
         task = (
             f"Write a comprehensive technical reference guide covering ALL of "
             f"the following {len(self.sections)} sections, in order, each at "
             f"least {per_section} words:\n\n{numbered}\n\n"
             "Begin immediately with '# Technical Reference Guide'. "
+            "After the final numbered section, add a short '## Conclusion' "
+            "summarising the guide. "
             "Do not rewrite completed sections."
         )
 
@@ -188,7 +215,8 @@ class CRPStrategy(BaseStrategy):
                     prev_window_text=prev_text,
                     section_title=(
                         self.sections[window_idx - 1]
-                        if window_idx - 1 < len(self.sections) else ""
+                        if window_idx - 1 < len(self.sections)
+                        else f"continuation (beyond the {len(self.sections)} planned sections)"
                     ),
                     note="CRP continuation engine (real dispatch_stream)",
                 )
@@ -220,6 +248,9 @@ class CRPStrategy(BaseStrategy):
         )
         rep_cont = int(getattr(report, "continuation_windows", 0) or 0)
         windows = max(window_idx, rep_cont + 1, 1)
+        termination_reason = str(
+            telemetry.get("continuation_termination_reason") or ""
+        )
 
         wc = word_count(full_text)
         rep = ngram_repetition(full_text)
@@ -241,6 +272,7 @@ class CRPStrategy(BaseStrategy):
             avg_unique_word_ratio=uwr_avg,
             sections_completed=count_headings(full_text),
             context_efficiency=total_output_tokens / total_toks,
+            termination_reason=termination_reason,
             window_metrics=window_metrics,
             errors=errors,
         )

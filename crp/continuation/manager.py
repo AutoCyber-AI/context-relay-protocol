@@ -28,6 +28,17 @@ if TYPE_CHECKING:
     from crp.extraction.types import Fact
 
 
+_WORD_RE = re.compile(r"\b\w+\b")
+
+
+def _window_6grams(text: str) -> set[str]:
+    """Word 6-gram set of a window output — the near-duplicate guard's unit."""
+    words = _WORD_RE.findall(text.lower())
+    if len(words) < 6:
+        return set()
+    return {" ".join(words[i: i + 6]) for i in range(len(words) - 5)}
+
+
 class LLMDispatcher(Protocol):
     """Protocol for an LLM dispatch callback used by the continuation loop."""
 
@@ -481,8 +492,28 @@ class ContinuationManager:
             == self._state.window_outputs[-2]["output"].strip()
         )
 
+        # Near-duplicate guard (paraphrase class): small models that run out
+        # of instructed content do not copy the previous window verbatim —
+        # they rephrase an EARLIER window (section rewrites with altered
+        # wording). 6-gram overlap with any single prior window above the
+        # threshold means the model is recycling material, not adding new
+        # material, so the loop stops instead of accumulating repetition
+        # window over window.
+        _is_near_duplicate = False
+        if output.strip() and len(self._state.window_outputs) > 1:
+            _cur_grams = _window_6grams(output)
+            if _cur_grams:
+                for _prev in self._state.window_outputs[:-1]:
+                    _prev_grams = _window_6grams(_prev["output"])
+                    if not _prev_grams:
+                        continue
+                    _overlap = len(_cur_grams & _prev_grams) / len(_cur_grams)
+                    if _overlap >= 0.30:
+                        _is_near_duplicate = True
+                        break
+
         # 3-way termination check
-        if _is_repeat:
+        if _is_repeat or _is_near_duplicate:
             self._state.finished = True
             self._state.termination_reason = "repetition_detected"
         elif self._state.gap_result.is_complete:

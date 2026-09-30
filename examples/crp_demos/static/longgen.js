@@ -120,6 +120,12 @@ async function startRun() {
     } else if (evt.type === "chunk") {
       docText += evt.data.text;
       scheduleRender();
+    } else if (evt.type === "document") {
+      // Assembled deliverable from the backend (boundary-safe, deduped) —
+      // replaces the raw chunk stream, which glues window boundaries
+      // together without separators.
+      docText = evt.data.text || "";
+      scheduleRender();
     } else if (evt.type === "window_metrics") {
       const m = evt.data.metrics || {};
       el("pg-words").textContent = (m.running_words || 0).toLocaleString();

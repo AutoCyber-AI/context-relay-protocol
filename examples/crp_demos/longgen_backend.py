@@ -15,8 +15,9 @@ API (used by ``server.py``):
   POST /api/longgen/cancel   → {"cancelled": bool}
   POST /api/longgen/poll     → {"events": [...]}        non-SSE drain
 
-Events: run_started, chunk {text}, window_done {window, metrics},
-run_done {result, full_text, acceptance}, run_error {error}.
+Events: run_started, chunk {text}, document {text} (assembled deliverable,
+replaces raw chunk accumulation), window_done {window, metrics},
+run_done {result, acceptance}, run_error {error}.
 """
 
 from __future__ import annotations
@@ -209,9 +210,15 @@ def _run_longgen(run: _LongGenRun) -> None:
             "metrics": metrics,
         })
 
+    def on_document(text: str) -> None:
+        # Assembled (boundary-safe, deduplicated) deliverable so far —
+        # replaces the raw chunk accumulation in the document pane.
+        run.emit("document", {"text": text})
+
     try:
         result = strategy.run(on_chunk=on_chunk, on_metrics=on_metrics,
-                              on_window_done=on_window_done)
+                              on_window_done=on_window_done,
+                              on_document=on_document)
     except Exception as exc:  # noqa: BLE001
         logger.exception("longgen run failed")
         run.error = str(exc)

@@ -2,6 +2,28 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.10] — Stitched Deliverable, Budget Off-by-One, Conclusion Directive
+
+### Fixed
+- **Deliverable document not stitched** — the long-gen demo assembled its
+  document by concatenating raw window outputs, so window boundaries glued
+  together without separators ("...Serverless## 3. API Design..."), breaking
+  markdown headings at every stitch point in the rendered document and in
+  the downloaded file. The strategy now builds the deliverable through the
+  real continuation stitcher (echo removal, bridge insertion, section
+  dedup); the raw token stream remains live-only.
+- **Continuation budget off-by-one** — the strategy passed
+  `max_continuations = planned_windows - 1`, but the engine's trigger counts
+  the initial window inside that budget and fires at `>=`, so every run
+  stopped one window early: below the word target and before the conclusion.
+  Passes `planned_windows` now; verified live (6 windows for a 2,000-word /
+  5-section plan instead of 5).
+- **Vague directive once all sections were complete** — "continue where you
+  left off" invited full rewrites of early sections when the plan ran out
+  (observed live: a window rewrote Section 1 verbatim). When every planned
+  section is written and no conclusion heading exists, the continuation
+  envelope now directs the next window to write ONLY `## Conclusion`.
+
 ## [6.1.9] — Within-Window Duplicate Collapse + Title-Preserving Continuation Directives
 
 ### Fixed

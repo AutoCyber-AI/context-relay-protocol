@@ -491,6 +491,57 @@ class TestContinuationDirectiveTitles:
         assert "3. API Design and Versioning" in env
         assert "'## 2. Service Architecture Patterns'" in env
 
+    def test_all_sections_complete_directs_conclusion(self):
+        """With every planned section written and no conclusion in the doc,
+        the directive must aim the next window at '## Conclusion' — a vague
+        'continue where you left off' invites a rewrite of an early section
+        (observed live: a full Section 1 rewrite once sections ran out)."""
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        body = (
+            "Alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            "lambda mu xi omicron pi rho sigma tau upsilon phi chi psi."
+        )
+        for i in range(1, 4):
+            mgr.process_window(
+                task_intent=self._TASK,
+                output=f"## {i}. Section {i} title here\n{body}",
+                finish_reason="length",
+                output_tokens=100,
+                facts=[],
+                window_id=f"w{i}",
+            )
+        env = mgr.build_continuation_envelope(task_intent=self._TASK)
+        assert "## Conclusion" in env
+        assert "Do NOT rewrite any completed section" in env
+
+    def test_existing_conclusion_not_redirected(self):
+        from crp.continuation.manager import ContinuationManager
+
+        mgr = ContinuationManager()
+        body = (
+            "Alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            "lambda mu xi omicron pi rho sigma tau upsilon phi chi psi."
+        )
+        outputs = [
+            "## 1. Section 1 title here\n" + body,
+            "## 2. Section 2 title here\n" + body,
+            "## 3. Section 3 title here\n" + body,
+            "## Conclusion\n" + body,
+        ]
+        for i, text in enumerate(outputs, start=1):
+            mgr.process_window(
+                task_intent=self._TASK,
+                output=text,
+                finish_reason="length",
+                output_tokens=100,
+                facts=[],
+                window_id=f"w{i}",
+            )
+        env = mgr.build_continuation_envelope(task_intent=self._TASK)
+        assert "Write ONLY a short '## Conclusion'" not in env
+
 
 # ── H9: Structured logging ──────────────────────────────────────────
 

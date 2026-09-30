@@ -110,6 +110,7 @@ class RAGStrategy(BaseStrategy):
         on_chunk: Callable[[str], None] | None = None,
         on_metrics: Callable[[dict], None] | None = None,
         on_window_done: Callable[[int, str, dict], None] | None = None,
+        on_document: Callable[[str], None] | None = None,
     ) -> StrategyResult:
         retriever = _TFIDFRetriever()
         sections = self.sections

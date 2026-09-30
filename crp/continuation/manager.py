@@ -360,13 +360,33 @@ class ContinuationManager:
             )
         elif completed_sections:
             last_completed = max(completed_sections)
-            sections.append(
-                "[CONTINUATION DIRECTIVE]\n"
-                f"You have completed sections up to {last_completed}. "
-                "Continue from exactly where you left off. "
-                "Do NOT repeat any previously written sections. "
-                "Do NOT restart from the beginning."
+            # All numbered sections are done. If the document has no
+            # conclusion yet, aim the remaining window(s) at it — otherwise
+            # the vague "continue where you left off" invites a rewrite of
+            # the last section (observed live: full rewrites of Section 1
+            # once sections ran out).
+            has_conclusion = any(
+                "conclusion" in h.text.lower()
+                for h in self._document_map.headings
             )
+            if not has_conclusion:
+                sections.append(
+                    "[CONTINUATION DIRECTIVE]\n"
+                    f"All {len(all_expected) if all_expected else last_completed} "
+                    "planned sections are complete. "
+                    "Write ONLY a short '## Conclusion' section now, "
+                    "summarising the guide in a few sentences. "
+                    "Begin your output with the heading '## Conclusion'. "
+                    "Do NOT rewrite any completed section."
+                )
+            else:
+                sections.append(
+                    "[CONTINUATION DIRECTIVE]\n"
+                    f"You have completed sections up to {last_completed}. "
+                    "Continue from exactly where you left off. "
+                    "Do NOT repeat any previously written sections. "
+                    "Do NOT restart from the beginning."
+                )
         else:
             sections.append(
                 "[CONTINUATION]\n"

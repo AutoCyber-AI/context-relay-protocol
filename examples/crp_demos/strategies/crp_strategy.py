@@ -122,19 +122,22 @@ class CRPStrategy(BaseStrategy):
         on_chunk: Callable[[str], None] | None = None,
         on_metrics: Callable[[dict], None] | None = None,
         on_window_done: Callable[[int, str, dict], None] | None = None,
+        on_document: Callable[[str], None] | None = None,
     ) -> StrategyResult:
         """Drive the real CRP continuation engine. No silent fallback."""
-        return self._run_crp(on_chunk, on_metrics, on_window_done)
+        return self._run_crp(on_chunk, on_metrics, on_window_done, on_document)
 
     def _run_crp(
         self,
         on_chunk: Callable[[str], None] | None,
         on_metrics: Callable[[dict], None] | None,
         on_window_done: Callable[[int, str, dict], None] | None,
+        on_document: Callable[[str], None] | None,
     ) -> StrategyResult:
         """Invoke CRPOrchestrator.dispatch_stream and translate its event
         stream into the strategy result shape the comparison UI consumes."""
         from crp.core.orchestrator import CRPOrchestrator
+        from crp.continuation.manager import collapse_duplicate_blocks
 
         server_url = self.endpoint[:-3] if self.endpoint.endswith("/v1") \
             else self.endpoint
@@ -149,6 +152,11 @@ class CRPStrategy(BaseStrategy):
         # tokens per word and allow the planned sections plus a small margin.
         # Without this the loop keeps opening windows on word-count gaps the
         # model can only fill by rephrasing earlier sections.
+        # NOTE: the engine's trigger counts the INITIAL window inside
+        # max_continuations (continuation_count == window_count) and fires at
+        # >=, so total windows == max_continuations exactly. Passing
+        # planned_windows - 1 silently cut the last window — the run stopped
+        # before the word target and before the conclusion every time.
         est_words_per_window = max(150, int(self.max_tokens_per_window / 1.4))
         planned_windows = max(
             len(self.sections) + 1,
@@ -156,7 +164,7 @@ class CRPStrategy(BaseStrategy):
         )
         orch = CRPOrchestrator(
             provider=provider,
-            max_continuations=planned_windows - 1,
+            max_continuations=planned_windows,
         )
 
         per_section = max(300, self.target_words // len(self.sections))
@@ -188,6 +196,7 @@ class CRPStrategy(BaseStrategy):
 
         collected: list[str] = []
         seg_buf: list[str] = []
+        stitched_doc = ""  # document assembled via the real stitcher
         window_metrics: list[WindowMetrics] = []
         errors: list[str] = []
         report = None
@@ -208,6 +217,24 @@ class CRPStrategy(BaseStrategy):
                 seg_buf = []
                 summary = evt.data
                 full_so_far = "".join(collected)
+                # The raw token stream concatenates window outputs with no
+                # boundary handling ("...Serverless## 3. API Design..."),
+                # which breaks markdown headings at every stitch point in
+                # the rendered document. The deliverable is assembled
+                # separately: newline-safe join plus document-level
+                # duplicate-block collapse. (The full prose stitcher is NOT
+                # used here — measured on real segments it over-trims: its
+                # section dedup kills same-titled subsections under
+                # different parents and echo detection can swallow a whole
+                # rewritten section, ~1150 words lost on one live run.)
+                sep = ""
+                if stitched_doc:
+                    sep = "\n" if stitched_doc.endswith("\n") else "\n\n"
+                combined = stitched_doc + sep + seg_text
+                combined, _dropped = collapse_duplicate_blocks(combined, "")
+                stitched_doc = combined
+                if on_document:
+                    on_document(stitched_doc)
                 wm = _make_wm(
                     self.name, window_idx,
                     summary.input_tokens, summary.output_tokens,
@@ -231,7 +258,7 @@ class CRPStrategy(BaseStrategy):
             elif et == "done":
                 report = evt.data
 
-        full_text = "".join(collected)
+        full_text = stitched_doc
         total_latency = time.monotonic() - t0
 
         telemetry = dict(getattr(report, "telemetry", None) or {})

@@ -13,6 +13,8 @@ Public API:
     check_inheritance                — multi-agent tightening rule
     build_report / deliver_report    — violation reporting
     bind_policy / verify_policy      — policy-nonce binding
+    infer_from_text (+ with_llm)     — natural-language instruction →
+                                       SafetyControlPlane settings (SPEC-033)
 """
 
 from __future__ import annotations
@@ -31,6 +33,12 @@ from .model import (
     Strategy,
     Violation,
     ViolationType,
+)
+from .nl_infer import (
+    InferredPolicy,
+    infer_from_text,
+    infer_from_text_with_llm,
+    looks_like_natural_language,
 )
 from .nonce import bind_policy, generate_nonce, verify_policy
 from .profiles import PROFILES, expand_profile, is_profile_policy, resolve_policy
@@ -74,4 +82,9 @@ __all__ = [
     "generate_nonce",
     "bind_policy",
     "verify_policy",
+    # natural-language inference (SPEC-033)
+    "InferredPolicy",
+    "infer_from_text",
+    "infer_from_text_with_llm",
+    "looks_like_natural_language",
 ]

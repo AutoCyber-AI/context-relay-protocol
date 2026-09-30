@@ -99,6 +99,8 @@ class ContinuationState:
         quality_anomaly: True if a quality anomaly was detected.
         regrounded: True if regrounding occurred this window.
         window_outputs: Per-window raw outputs with metadata.
+        section_rewrites: Headings that re-announced an already-completed
+            section across all windows so far (anti-rewrite guard signal).
     """
 
     window_count: int = 0
@@ -115,6 +117,7 @@ class ContinuationState:
     quality_anomaly: bool = False
     regrounded: bool = False
     window_outputs: list[dict[str, Any]] = field(default_factory=list)
+    section_rewrites: int = 0
 
 
 class ContinuationManager:
@@ -237,6 +240,33 @@ class ContinuationManager:
         if toc:
             sections.append(f"[DOCUMENT PROGRESS]\nSections already written:\n{toc}")
 
+        # ── 2b. Explicit anti-rewrite guard ──
+        # The TOC shows completion, but small models routinely re-open a
+        # completed section anyway. Name the completed sections verbatim and
+        # state the consequence, and surface any rewrites observed so far.
+        completed_titles: list[str] = []
+        seen_titles: set[str] = set()
+        for h in self._document_map.headings:
+            title = re.sub(r"^\d{1,3}\.\s*", "", h.text).strip()
+            if title and title.lower() not in seen_titles:
+                seen_titles.add(title.lower())
+                completed_titles.append(title)
+        if completed_titles:
+            guard_lines = "\n".join(f"- {t}" for t in completed_titles[:12])
+            warn = ""
+            if self._state.section_rewrites:
+                warn = (
+                    f" WARNING: previous windows rewrote {self._state.section_rewrites} "
+                    "already-completed section heading(s). That content already exists "
+                    "in the document - repeating it counts as failure."
+                )
+            sections.append(
+                "[COMPLETED - DO NOT REWRITE]\n"
+                "These sections are already fully written. Do NOT write any of them "
+                "again. Continue only with sections that are not in this list.\n"
+                f"{guard_lines}{warn}"
+            )
+
         # ── 3. Unfulfilled requirements ──
         if gap_result and gap_result.unfulfilled:
             items = [f"- {r.text}" for r in gap_result.unfulfilled[:10]]
@@ -351,6 +381,28 @@ class ContinuationManager:
         if self._voice is None and output:
             self._voice = extract_voice_profile(output)
             self._state.voice_profile = self._voice
+
+        # Section-rewrite detection: headings that re-announce a section the
+        # document map already holds. Each rewrite burns a generation window
+        # on content that already exists and inflates repetition metrics.
+        # The pre-update snapshot is compared against this window's raw
+        # headings so a section is never counted against itself.
+        raw_headings = [
+            m.group(2).strip()
+            for m in re.finditer(r"^(#{1,6})\s+(.+)$", output, re.MULTILINE)
+        ]
+        pre_nums: set[int] = set()
+        pre_texts: set[str] = set()
+        for h in self._document_map.headings:
+            m = re.match(r"(\d{1,3})\.", h.text)
+            if m:
+                pre_nums.add(int(m.group(1)))
+            pre_texts.add(re.sub(r"^\d{1,3}\.\s*", "", h.text).strip().lower())
+        for ht in raw_headings:
+            m = re.match(r"(\d{1,3})\.", ht)
+            norm = re.sub(r"^\d{1,3}\.\s*", "", ht).strip().lower()
+            if (m and int(m.group(1)) in pre_nums) or (norm and norm in pre_texts):
+                self._state.section_rewrites += 1
 
         # Document map update
         self._document_map.update(output, window_id)

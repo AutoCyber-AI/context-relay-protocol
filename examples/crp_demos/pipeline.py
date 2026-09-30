@@ -245,6 +245,16 @@ def stream_generate(
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 _CLAUSE_RE = re.compile(r";\s+")
+_CJK_RE = re.compile(
+    "[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff"
+    "\uac00-\ud7af\u0e00-\u0e7f\u0400-\u04ff]")
+
+
+def _cjk_fraction(text: str) -> float:
+    """Fraction of non-Latin-script characters (CJK/Hangul/Thai/Cyrillic)."""
+    if not text:
+        return 0.0
+    return len(_CJK_RE.findall(text)) / len(text)
 
 
 def _facts_from_text(text: str, category: str) -> list[Fact]:
@@ -675,6 +685,16 @@ class ContextSessionStore:
                 self._sessions[session_id] = sess
             return sess
 
+    def known(self, session_id: str) -> bool:
+        """True only if this session exists in this server process.
+
+        Unlike ``_get`` this never creates a session — the browser uses it to
+        decide whether a restored (sessionStorage) session is still live or
+        belongs to a previous server run.
+        """
+        with self._lock:
+            return session_id in self._sessions
+
     def new_session(self) -> dict[str, Any]:
         session_id = f"ctx-{uuid.uuid4().hex[:12]}"
         self._get(session_id)
@@ -718,7 +738,9 @@ class ContextSessionStore:
         # 2) Generate a reply grounded in retrieved memory.
         context_block = "\n".join(f"- {r['text']}" for r in retrieved)
         sys = ("You are a helpful assistant with persistent memory. "
-               "Use the remembered facts when relevant.")
+               "Use the remembered facts when relevant. "
+               "Always respond in English, regardless of the language of the "
+               "question or the remembered facts.")
         if context_block:
             sys += "\n\nREMEMBERED FACTS:\n" + context_block
         messages = [{"role": "system", "content": sys}]
@@ -745,6 +767,16 @@ class ContextSessionStore:
         sess.history.append({"role": "user", "content": message})
         if reply:
             sess.history.append({"role": "assistant", "content": reply})
+            # Language guard (advisory): local models sometimes drift into the
+            # question's language despite the English directive. Flag it in
+            # the audit trail so the turn result can surface a warning.
+            cjk = _cjk_fraction(reply)
+            if cjk > 0.05:
+                sess.audit.record(ComplianceEventType.DATA_PROCESSED, data={
+                    "warning": "non_latin_script_drift",
+                    "cjk_fraction": round(cjk, 4),
+                    "window": window_id,
+                })
 
         # 3) Extract facts from this turn and store them in the CKF.
         new_facts = _facts_from_text(message, "user_statement")

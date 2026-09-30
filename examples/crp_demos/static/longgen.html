@@ -51,6 +51,10 @@
           <input type="number" id="tpw" min="200" step="50" value="700" />
         </div>
       </div>
+      <div style="margin-top:0.6rem">
+        <label for="section-titles">Section titles — one per line (blank = built-in topic)</label>
+        <textarea id="section-titles" rows="3" placeholder="Leave blank for the built-in 'Distributed Systems' topic, or write your own, e.g.&#10;The economics of renewable energy&#10;Grid storage technologies&#10;Policy instruments"></textarea>
+      </div>
       <p class="muted" style="font-size:0.78rem">Each window writes up to its token
         budget, then CRP extracts the document state and opens the next window -
         that handoff is the demo. A non-thinking instruct model (e.g.

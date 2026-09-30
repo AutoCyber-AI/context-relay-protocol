@@ -108,6 +108,13 @@ def _run_longgen(run: _LongGenRun) -> None:
     endpoint = str(cfg.get("endpoint", "http://127.0.0.1:1234"))
     model = str(cfg.get("model", "meta-llama-3.1-8b-instruct"))
     context_size = int(cfg.get("context_size", 4096))
+    # Optional user-defined section titles replace the built-in topic.
+    custom_sections = [
+        str(s).strip() for s in (cfg.get("section_titles") or [])
+        if str(s).strip()
+    ]
+    chosen_sections = custom_sections[:sections_n] if custom_sections \
+        else BENCHMARK_SECTIONS[:sections_n]
 
     strategy = CRPStrategy(
         endpoint=endpoint,
@@ -115,13 +122,13 @@ def _run_longgen(run: _LongGenRun) -> None:
         context_size=context_size,
         max_tokens_per_window=tokens_per_window,
         target_words=target_words,
-        sections=BENCHMARK_SECTIONS[:sections_n],
+        sections=chosen_sections,
     )
     run.emit("run_started", {
         "run_id": run.run_id, "model": model, "context_size": context_size,
-        "sections": sections_n, "target_words": target_words,
+        "sections": len(chosen_sections), "target_words": target_words,
         "tokens_per_window": tokens_per_window,
-        "section_titles": BENCHMARK_SECTIONS[:sections_n],
+        "section_titles": chosen_sections,
     })
 
     def on_chunk(chunk: str) -> None:
@@ -153,7 +160,7 @@ def _run_longgen(run: _LongGenRun) -> None:
         return
 
     result_dict = result.to_dict()
-    gate = acceptance_gate(result.full_text, result_dict, target_words, sections_n)
+    gate = acceptance_gate(result.full_text, result_dict, target_words, len(chosen_sections))
     run.status = "done"
     run.ended_at = time.time()
     run.emit("run_done", {

@@ -50,6 +50,28 @@ def _window_6grams(text: str) -> set[str]:
 _BLOCK_DUP_THRESHOLD = 0.50
 _BLOCK_MIN_WORDS = 40
 
+# Subsection titles that legitimately recur under every section of a guide.
+# A block under one of these needs the high _BLOCK_DUP_THRESHOLD overlap to be
+# dropped; distinctive section titles get the lower heading-match bar below.
+_BOILERPLATE_HEADINGS = {
+    "key concepts",
+    "trade offs",
+    "real world patterns",
+    "implementation details",
+    "introduction",
+    "overview",
+    "conclusion",
+    "summary",
+    "examples",
+    "example",
+    "best practices",
+    "design principles",
+    "challenges",
+    "key takeaways",
+    "further reading",
+    "references",
+}
+
 
 def _normalize_heading(text: str) -> str:
     """Normalize a heading for equality comparison: '## Section 3: Data
@@ -107,6 +129,20 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
         )
         norm_h = _normalize_heading(heading_line) if heading_line else ""
         word_n = len(_WORD_RE.findall(block))
+        # Orphan heading: a heading line with no body of its own (observed
+        # live: a window closed its section, then re-announced two earlier
+        # section headings as the token budget cut it off mid-retry). It
+        # carries no content, so the _BLOCK_MIN_WORDS exemption must not
+        # protect it — but only when it RE-announces: a first announcement is
+        # kept so a following window can still write content under it.
+        body_words = word_n - len(_WORD_RE.findall(heading_line))
+        if (
+            norm_h
+            and body_words == 0
+            and (norm_h in kept_headings or norm_h in prior_headings)
+        ):
+            dropped += 1
+            continue
         if word_n >= _BLOCK_MIN_WORDS:
             grams = _window_6grams(block)
             max_overlap = 0.0
@@ -121,13 +157,19 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
             # Heading re-announcement alone is NOT enough: recurring
             # subsection titles like "Key Concepts" / "Trade-offs" appear in
             # every section of a guide. A block is dropped on a heading match
-            # only when its wording also overlaps the earlier content — the
-            # user's real rewrite measured 0.37 here, while a fresh "Key
-            # Concepts" block under a repeated heading sits near 0.05.
+            # only when its wording also overlaps the earlier content —
+            # distinctive titles get a low bar (a summarized rewrite of a
+            # whole section measured 0.19 on real data and must be dropped),
+            # while boilerplate subheads keep the high overlap-only path so a
+            # fresh "Key Concepts" block under a repeated heading (~0.05)
+            # survives.
             heading_dup = (
                 bool(norm_h)
                 and (norm_h in kept_headings or norm_h in prior_headings)
-                and max_overlap >= 0.20
+                and (
+                    (norm_h not in _BOILERPLATE_HEADINGS and max_overlap >= 0.10)
+                    or max_overlap >= 0.50
+                )
             )
             if heading_dup or max_overlap >= _BLOCK_DUP_THRESHOLD:
                 dropped += 1

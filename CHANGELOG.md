@@ -2,6 +2,34 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.11] — Summarized Section-Rewrite Collapse
+
+### Fixed
+- **Summarized section rewrite surviving collapse** — the 6.1.9 heading-match
+  bar (0.20 6-gram overlap) missed a real qwen2.5-7b artifact where a window
+  closed its section, then appended a *short summarized rewrite* of the same
+  section under a new number ("## 5. Caching Strategies" ... then
+  "## Section 6: Caching Strategies" with the same opening verbatim).
+  The rewrite's summarized body measured 0.19–0.25 overlap — under the bar —
+  so it entered the document, the cross-window near-duplicate guard then
+  fired on the polluted window, and the loop terminated early below the word
+  target. Distinctive section titles now drop a heading-matched block at
+  >= 0.10 overlap; a stoplist of boilerplate subheads ("Key Concepts",
+  "Trade-offs", "Real-World Patterns", ...) keeps the high 0.50 overlap-only
+  path so genuinely fresh content under a repeated subsection title survives.
+- **Orphan re-announced headings leaking into the document tail** — a window
+  whose token budget cut it off right after re-announcing earlier section
+  headings left bare heading lines at the end of the deliverable (observed
+  live on the conclusion window). The duplicate-block collapse exempts
+  blocks under 40 words, so these one-line orphans passed through. A heading
+  line with no body of its own that re-announces an already-written heading
+  is now dropped; a first announcement is kept so the next window can still
+  write content under it.
+- Verified live on qwen2.5-7b-instruct (5 sections / 2,000 words /
+  grounding on): full acceptance gate PASS — 2,008 assembled words,
+  27 headings, 0.2% 6-gram repetition, 0.0% duplicate sentences, conclusion
+  present, 6 windows.
+
 ## [6.1.10] — Stitched Deliverable, Budget Off-by-One, Conclusion Directive
 
 ### Fixed

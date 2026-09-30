@@ -455,6 +455,137 @@ class TestDuplicateBlockCollapse:
         stitched = mgr._state.stitched_output
         assert "In the realm of distributed systems" not in stitched
 
+    _SECTION_5 = (
+        "## 5. Caching Strategies\n"
+        "Caching is a crucial technique in distributed systems to improve "
+        "performance by reducing the number of requests to slower or more "
+        "expensive data sources such as databases. This section covers "
+        "various caching strategies, their implementation details, trade "
+        "offs, and real world patterns.\n"
+        "In-Memory Caching: Stores frequently accessed data in memory to "
+        "minimize disk I/O operations. Tools like Redis and Memcached are "
+        "popular choices for this purpose.\n"
+        "Disk-Based Caching: Stores frequently accessed data on disk with "
+        "read caching and write-through or write-back strategies. This is "
+        "useful when the amount of data exceeds memory capacity.\n"
+        "Hierarchical Caching: Combines multiple levels of caching, "
+        "typically starting from the most expensive but fastest (in-memory) "
+        "down to slower and cheaper storage (disk).\n"
+        "Trade-offs: Consistency vs. Performance. Caching can improve "
+        "performance by reducing database access but may introduce "
+        "inconsistencies if the cache is not updated in real-time."
+    )
+
+    _SECTION_6_SUMMARIZED_REWRITE = (
+        "## Section 6: Caching Strategies\n"
+        "Caching is a crucial technique in distributed systems to improve "
+        "performance by reducing the number of requests to slower or more "
+        "expensive data sources such as databases.\n"
+        "In-Memory Caching: Stores frequently accessed data in memory for "
+        "quick access. This approach can significantly reduce latency and "
+        "improve response times, but requires careful management of cache "
+        "invalidation across multiple nodes.\n"
+        "Disk-Based Caching: Stores frequently accessed data on disk with "
+        "an in-memory layer for faster access. This approach balances "
+        "performance and cost by leveraging both RAM and disk storage, but "
+        "introduces additional latency due to I/O operations.\n"
+        "Distributed Caching: Replicates cached data across multiple nodes "
+        "in a network to ensure high availability and performance. This "
+        "approach leverages redundancy to improve reliability but increases "
+        "complexity due to the need for consistent state management among "
+        "nodes."
+    )
+
+    def test_summarized_section_rewrite_is_dropped(self):
+        """Real qwen2.5-7b artifact (round 5): window 5 closed with its
+        section, then appended a SHORT summarized rewrite of the same section
+        under a new number. The rewrite shares its opening verbatim but is
+        too summarized to reach the old 0.20 heading-match bar (measured
+        ~0.19) — distinctive section titles must drop at 0.10."""
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        window = self._SECTION_5 + "\n\n" + self._SECTION_6_SUMMARIZED_REWRITE
+        cleaned, dropped = collapse_duplicate_blocks(window, self._PRIOR_DOC)
+        assert dropped == 1
+        assert "Distributed Caching: Replicates cached data" not in cleaned
+        assert "Hierarchical Caching" in cleaned
+
+    def test_boilerplate_heading_moderate_overlap_survives(self):
+        """A 'Key Concepts' block under a repeated subheading with moderate
+        (~0.30) but genuine fresh wording must survive — the high bar
+        applies to boilerplate headings even when they repeat."""
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        prior = (
+            "## 1. Foundations\n"
+            "### Key Concepts\n"
+            "Distributed systems are collections of autonomous nodes that "
+            "communicate over a network. Concurrency is managed through "
+            "locks, semaphores, and condition variables. The lack of a "
+            "global clock requires vector clocks and logical time to track "
+            "causality between events across nodes in the system.\n"
+        )
+        fresh = (
+            "## 2. Service Architecture\n"
+            "### Key Concepts\n"
+            "In any distributed system, concurrency is managed through "
+            "locks, semaphores, and condition variables, while the lack of "
+            "a global clock requires vector clocks and logical time. "
+            "Microservices decompose applications into independently "
+            "deployable services with well-defined APIs and event-driven "
+            "architecture reacts to events instead of direct invocation "
+            "between components."
+        )
+        cleaned, dropped = collapse_duplicate_blocks(fresh, prior)
+        assert dropped == 0
+        assert "Microservices decompose applications" in cleaned
+
+    _PRIOR_TWO_SECTIONS = (
+        "## 1. Foundations of Distributed Systems\n"
+        "Distributed systems are collections of autonomous computers "
+        "communicating over a network. Key challenges include concurrency, "
+        "the lack of a global clock, and independent component failures.\n"
+        "## 2. Service Architecture Patterns\n"
+        "Microservices decompose applications into independently deployable "
+        "services. Event-driven architecture reacts to events rather than "
+        "direct invocation between components."
+    )
+
+    def test_orphan_reannounced_headings_dropped(self):
+        """Real qwen2.5-7b artifact (round 5, run 8): the conclusion window
+        ended by re-announcing two earlier section headings with NO body
+        before the token budget cut it off. Orphan headings under the
+        _BLOCK_MIN_WORDS exemption leaked into the document tail. A
+        re-announced orphan carries no content and must be dropped; a FIRST
+        announcement must survive so the next window can write under it."""
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        window = (
+            "## Conclusion\n"
+            "This guide covered the foundations of distributed systems, "
+            "service architecture patterns, and API design. Each section "
+            "presented key concepts, trade-offs, and real-world patterns "
+            "for senior engineers building scalable, reliable systems.\n"
+            "## Section 1: Foundations of Distributed Systems\n"
+            "## Section 2: Service Architecture Patterns"
+        )
+        cleaned, dropped = collapse_duplicate_blocks(window, self._PRIOR_TWO_SECTIONS)
+        assert dropped == 2
+        assert cleaned.rstrip().endswith("reliable systems.")
+        assert "Section 1: Foundations" not in cleaned
+
+    def test_orphan_first_announcement_survives(self):
+        from crp.continuation.manager import collapse_duplicate_blocks
+
+        window = (
+            "Some closing words about the guide as a whole and its "
+            "intended audience of senior engineers.\n"
+            "## 6. Deployment and Operations"
+        )
+        cleaned, dropped = collapse_duplicate_blocks(window, self._PRIOR_TWO_SECTIONS)
+        assert dropped == 0
+        assert cleaned.rstrip().endswith("## 6. Deployment and Operations")
+
 
 class TestContinuationDirectiveTitles:
     """Continuation directives must name missing sections by TITLE. A bare

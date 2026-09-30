@@ -2,6 +2,27 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.12] — Natural-Language Safety Policy Inference
+
+### Added
+- **`crp.policy.nl_infer`** (SPEC-033/034 extension) — declare safety policy
+  in plain English. `infer_from_text("never let it delete files without
+  asking me first")` returns Safety Control Plane settings
+  (`human_oversight=automatic`, `oversight_required={"destructive"}`), with
+  every matched rule surfaced in `matched_rules` for auditability — an
+  inferred policy is never a black box. Two layers:
+  - a deterministic keyword/pattern layer (zero cost, always available);
+  - an optional LLM-assisted layer (`infer_from_text_with_llm`, pass any
+    already-resolved `model_call`) for phrasing the keyword layer misses —
+    advisory enrichment that falls back cleanly on provider errors or
+    malformed output, and silently drops unknown capability keys or
+    safety-class tokens.
+  - `looks_like_natural_language()` lets callers (e.g. `crp.Agent(safety=...)`)
+    route a string argument to profile parsing vs. NL inference.
+- Public API re-exported from `crp.policy`: `InferredPolicy`,
+  `infer_from_text`, `infer_from_text_with_llm`,
+  `looks_like_natural_language`.
+
 ## [6.1.11] — Summarized Section-Rewrite Collapse
 
 ### Fixed

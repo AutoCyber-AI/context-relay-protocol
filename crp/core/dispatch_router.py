@@ -4687,6 +4687,9 @@ class DispatchMixin:
             continuation_termination_reason=(
                 cont_state.termination_reason if cont_state is not None else ""
             ),
+            duplicate_blocks_collapsed=(
+                cont_state.blocks_collapsed if cont_state is not None else 0
+            ),
             facts_extracted=extraction.total_facts,
             continuation_triggered=continuation_windows > 0,
             continuation_index=continuation_windows,

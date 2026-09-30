@@ -39,6 +39,109 @@ def _window_6grams(text: str) -> set[str]:
     return {" ".join(words[i: i + 6]) for i in range(len(words) - 5)}
 
 
+# Duplicate-block collapse: when a model starts looping mid-window it often
+# rewrites a whole section block a second time inside the SAME window. The
+# cross-window near-duplicate guard cannot see that (it compares completed
+# windows), so the redundant block would enter the document verbatim. Blocks
+# are dropped on EITHER signal: (a) their normalized heading re-announces an
+# already-written heading (catches heavily-reworded rewrites that share few
+# 6-grams — measured as low as 0.37 overlap on real data), or (b) their
+# 6-gram overlap with already-written content is very high.
+_BLOCK_DUP_THRESHOLD = 0.50
+_BLOCK_MIN_WORDS = 40
+
+
+def _normalize_heading(text: str) -> str:
+    """Normalize a heading for equality comparison: '## Section 3: Data
+    Modeling and Storage' and '### 3. Data Modeling and Storage' must match."""
+    h = re.sub(r"^#{1,6}\s*", "", text.strip().lower())
+    h = re.sub(r"^section\s+\d{1,3}\s*[:.)-]?\s*", "", h)
+    h = re.sub(r"^\d{1,3}\s*[.)]\s*", "", h)
+    return re.sub(r"[^a-z0-9 ]", "", h).strip()
+
+
+def _block_headings(text: str) -> set[str]:
+    """Normalized headings declared in a text."""
+    return {
+        _normalize_heading(m.group(1))
+        for m in re.finditer(r"^#{1,6}\s+(.+)$", text, re.MULTILINE)
+    }
+
+
+def _split_markdown_blocks(text: str) -> list[str]:
+    """Split markdown into heading-delimited blocks (heading kept with body)."""
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in text.split("\n"):
+        if line.startswith("#") and current:
+            blocks.append(current)
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        blocks.append(current)
+    return ["\n".join(b) for b in blocks if "\n".join(b).strip()]
+
+
+def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
+    """Drop blocks that rewrite content already written (prior windows or
+    earlier blocks of this same window).
+
+    Returns (cleaned_text, blocks_dropped). If every block duplicates, the
+    original is returned unchanged so the cross-window near-duplicate guard
+    remains the terminating authority — never leave an empty document.
+    """
+    blocks = _split_markdown_blocks(output)
+    if len(blocks) < 2:
+        return output, 0
+
+    prior_grams = _window_6grams(prior_text) if prior_text else set()
+    prior_headings = _block_headings(prior_text) if prior_text else set()
+    kept: list[str] = []
+    kept_grams: set[str] = set()
+    kept_headings: set[str] = set()
+    dropped = 0
+    for block in blocks:
+        heading_line = next(
+            (ln for ln in block.split("\n") if ln.startswith("#")), "",
+        )
+        norm_h = _normalize_heading(heading_line) if heading_line else ""
+        word_n = len(_WORD_RE.findall(block))
+        if word_n >= _BLOCK_MIN_WORDS:
+            grams = _window_6grams(block)
+            max_overlap = 0.0
+            if grams:
+                against_prior = (
+                    len(grams & prior_grams) / len(grams) if prior_grams else 0.0
+                )
+                against_kept = (
+                    len(grams & kept_grams) / len(grams) if kept_grams else 0.0
+                )
+                max_overlap = max(against_prior, against_kept)
+            # Heading re-announcement alone is NOT enough: recurring
+            # subsection titles like "Key Concepts" / "Trade-offs" appear in
+            # every section of a guide. A block is dropped on a heading match
+            # only when its wording also overlaps the earlier content — the
+            # user's real rewrite measured 0.37 here, while a fresh "Key
+            # Concepts" block under a repeated heading sits near 0.05.
+            heading_dup = (
+                bool(norm_h)
+                and (norm_h in kept_headings or norm_h in prior_headings)
+                and max_overlap >= 0.20
+            )
+            if heading_dup or max_overlap >= _BLOCK_DUP_THRESHOLD:
+                dropped += 1
+                continue
+            kept_grams |= grams
+        if norm_h:
+            kept_headings.add(norm_h)
+        kept.append(block)
+
+    if dropped and kept:
+        return "\n".join(kept), dropped
+    return output, 0
+
+
 class LLMDispatcher(Protocol):
     """Protocol for an LLM dispatch callback used by the continuation loop."""
 
@@ -112,6 +215,10 @@ class ContinuationState:
         window_outputs: Per-window raw outputs with metadata.
         section_rewrites: Headings that re-announced an already-completed
             section across all windows so far (anti-rewrite guard signal).
+        blocks_collapsed: Whole blocks (sections/paragraph groups) removed
+            from window outputs because they rewrote earlier content —
+            within-window duplication the cross-window near-duplicate guard
+            cannot see.
     """
 
     window_count: int = 0
@@ -129,6 +236,7 @@ class ContinuationState:
     regrounded: bool = False
     window_outputs: list[dict[str, Any]] = field(default_factory=list)
     section_rewrites: int = 0
+    blocks_collapsed: int = 0
 
 
 class ContinuationManager:
@@ -220,14 +328,35 @@ class ContinuationManager:
 
         if missing and completed_sections:
             last_completed = max(completed_sections)
-            next_sections = ", ".join(str(n) for n in missing[:10])
+            titles = self._get_expected_section_titles(task_intent)
+            # Name each missing section by TITLE, not just number. The compact
+            # task reference in continuation windows drops the original
+            # numbered list, so a bare "section 3" leaves the model to guess
+            # the topic — and it guesses wrong (observed live: window tasked
+            # with "3. API Design and Versioning" wrote "Data Modeling and
+            # Storage" instead).
+            missing_named = ", ".join(
+                f"{n}. {titles[n]}" if n in titles else str(n)
+                for n in missing[:10]
+            )
+            next_n = missing[0]
+            next_title = titles.get(next_n)
+            heading_instr = (
+                f"Begin your output with the heading '## {next_n}. {next_title}' "
+                if next_title
+                else f"Begin your output with the heading '## {next_n}.' "
+            )
             sections.append(
                 "[CONTINUATION DIRECTIVE]\n"
                 f"You have completed sections up to {last_completed}. "
-                f"The following sections are MISSING and MUST be written next: {next_sections}.\n"
+                f"The following sections are MISSING and MUST be written next, "
+                f"in this order: {missing_named}.\n"
+                f"Write ONLY section {next_n}"
+                + (f" ({next_title})" if next_title else "")
+                + " now. " + heading_instr +
                 "Do NOT repeat any previously written sections. "
-                "Start writing from the next missing section immediately. "
-                "Do NOT restart from Section 1."
+                "Do NOT restart from Section 1. "
+                "Do NOT write any section other than the one named above."
             )
         elif completed_sections:
             last_completed = max(completed_sections)
@@ -335,6 +464,19 @@ class ContinuationManager:
             return list(range(1, count + 1))
         return []
 
+    def _get_expected_section_titles(self, task_intent: str) -> dict[int, str]:
+        """Map section number -> title from a numbered list in the task text.
+
+        Matches lines like "3. API Design and Versioning" so continuation
+        directives can name the exact topic each missing section must cover.
+        """
+        titles: dict[int, str] = {}
+        for m in re.finditer(
+            r"^\s*(\d{1,3})[.)]\s+(.+?)\s*$", task_intent, re.MULTILINE,
+        ):
+            titles[int(m.group(1))] = m.group(2).strip()
+        return titles
+
     def process_window(
         self,
         task_intent: str,
@@ -363,6 +505,16 @@ class ContinuationManager:
         Returns:
             Updated ``ContinuationState``.
         """
+        # Within-window duplicate collapse: drop section blocks that rewrite
+        # content already in the document (including earlier blocks of THIS
+        # window) before anything ingests the output. The cross-window
+        # near-duplicate guard fires only after the fact; this keeps the
+        # recycled material out of the document and the document map.
+        prior_text = self._outputs[-1] if self._outputs else ""
+        output, _collapsed = collapse_duplicate_blocks(output, prior_text)
+        if _collapsed:
+            self._state.blocks_collapsed += _collapsed
+
         self._outputs.append(output)
         self._state.window_count += 1
         self._state.total_tokens += output_tokens

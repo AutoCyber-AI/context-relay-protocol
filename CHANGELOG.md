@@ -2,6 +2,31 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.1.9] — Within-Window Duplicate Collapse + Title-Preserving Continuation Directives
+
+### Fixed
+- **Within-window section rewrites entering the document** — a model that
+  starts looping mid-window often rewrites a whole section block a second
+  time *inside the same window*. The cross-window near-duplicate guard
+  (6.1.7) cannot see this: it compares completed windows. The continuation
+  manager now collapses duplicate blocks before ingesting a window's output
+  — a block is dropped when its normalized heading re-announces an
+  already-written heading AND its 6-gram overlap with prior content is
+  >= 0.20, or when overlap alone reaches 0.50. Recurring subsection titles
+  ("Key Concepts", "Trade-offs") with genuinely new content are preserved
+  (calibrated on a real qwen2.5-7b artifact: rewrite measured 0.37 overlap,
+  fresh content under a repeated heading ~0.05). Count exposed as
+  `ContinuationState.blocks_collapsed` and
+  `WindowMetrics.duplicate_blocks_collapsed` in dispatch telemetry.
+- **Continuation windows writing the wrong section** — continuation
+  directives listed missing sections as bare numbers ("section 3"), while
+  the compact task reference in continuation windows drops the original
+  numbered list. Small models guessed the topic (observed live twice:
+  a window tasked with "3. API Design and Versioning" wrote "Data Modeling
+  and Storage"; the next run skipped section 3 entirely). Directives now
+  name each missing section by title, instruct the model to write ONLY the
+  next missing section, and specify the exact heading to begin with.
+
 ## [6.1.8] — Telemetry Serialization Fix
 
 ### Fixed

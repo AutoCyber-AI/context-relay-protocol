@@ -72,7 +72,7 @@ dev = [
     # crp_shared (repo-local shared server package) test collection needs these
     "fastapi>=0.110,<1",
     "asyncpg>=0.29,<1",
-    "webauthn>=2.0,<3",
+    "webauthn>=2.0,<4",
 ]
 docs = [
     "mkdocs-material>=9.5,<10",

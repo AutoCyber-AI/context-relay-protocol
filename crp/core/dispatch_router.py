@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import re
 import time
 import uuid
@@ -34,6 +35,13 @@ from crp.core.window import (
     resolve_generation_reserve,
 )
 from crp.security.audit_trail import ComplianceEventType
+from crp.security.transcript_store import (
+    ENV_TRANSCRIPT_DIR,
+    TranscriptRecord,
+    TranscriptStore,
+    hash_text,
+    redact_text,
+)
 
 if TYPE_CHECKING:
     import threading
@@ -296,6 +304,8 @@ class DispatchMixin:
     _human_oversight: HumanOversightController
     _risk_classifier: RiskClassifier
     _compliance_reporter: ComplianceReporter
+    # Transcript capture (schema 2.1.0) — lazily created by _get_transcript_store
+    _transcript_store: TranscriptStore | None
 
     if TYPE_CHECKING:
         def _check_session(self) -> None: ...
@@ -445,6 +455,156 @@ class DispatchMixin:
                     )
 
         return envelope
+
+    # ------------------------------------------------------------------
+    # Transcript capture (§7.14, schema 2.1.0 — docs/FIX_NOTE_transcript_capture.md)
+    # ------------------------------------------------------------------
+
+    def _get_transcript_store(self) -> TranscriptStore:
+        """Return (creating + attaching on first use) the session transcript store."""
+        store = getattr(self, "_transcript_store", None)
+        if store is None:
+            storage_dir = self._config.get("audit_transcript_dir", "") or os.environ.get(
+                ENV_TRANSCRIPT_DIR, ""
+            )
+            store = TranscriptStore(
+                storage_dir=storage_dir or None,
+                max_bytes=int(self._config.get("audit_transcript_max_bytes", 1_048_576)),
+            )
+            self._transcript_store = store
+            try:
+                self._compliance_audit.attach_transcript_store(store)
+            except Exception as exc:  # noqa: BLE001 — never break dispatch
+                logger.warning("Could not attach transcript store to audit trail: %s", exc)
+        return store
+
+    def _maybe_record_transcript(
+        self,
+        *,
+        node: WindowNode,
+        messages: list[dict[str, Any]] | None,
+        output: str,
+        system_prompt: str,
+        task_input: str,
+        operation: str,
+        window_type: str = "primary",
+        continuation_index: int = 0,
+    ) -> None:
+        """Persist a per-window transcript + emit TRANSCRIPT_RECORDED (§7.14).
+
+        Called at every window-completion site (all dispatch variants share
+        this path) right after ``node.raw_output_id`` is minted, so the id
+        stops dangling: the store resolves it to the persisted messages +
+        raw output.  OFF unless ``audit_capture_transcripts`` is enabled;
+        never raises into the dispatch pipeline.
+        """
+        if not self._config.get("audit_capture_transcripts", False):
+            return
+        try:
+            redact = bool(self._config.get("audit_transcript_redact_pii", False))
+            store = self._get_transcript_store()
+            pii_types: set[str] = set()
+
+            sys_stored, task_stored, out_stored = system_prompt, task_input, output
+            if redact:
+                # Integrate with the existing advisory _pii_scanner results:
+                # the stored variant replaces detected spans with markers.
+                for attr, value in (
+                    ("system_prompt", system_prompt),
+                    ("task_input", task_input),
+                    ("output", output),
+                ):
+                    scan = self._pii_scanner.scan(value)
+                    pii_types |= scan.pii_types_found
+                    if attr == "system_prompt":
+                        sys_stored = redact_text(value, scan)
+                    elif attr == "task_input":
+                        task_stored = redact_text(value, scan)
+                    else:
+                        out_stored = redact_text(value, scan)
+
+            record = TranscriptRecord(
+                raw_output_id=node.raw_output_id,
+                window_id=node.window_id,
+                session_id=self._session.session_id,
+                operation=operation,
+                window_type=window_type,
+                continuation_index=continuation_index,
+                system_prompt=sys_stored,
+                task_input=task_stored,
+                messages=list(messages) if messages else [],
+                output=out_stored,
+                redacted=redact,
+                pii_types=sorted(pii_types),
+            )
+            transcript_ref = store.store(record)
+
+            # Reuse the exact hashing convention of LLM_CALL_COMPLETED
+            # (truncated sha256) so chain ↔ content joins are trivial.
+            self._compliance_audit.record(
+                ComplianceEventType.TRANSCRIPT_RECORDED,
+                session_id=self._session.session_id,
+                data={
+                    "operation": operation,
+                    "window_id": node.window_id,
+                    "window_type": window_type,
+                    "continuation_index": continuation_index,
+                    "raw_output_id": node.raw_output_id,
+                    "input_hash": hash_text(task_stored)[:16],
+                    "output_hash": hash_text(out_stored)[:16],
+                    "system_prompt_hash": hash_text(sys_stored)[:16],
+                    "transcript_ref": transcript_ref,
+                    "bytes_in": record.bytes_in,
+                    "bytes_out": record.bytes_out,
+                    "stored_bytes": record.stored_bytes,
+                    "truncated": record.truncated,
+                    "redacted": redact,
+                    "pii_types": sorted(pii_types),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 — capture must never break dispatch
+            logger.warning("Transcript capture failed (non-fatal): %s", exc)
+
+    def _audit_quarantine_validation(self, report: Any, *, window_id: str, operation: str) -> None:
+        """Record QUARANTINE_VALIDATED counters for a promotion pass (§7.8).
+
+        The QuarantineReport from ``IngestQuarantine.validate_and_promote``
+        was previously discarded by the dispatch variants — the quarantine
+        counters (promoted / rejected / batch-poisoned) never reached the
+        compliance chain.  This exposes them as a typed audit event; a
+        batch-poisoning verdict is additionally recorded as a security threat.
+        Never raises into the dispatch pipeline.
+        """
+        try:
+            if report is None or getattr(report, "total_quarantined", 0) <= 0:
+                return
+            self._compliance_audit.record(
+                ComplianceEventType.QUARANTINE_VALIDATED,
+                session_id=self._session.session_id,
+                data={
+                    "operation": operation,
+                    "window_id": window_id,
+                    "total_quarantined": report.total_quarantined,
+                    "promoted": report.promoted,
+                    "rejected": report.rejected,
+                    "batch_poisoned": report.batch_poisoned,
+                    "details": list(report.details)[:20],
+                },
+            )
+            if report.batch_poisoned:
+                self._compliance_audit.record(
+                    ComplianceEventType.SECURITY_THREAT_DETECTED,
+                    session_id=self._session.session_id,
+                    data={
+                        "operation": operation,
+                        "window_id": window_id,
+                        "threat_type": "batch_poisoning",
+                        "rejected": report.rejected,
+                        "total_quarantined": report.total_quarantined,
+                    },
+                )
+        except Exception as exc:  # noqa: BLE001 — audit must never break dispatch
+            logger.warning("Quarantine audit recording failed (non-fatal): %s", exc)
 
     # ------------------------------------------------------------------
     # Internal: input-side continuation (multi-window input processing)
@@ -1127,6 +1287,11 @@ class DispatchMixin:
         wall_ms = (time.monotonic_ns() - start_ms) / 1_000_000
         node.finish_reason = finish_reason
         node.raw_output_id = str(uuid.uuid4())
+        self._maybe_record_transcript(
+            node=node, messages=messages, output=output,
+            system_prompt=system_prompt, task_input=task_input,
+            operation="dispatch", window_type="primary",
+        )
         node.advance(WindowState.COMPLETED)
 
         logger.info(
@@ -1308,7 +1473,10 @@ class DispatchMixin:
         # Cross-reference quarantined facts against extraction-derived facts
         if self._quarantine.quarantine_count > 0 and extraction.facts:
             extraction_texts = {f.id: f.text for f in extraction.facts}
-            self._quarantine.validate_and_promote(window_id, extraction_texts)
+            _q_report = self._quarantine.validate_and_promote(window_id, extraction_texts)
+            self._audit_quarantine_validation(
+                _q_report, window_id=window_id, operation="dispatch"
+            )
 
         # ---------- PII scan on output (§7.12) ----------
         output_pii = self._pii_scanner.scan(output)
@@ -1614,6 +1782,12 @@ class DispatchMixin:
                 # Record minimal telemetry and continue
                 cont_node.finish_reason = cont_finish
                 cont_node.raw_output_id = str(uuid.uuid4())
+                self._maybe_record_transcript(
+                    node=cont_node, messages=cont_messages, output="",
+                    system_prompt=system_prompt, task_input=cont_task,
+                    operation="dispatch", window_type="continuation",
+                    continuation_index=continuation_windows,
+                )
                 cont_node.advance(WindowState.COMPLETED)
                 _per_window_detail.append({
                     "window": continuation_windows,
@@ -1647,6 +1821,12 @@ class DispatchMixin:
 
             cont_node.finish_reason = cont_finish
             cont_node.raw_output_id = str(uuid.uuid4())
+            self._maybe_record_transcript(
+                node=cont_node, messages=cont_messages, output=cont_output,
+                system_prompt=system_prompt, task_input=cont_task,
+                operation="dispatch", window_type="continuation",
+                continuation_index=continuation_windows,
+            )
             cont_node.advance(WindowState.COMPLETED)
 
             logger.info(
@@ -2531,6 +2711,11 @@ class DispatchMixin:
 
         node.finish_reason = finish_reason
         node.raw_output_id = str(uuid.uuid4())
+        self._maybe_record_transcript(
+            node=node, messages=messages, output=output,
+            system_prompt=system_prompt, task_input=task_input,
+            operation="dispatch_with_tools", window_type="primary",
+        )
         node.advance(WindowState.COMPLETED)
 
         logger.info(
@@ -2559,7 +2744,10 @@ class DispatchMixin:
         # ---------- Quarantine promotion ----------
         if self._quarantine.quarantine_count > 0 and extraction.facts:
             extraction_texts = {f.id: f.text for f in extraction.facts}
-            self._quarantine.validate_and_promote(window_id, extraction_texts)
+            _q_report = self._quarantine.validate_and_promote(window_id, extraction_texts)
+            self._audit_quarantine_validation(
+                _q_report, window_id=window_id, operation="dispatch_with_tools"
+            )
 
         # ---------- LLM context curation ----------
         if self._curator.should_curate(self._windows_completed):
@@ -2839,6 +3027,15 @@ class DispatchMixin:
 
         node.finish_reason = finish_reason
         node.raw_output_id = str(uuid.uuid4())
+        # messages_refine is the last full message array sent to the provider
+        # in this variant; pass 1 used messages_pass1.
+        self._maybe_record_transcript(
+            node=node,
+            messages=messages_refine if total_passes > 1 else messages_pass1,
+            output=output,
+            system_prompt=system_prompt, task_input=task_input,
+            operation="dispatch_reflexive", window_type="primary",
+        )
         node.advance(WindowState.COMPLETED)
 
         # ---------- Extract facts from FINAL output ----------
@@ -3115,6 +3312,13 @@ class DispatchMixin:
 
         node.finish_reason = finish_reason
         node.raw_output_id = str(uuid.uuid4())
+        self._maybe_record_transcript(
+            node=node,
+            messages=messages_detail if detail_entries > 0 else messages_indexed,
+            output=output,
+            system_prompt=system_prompt, task_input=task_input,
+            operation="dispatch_progressive", window_type="primary",
+        )
         node.advance(WindowState.COMPLETED)
 
         # ---------- Extract facts from final output ----------
@@ -3484,6 +3688,11 @@ class DispatchMixin:
 
         node.finish_reason = finish_reason
         node.raw_output_id = str(uuid.uuid4())
+        self._maybe_record_transcript(
+            node=node, messages=current_messages, output=output,
+            system_prompt=system_prompt, task_input=task_input,
+            operation="dispatch_stream_augmented", window_type="primary",
+        )
         node.advance(WindowState.COMPLETED)
 
         # ---------- Extract facts from final output ----------
@@ -4537,6 +4746,12 @@ class DispatchMixin:
 
             current_node.finish_reason = finish_reason
             current_node.raw_output_id = str(uuid.uuid4())
+            self._maybe_record_transcript(
+                node=current_node, messages=current_messages, output=output_segment,
+                system_prompt=system_prompt, task_input=task_input,
+                operation="dispatch_stream", window_type="segment",
+                continuation_index=continuation_windows,
+            )
             current_node.advance(WindowState.COMPLETED)
             current_node.advance(WindowState.EXTRACTED)
 

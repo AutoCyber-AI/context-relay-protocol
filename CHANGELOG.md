@@ -2,6 +2,60 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.2.0] — Transcript Capture + Incident Events (audit schema 2.1.0)
+
+### Added
+- **Opt-in transcript capture for the compliance audit chain** (§7.14,
+  `docs/FIX_NOTE_transcript_capture.md`). `LLM_CALL_COMPLETED` previously
+  recorded only truncated hashes and telemetry — every window minted
+  `node.raw_output_id` but nothing persisted content against it. Now:
+  - New **`TRANSCRIPT_RECORDED`** compliance event (audit schema **2.1.0**),
+    emitted once per window (primary + each continuation) with payload
+    `{window_id, raw_output_id, input_hash, output_hash, transcript_ref,
+    bytes_in, bytes_out, redacted, pii_types}` — reusing the exact truncated
+    SHA-256 convention of `LLM_CALL_COMPLETED` so chain ↔ content joins are
+    trivial.
+  - New **`crp/security/transcript_store.py`** — content-addressed store
+    persisting the assembled messages + raw output per window, keyed by
+    `raw_output_id`; per-window JSON files + `manifest.jsonl`, or memory-only
+    when no directory is configured. **`verify_transcripts()`** re-hashes
+    stored content and proves it matches the chain (stored-content ↔ event
+    hashes ↔ unredacted `LLM_CALL_COMPLETED` hashes); an edited transcript
+    flags at the exact window. Also `ComplianceAuditTrail.verify_transcripts()`.
+  - **Config, OFF by default** (zero overhead unless enabled):
+    `audit_capture_transcripts` (env `CRP_AUDIT_CAPTURE_TRANSCRIPTS`),
+    `audit_transcript_max_bytes` (env `CRP_AUDIT_TRANSCRIPT_MAX_BYTES`),
+    `audit_transcript_redact_pii` (env `CRP_AUDIT_TRANSCRIPT_REDACT_PII`,
+    integrates with the existing advisory `_pii_scanner` results — stored
+    variant replaces detected spans with `[REDACTED:<type>]` markers and
+    records `redacted`/`pii_types` on the event), `audit_transcript_dir`
+    (env `CRP_AUDIT_TRANSCRIPT_DIR`). Byte cap honoured on disk; oversized
+    outputs are head-truncated with the full-content hash kept for chain
+    linkage.
+  - **Export**: `export_jsonl(..., include_transcripts=True)` appends
+    `record_type="transcript"` lines for a self-contained bundle;
+    `export_ocsf(..., include_transcripts=True)` carries transcript refs and
+    content hashes in `unmapped`.
+  - Wired into **`crp/core/dispatch_router.py`** at every window-completion
+    site across all dispatch variants (`dispatch`, `dispatch_with_tools`,
+    `dispatch_reflexive`, `dispatch_progressive`, `dispatch_stream_augmented`,
+    `dispatch_stream`, continuation windows) — `raw_output_id` stops dangling.
+    Capture failures are logged and never break dispatch.
+- **INCIDENT_* compliance event types** (SPEC-033 §3.4; for the WASA
+  self-healing loop): `INCIDENT_CAPTURED`, `INCIDENT_DIAGNOSED`,
+  `INCIDENT_REMEDIATED`, `INCIDENT_VERIFIED` with documented, validated
+  payload shapes (`INCIDENT_PAYLOAD_SHAPES` /
+  `validate_incident_payload()` in `crp/security/audit_trail.py`):
+  incident_id + session id + tool/component throughout; classification +
+  evidence hash refs (CAPTURED); hypothesis (DIAGNOSED); action enum +
+  before/after state (REMEDIATED); probe result (VERIFIED).
+- **`QUARANTINE_VALIDATED`** compliance event (§7.8) — the
+  `QuarantineReport` from ingest-quarantine promotion was previously
+  discarded by the dispatch variants; promoted/rejected counters and the
+  batch-poisoning verdict now reach the compliance chain (batch poisoning
+  is additionally recorded as `SECURITY_THREAT_DETECTED`).
+- Tests: `tests/test_transcript_capture.py` (33).
+
 ## [6.1.12] — Natural-Language Safety Policy Inference
 
 ### Added

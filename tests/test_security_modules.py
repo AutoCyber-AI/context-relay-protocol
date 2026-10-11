@@ -82,7 +82,7 @@ class TestAuditTrailIntegrity:
         assert ComplianceEventType.PROVENANCE_ENGINE_FAILURE
         assert ComplianceEventType.PROVENANCE_DISABLED
         assert ComplianceEventType.ENTAILMENT_MODEL_STATUS
-        assert len(ComplianceEventType) == 61
+        assert len(ComplianceEventType) == 67
 
     def test_provenance_events_recordable(self) -> None:
         trail = ComplianceAuditTrail(signing_key=b"k", session_id="s")

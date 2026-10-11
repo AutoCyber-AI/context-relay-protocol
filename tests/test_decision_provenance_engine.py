@@ -762,8 +762,9 @@ class TestComplianceEventTypes:
     def test_total_event_types(self):
         # Current enum includes lifecycle, consent, privacy, security, oversight,
         # session, risk, LLM provenance, DPE, fidelity, entailment, hallucination,
-        # provenance engine ops, RQA, activation, and window DAG events.
-        assert len(ComplianceEventType) == 61
+        # provenance engine ops, RQA, activation, window DAG,
+        # transcript, incident lifecycle, and quarantine events.
+        assert len(ComplianceEventType) == 67
 
 
 # ===================================================================

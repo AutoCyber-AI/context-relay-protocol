@@ -170,6 +170,14 @@ Auto-generated reference for the ``crp.security`` subpackage.
       filters:
         - "!^_"
 
+## `security.transcript_store`
+
+::: crp.security.transcript_store
+    options:
+      show_source: false
+      filters:
+        - "!^_"
+
 ## `security.trust_monitor`
 
 ::: crp.security.trust_monitor

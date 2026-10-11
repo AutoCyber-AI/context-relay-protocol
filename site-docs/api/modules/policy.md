@@ -50,6 +50,14 @@ Auto-generated reference for the ``crp.policy`` subpackage.
       filters:
         - "!^_"
 
+## `policy.nl_infer`
+
+::: crp.policy.nl_infer
+    options:
+      show_source: false
+      filters:
+        - "!^_"
+
 ## `policy.nonce`
 
 ::: crp.policy.nonce

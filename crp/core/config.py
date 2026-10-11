@@ -83,6 +83,21 @@ _DEFAULTS: dict[str, Any] = {
     #   "multi_window" — use full LLM windows to process each input chunk and
     #                    relay extracted facts between windows.
     "input_continuation_mode": "auto_ingest",
+    # Transcript capture for the compliance audit chain (§7.14, schema 2.1.0).
+    # OFF by default — zero overhead unless explicitly enabled.
+    #   audit_capture_transcripts — persist per-window messages + raw output
+    #                               keyed by raw_output_id, and emit
+    #                               compliance.transcript_recorded per window.
+    #   audit_transcript_max_bytes — per-transcript serialized byte cap.
+    #   audit_transcript_redact_pii — store a PII-redacted variant instead of
+    #                                 raw content (redaction state is recorded
+    #                                 on the transcript event).
+    #   audit_transcript_dir — storage directory ("" → CRP_AUDIT_TRANSCRIPT_DIR
+    #                          env → memory-only when neither is set).
+    "audit_capture_transcripts": False,
+    "audit_transcript_max_bytes": 1_048_576,
+    "audit_transcript_redact_pii": False,
+    "audit_transcript_dir": "",
 }
 
 # Fields set at init that CANNOT change after session start
@@ -119,18 +134,23 @@ _ENV_MAP: dict[str, str] = {
     "EAGER_LOAD_MODELS": "eager_load_models",
     "DISPATCH_TIMEOUT": "dispatch_timeout",
     "INPUT_CONTINUATION_MODE": "input_continuation_mode",
+    "AUDIT_CAPTURE_TRANSCRIPTS": "audit_capture_transcripts",
+    "AUDIT_TRANSCRIPT_MAX_BYTES": "audit_transcript_max_bytes",
+    "AUDIT_TRANSCRIPT_REDACT_PII": "audit_transcript_redact_pii",
+    "AUDIT_TRANSCRIPT_DIR": "audit_transcript_dir",
 }
 
 _BOOL_KEYS = frozenset({"enabled", "log_envelopes", "encrypt_cold_state",
                          "enable_stage_3", "enable_stage_4", "enable_stage_5",
-                         "enable_stage_6", "eager_load_models"})
+                         "enable_stage_6", "eager_load_models",
+                         "audit_capture_transcripts", "audit_transcript_redact_pii"})
 _INT_KEYS = frozenset({
     "max_continuations", "max_dispatch_rate", "session_timeout",
     "ingest_quarantine", "max_ram_mb", "max_model_ram_mb", "max_threads",
     "max_windows_per_session", "max_total_input_tokens",
     "max_total_output_tokens", "max_envelope_latency_ms",
     "max_extraction_latency_ms", "max_windows_per_minute",
-    "dispatch_timeout",
+    "dispatch_timeout", "audit_transcript_max_bytes",
 })
 
 
@@ -247,6 +267,7 @@ _INT_BOUNDS: dict[str, tuple[int | None, int | None]] = {
     "parallel_max_concurrent": (1, 128),
     "dispatch_timeout": (10, 86_400),  # 10s – 24h
     "memory_budget_mb": (1, 65_536),
+    "audit_transcript_max_bytes": (1_024, 2**31),
 }
 _FLOAT_BOUNDS: dict[str, tuple[float | None, float | None]] = {
     "overhead_cap_pct": (0.0, 100.0),

@@ -223,6 +223,130 @@ class ComplianceEventType(str, Enum):
     CHAIN_INTEGRITY_BROKEN = "compliance.chain_integrity_broken"
     FAN_IN_MERGED = "compliance.fan_in_merged"
 
+    # Transcript capture (schema 2.1.0 — docs/FIX_NOTE_transcript_capture.md)
+    # Emitted once per window (primary + each continuation) when
+    # ``CRP_AUDIT_CAPTURE_TRANSCRIPTS`` / ``audit_capture_transcripts`` is on.
+    # Payload: {window_id, raw_output_id, input_hash, output_hash,
+    #           transcript_ref, bytes_in, bytes_out, redacted, pii_types}
+    TRANSCRIPT_RECORDED = "compliance.transcript_recorded"
+
+    # Self-healing incident lifecycle (SPEC-033 §3.4; WASA self-healing loop).
+    # Typed payloads — see INCIDENT_PAYLOAD_SHAPES / validate_incident_payload.
+    INCIDENT_CAPTURED = "compliance.incident_captured"
+    INCIDENT_DIAGNOSED = "compliance.incident_diagnosed"
+    INCIDENT_REMEDIATED = "compliance.incident_remediated"
+    INCIDENT_VERIFIED = "compliance.incident_verified"
+
+    # Ingest quarantine validation counters (§7.8)
+    QUARANTINE_VALIDATED = "compliance.quarantine_validated"
+
+
+# ---------------------------------------------------------------------------
+# Incident lifecycle payload shapes (SPEC-033 §3.4)
+# ---------------------------------------------------------------------------
+
+#: Canonical payload shapes for the INCIDENT_* event types.  Maps each event
+#: type to ``field -> description``; :func:`validate_incident_payload` enforces
+#: the required fields so self-healing loops emit first-class, machine-checkable
+#: incident records instead of free-form strings.
+#:
+#: INCIDENT_CAPTURED  — an anomaly was observed and isolated:
+#:   incident_id, session_id (engagement), component (tool/subsystem),
+#:   classification (e.g. "tool_failure" | "anomalous_output" | "trust_decay"),
+#:   evidence_refs (list of content hashes / artifact refs)
+#: INCIDENT_DIAGNOSED — root-cause hypothesis recorded:
+#:   incident_id, session_id, component, hypothesis, evidence_refs
+#: INCIDENT_REMEDIATED — a corrective action was applied:
+#:   incident_id, session_id, action (enum), state_before, state_after
+#: INCIDENT_VERIFIED  — post-remediation probe result:
+#:   incident_id, session_id, probe_result
+INCIDENT_PAYLOAD_SHAPES: dict[str, dict[str, str]] = {
+    ComplianceEventType.INCIDENT_CAPTURED.value: {
+        "incident_id": "Unique incident identifier (links the lifecycle).",
+        "session_id": "Engagement / session the incident belongs to.",
+        "component": "Tool or subsystem the incident attaches to.",
+        "classification": "Coarse incident class (e.g. tool_failure, anomalous_output).",
+        "evidence_refs": "List of evidence references (content hashes / artifact ids).",
+    },
+    ComplianceEventType.INCIDENT_DIAGNOSED.value: {
+        "incident_id": "Unique incident identifier (links the lifecycle).",
+        "session_id": "Engagement / session the incident belongs to.",
+        "component": "Tool or subsystem the incident attaches to.",
+        "hypothesis": "Root-cause hypothesis recorded by the diagnoser.",
+        "evidence_refs": "List of evidence references supporting the hypothesis.",
+    },
+    ComplianceEventType.INCIDENT_REMEDIATED.value: {
+        "incident_id": "Unique incident identifier (links the lifecycle).",
+        "session_id": "Engagement / session the incident belongs to.",
+        "action": "Remediation action taken (enum, e.g. restart_service, swap_model).",
+        "state_before": "Serializable component state before remediation.",
+        "state_after": "Serializable component state after remediation.",
+    },
+    ComplianceEventType.INCIDENT_VERIFIED.value: {
+        "incident_id": "Unique incident identifier (links the lifecycle).",
+        "session_id": "Engagement / session the incident belongs to.",
+        "probe_result": "Serializable probe outcome (pass/fail + measurements).",
+    },
+}
+
+#: Allowed values for INCIDENT_REMEDIATED ``action`` (open enum — new actions
+#: must be lowercase snake_case; unknown values validate with a warning-level
+#: note via ``extra_fields``, never a hard error).
+INCIDENT_ACTIONS: frozenset[str] = frozenset({
+    "retry",
+    "restart_service",
+    "swap_model",
+    "reduce_context",
+    "gate_tool",
+    "rollback",
+    "escalate",
+    "skip_step",
+})
+
+
+def validate_incident_payload(
+    event_type: ComplianceEventType | str,
+    data: dict[str, Any],
+) -> list[str]:
+    """Validate an INCIDENT_* event payload against its canonical shape.
+
+    Args:
+        event_type: One of the four INCIDENT_* event types (enum or value str).
+        data: Event payload to validate.
+
+    Returns:
+        A list of problems (empty when the payload conforms).  Problems are
+        strings of the form ``"missing field: <name>"`` or
+        ``"bad type: <name> (expected <t>, got <t>)"``.  Non-incident event
+        types return an empty list (no shape constraint).
+    """
+    evt = event_type.value if isinstance(event_type, ComplianceEventType) else event_type
+    shape = INCIDENT_PAYLOAD_SHAPES.get(evt)
+    if shape is None:
+        return []
+    problems: list[str] = []
+    for field_name in shape:
+        if field_name not in data or data[field_name] is None:
+            problems.append(f"missing field: {field_name}")
+    if evt == ComplianceEventType.INCIDENT_CAPTURED.value:
+        refs = data.get("evidence_refs")
+        if refs is not None and not isinstance(refs, list):
+            problems.append(
+                f"bad type: evidence_refs (expected list, got {type(refs).__name__})"
+            )
+        comp = data.get("component")
+        if comp is not None and not isinstance(comp, str):
+            problems.append(
+                f"bad type: component (expected str, got {type(comp).__name__})"
+            )
+    if evt == ComplianceEventType.INCIDENT_REMEDIATED.value:
+        action = data.get("action")
+        if action is not None and not isinstance(action, str):
+            problems.append(
+                f"bad type: action (expected str, got {type(action).__name__})"
+            )
+    return problems
+
 
 # ---------------------------------------------------------------------------
 # Tamper-evident audit entry
@@ -329,6 +453,24 @@ class ComplianceAuditTrail:
         self._entries: list[AuditEntry] = []
         self._sequence = 0
         self._lock = threading.Lock()
+        # Optional transcript store (attached by the orchestrator when
+        # audit_capture_transcripts is enabled) — powers verify_transcripts()
+        # and include_transcripts exports.
+        self._transcript_store: Any | None = None
+
+    def attach_transcript_store(self, store: Any) -> None:
+        """Attach a :class:`crp.security.transcript_store.TranscriptStore`.
+
+        Enables :meth:`verify_transcripts` and transcript-aware exports on
+        this trail.  Called by the dispatch router the first time a transcript
+        is captured for a session.
+        """
+        self._transcript_store = store
+
+    @property
+    def transcript_store(self) -> Any | None:
+        """The attached transcript store, or None when capture is disabled."""
+        return self._transcript_store
 
     @property
     def entry_count(self) -> int:
@@ -396,6 +538,10 @@ class ComplianceAuditTrail:
             if self._action_signer is not None:
                 entry.schema_version = "2.0.0"
                 entry.receipt = self._action_signer.sign(entry_hash)
+            # Transcript events carry the transcript-capable schema (2.1.0);
+            # receipts still apply when a signer is configured.
+            if evt == ComplianceEventType.TRANSCRIPT_RECORDED.value:
+                entry.schema_version = "2.1.0"
             self._entries.append(entry)
             self._sequence += 1
 
@@ -475,6 +621,51 @@ class ComplianceAuditTrail:
                     return False, entry.sequence
 
             return True, -1
+
+    def verify_transcripts(self, *, session_id: str | None = None) -> Any:
+        """Verify stored transcripts against this trail (schema 2.1.0).
+
+        Companion to :meth:`verify_chain`: re-hashes stored transcript
+        content and confirms it matches the ``TRANSCRIPT_RECORDED`` events
+        and — for unredacted transcripts — the ``LLM_CALL_COMPLETED`` hashes
+        already chained here.  An edited transcript flags at the exact window.
+
+        Returns:
+            :class:`crp.security.transcript_store.TranscriptVerification`.
+
+        Raises:
+            ValueError: If no transcript store is attached (capture disabled).
+        """
+        if self._transcript_store is None:
+            raise ValueError(
+                "No transcript store attached — enable audit_capture_transcripts "
+                "(/ CRP_AUDIT_CAPTURE_TRANSCRIPTS) so transcripts are captured"
+            )
+        from crp.security.transcript_store import verify_transcripts
+
+        return verify_transcripts(self._transcript_store, self, session_id=session_id)
+
+    def _transcript_dicts(self) -> list[dict[str, Any]]:
+        """Stored transcripts matching this trail's sessions, as dicts."""
+        if self._transcript_store is None:
+            return []
+        try:
+            records = [
+                self._transcript_store.get(rid)
+                for rid in self._transcript_store.list_ids()
+            ]
+        except Exception as exc:  # noqa: BLE001 — export must never raise
+            logger.warning("Transcript listing failed during export: %s", exc)
+            return []
+        session_ids = {e.session_id for e in self._entries}
+        out: list[dict[str, Any]] = []
+        for rec in records:
+            if rec is None:
+                continue
+            if session_ids and rec.session_id not in session_ids:
+                continue
+            out.append(rec.to_dict())
+        return out
 
     def query(
         self,
@@ -569,11 +760,21 @@ class ComplianceAuditTrail:
 
         return export_data
 
-    def export_jsonl(self, *, since: float | None = None) -> str:
+    def export_jsonl(
+        self,
+        *,
+        since: float | None = None,
+        include_transcripts: bool = False,
+    ) -> str:
         """Export as JSONL (one entry per line) for log aggregation.
 
         Args:
             since: Only export entries with timestamp >= this value.
+            include_transcripts: When True (and a transcript store is
+                attached), append the stored window transcripts as additional
+                ``record_type="transcript"`` lines so the bundle is
+                self-contained: chain + verdicts + viewable query–response
+                pairs (schema 2.1.0).
 
         Returns:
             Newline-delimited JSON string of all matching entries.
@@ -582,9 +783,12 @@ class ComplianceAuditTrail:
             entries = self._entries
             if since is not None:
                 entries = [e for e in entries if e.timestamp >= since]
-            return "\n".join(
-                json.dumps(e.to_dict(), separators=(",", ":")) for e in entries
+            lines = [json.dumps(e.to_dict(), separators=(",", ":")) for e in entries]
+        if include_transcripts:
+            lines.extend(
+                json.dumps(t, separators=(",", ":")) for t in self._transcript_dicts()
             )
+        return "\n".join(lines)
 
     # -- SIEM / regulatory export formats (CRP-SPEC-011 §4) -----------------
 
@@ -605,6 +809,7 @@ class ComplianceAuditTrail:
         since: float | None = None,
         provider: str = "",
         model: str = "",
+        include_transcripts: bool = False,
     ) -> list[dict[str, Any]]:
         """Export events in OCSF API Activity format for SIEMs (§4.2).
 
@@ -612,41 +817,65 @@ class ComplianceAuditTrail:
             since: Only export entries with timestamp >= this value.
             provider: Provider identifier for the destination endpoint field.
             model: Model identifier for the destination endpoint field.
+            include_transcripts: When True (and a transcript store is
+                attached), TRANSCRIPT_RECORDED-derived records additionally
+                carry the transcript reference and content hashes in
+                ``unmapped`` (the transcript content itself stays in the
+                attached store / :meth:`export_jsonl` bundle).
 
         Returns:
             List of OCSF ``class_uid=6003`` records. The HMAC and risk level
             are carried in the ``unmapped`` extension.
         """
+        transcript_refs: dict[str, dict[str, Any]] = {}
+        if include_transcripts:
+            for t in self._transcript_dicts():
+                rid = t.get("raw_output_id", "")
+                if rid:
+                    transcript_refs[rid] = {
+                        "crp_transcript_ref": t.get("raw_output_id", ""),
+                        "crp_transcript_output_sha256": t.get("output_sha256", ""),
+                        "crp_transcript_bytes_out": t.get("bytes_out", 0),
+                        "crp_transcript_redacted": t.get("redacted", False),
+                    }
         with self._lock:
             entries = self._entries
             if since is not None:
                 entries = [e for e in entries if e.timestamp >= since]
             dst = "+".join(p for p in (provider, model) if p)
-            return [
-                {
-                    "class_uid": 6003,
-                    "activity_id": _ocsf_activity_id(e.event_type),
-                    "severity_id": _ocsf_severity_id(e.event_type, e.data),
-                    "time": _iso8601(e.timestamp),
-                    "src_endpoint": {"uid": e.session_id},
-                    "dst_endpoint": {"uid": dst},
-                    "metadata": {
-                        "product": {
-                            "name": "CRP Gateway",
-                            "vendor_name": "AutoCyber AI",
-                        },
-                        "event_code": e.event_type,
-                    },
-                    "unmapped": {
-                        "crp_hmac": e.signature,
-                        "crp_entry_hash": e.entry_hash,
-                        "crp_risk_level": e.data.get("risk_level", ""),
-                        "crp_window_id": e.data.get("window_id", ""),
-                        "crp_sequence": e.sequence,
-                    },
+            records: list[dict[str, Any]] = []
+            for e in entries:
+                unmapped: dict[str, Any] = {
+                    "crp_hmac": e.signature,
+                    "crp_entry_hash": e.entry_hash,
+                    "crp_risk_level": e.data.get("risk_level", ""),
+                    "crp_window_id": e.data.get("window_id", ""),
+                    "crp_sequence": e.sequence,
                 }
-                for e in entries
-            ]
+                rid = e.data.get("raw_output_id", "")
+                if e.event_type == ComplianceEventType.TRANSCRIPT_RECORDED.value:
+                    extra = transcript_refs.get(str(rid))
+                    if extra:
+                        unmapped.update(extra)
+                records.append(
+                    {
+                        "class_uid": 6003,
+                        "activity_id": _ocsf_activity_id(e.event_type),
+                        "severity_id": _ocsf_severity_id(e.event_type, e.data),
+                        "time": _iso8601(e.timestamp),
+                        "src_endpoint": {"uid": e.session_id},
+                        "dst_endpoint": {"uid": dst},
+                        "metadata": {
+                            "product": {
+                                "name": "CRP Gateway",
+                                "vendor_name": "AutoCyber AI",
+                            },
+                            "event_code": e.event_type,
+                        },
+                        "unmapped": unmapped,
+                    }
+                )
+            return records
 
     def export_sarif(self, *, since: float | None = None) -> dict[str, Any]:
         """Export events as a SARIF 2.1.0 log for GitHub integration (§4.3).

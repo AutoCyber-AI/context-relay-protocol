@@ -1034,8 +1034,9 @@ class TestComplianceEventTypes:
         from crp.security.audit_trail import ComplianceEventType
         # lifecycle + consent + privacy + security + oversight + session + risk +
         # LLM provenance + DPE + fidelity + entailment + hallucination +
-        # provenance engine ops + RQA + activation + window DAG = 61
-        assert len(ComplianceEventType) == 61
+        # provenance engine ops + RQA + activation + window DAG +
+        # transcript + incident lifecycle + quarantine = 67
+        assert len(ComplianceEventType) == 67
 
     def test_new_event_types_exist(self):
         """New entailment/risk event types should exist."""

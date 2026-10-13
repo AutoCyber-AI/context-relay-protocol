@@ -521,6 +521,7 @@ def run_positioned(
     final_synthesis: bool = True,
     safeguard_engine: SafeguardEngine | None = None,
     system: str | None = None,
+    model_failure_threshold: int = 1,
 ) -> PositionedResult:
     """Run the positioned-tool-loop for a request (CRP-SPEC-049/050).
 
@@ -533,6 +534,12 @@ def run_positioned(
         policy: Optional policy pre-filter / preventive-safety context.
         context_facts: Optional pre-retrieved facts for the first operations.
         max_operations: Hard cap on operations (loop guard).
+        model_failure_threshold: Consecutive ``ModelCallError`` failures tolerated
+            before the run halts (default 1: any provider failure halts, the
+            historical SPEC-056 D3 behavior).  Higher values let long-running
+            engagements skip past an operation whose provider call failed,
+            recording an honest failure note for that operation while the
+            remaining operations still execute.
         hmac_key: If provided, seals the CSO with an HMAC chain link.
         prior_cso: Optional prior-turn CSO to relay forward (multi-turn workflows).
         final_synthesis: If True and tool observations were made, run a final SYNTHESISE
@@ -584,6 +591,7 @@ def run_positioned(
     sm = OperationStateMachine(plan=operations, event_callback=event_callback)
     outputs: list[str] = []
     prior_ops: list[str] = []
+    _consecutive_model_failures = 0
     frame_tokens = 0
     continuation_windows_total = 0
 
@@ -810,17 +818,44 @@ def run_positioned(
         except ModelCallError as exc:
             # A genuine provider failure (SPEC-056 D3 faithful narration): halt
             # honestly rather than assembling a plausible-looking response
-            # around an empty body. ``sm.halt`` flips ``is_halted`` so the
+            # around an empty body.  ``sm.halt`` flips ``is_halted`` so the
             # caller reports risk=CRITICAL / grounded=False, not a silent LOW.
-            logger.warning("Positioned loop: model call failed for operation %s: %s", op.name, exc)
-            sm.halt("provider_call_failed")
+            #
+            # ``model_failure_threshold`` bounds how many consecutive provider
+            # failures a single run tolerates before halting (default 1 =
+            # historical behavior).  Long-running agentic engagements pass a
+            # higher threshold so one transient provider error (e.g. a
+            # truncated constrained call) abandons one operation — recorded
+            # honestly below — without discarding the remaining operations.
+            _consecutive_model_failures += 1
+            logger.warning(
+                "Positioned loop: model call failed for operation %s (%d/%d): %s",
+                op.name, _consecutive_model_failures, model_failure_threshold, exc,
+            )
             outputs.append(
                 "[unable to complete this step: the language model provider did not "
                 f"return a response — {exc}]"
             )
-            break
+            if _consecutive_model_failures >= model_failure_threshold:
+                sm.halt("provider_call_failed")
+                break
+            # Tolerated failure: the operation has concluded (unsuccessfully).
+            # Advance the state machine exactly like a completed operation so
+            # the next iteration starts from INTEGRATED and the final
+            # ``sm.complete()`` is a legal transition — and record the op as
+            # completed so completion/remaining bookkeeping stays accurate.
+            sm.verify(detail="provider-failed")
+            cso.completed_operations.append(op.name)
+            done = len(outputs)
+            cso.goal_state.completion = min(done / max(len(operations), 1), 1.0)
+            cso.goal_state.remaining = [o.name for o in operations[done:]]
+            sm.integrate(detail=f"output_len={len(outputs[-1])}")
+            if phase_sm is not None:
+                phase_sm.advance()
+            continue
 
         outputs.append(output)
+        _consecutive_model_failures = 0
         prior_ops.append(op.value)
         cso.completed_operations.append(op.name)
         done = len(outputs)

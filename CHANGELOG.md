@@ -2,6 +2,23 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.2.1] — STL model-failure threshold (long-run resilience)
+
+### Added
+- **`model_failure_threshold` on `crp/stl/positioned.py::run_positioned`** —
+  a single transient `ModelCallError` (provider timeout, wedge, OOM) no
+  longer kills a long unattended positioning run. Consecutive model failures
+  are counted across the run; only when the count reaches the threshold
+  (default 1 = historical behavior, configurable) does the run halt with
+  `risk=CRITICAL` / `grounded=False`. Below the threshold the failed
+  operation is recorded honestly ("unable to complete this step …") as a
+  completed-with-failure operation and the run advances to the next one, so
+  one transient provider error abandons one operation without discarding
+  the remaining operations. Enacted for WASA AI productionisation: a live
+  engagement died 4 tools into a run on one transient `ModelCallError`
+  (WASA pairs this with temperature/jittered retries at the runner level,
+  commit `114b5ba`).
+
 ## [6.2.0] — Transcript Capture + Incident Events (audit schema 2.1.0)
 
 ### Added

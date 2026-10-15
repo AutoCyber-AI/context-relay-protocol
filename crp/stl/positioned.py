@@ -522,6 +522,8 @@ def run_positioned(
     safeguard_engine: SafeguardEngine | None = None,
     system: str | None = None,
     model_failure_threshold: int = 1,
+    selection_pre_hook: Callable[..., dict[str, Any] | None] | None = None,
+    selection_post_hook: Callable[..., None] | None = None,
 ) -> PositionedResult:
     """Run the positioned-tool-loop for a request (CRP-SPEC-049/050).
 
@@ -551,6 +553,18 @@ def run_positioned(
             ``ModelCall`` (not message lists), so the system instruction is
             realised as a leading instruction block - faithful to a system
             message for every provider the adapter layer supports.
+        selection_pre_hook: Optional first-class host seam (SPEC-060 / audit
+            I-C4) invoked immediately before ``fabric.select`` per operation
+            with keyword args ``op``, ``phase``, ``phase_tools``, ``policy``
+            (post-narrowing), ``user_request`` and ``phase_guidance``. May
+            return a dict with any of ``policy`` (replaces the selection
+            policy), ``query_text``, ``query_embedding`` and ``k`` to steer
+            this operation's selection. Hook exceptions are logged and never
+            break the loop (advisory). This replaces consumer-side source
+            patching of the narrowing block.
+        selection_post_hook: Optional hook invoked after each
+            ``fabric.select`` with ``op``, ``phase`` and ``selection`` for
+            observability (e.g. offered-set telemetry). Advisory.
     """
     if system:
         inner_model_call = model_call
@@ -594,6 +608,13 @@ def run_positioned(
     _consecutive_model_failures = 0
     frame_tokens = 0
     continuation_windows_total = 0
+    # Pristine caller policy (audit A-PR-2 / I-C4): the per-operation
+    # phase narrowing below must derive from THIS copy every iteration.
+    # The pre-6.2.2 code rebound the loop-carried ``policy`` to the
+    # accumulated ``allowlist ∩ phase_tools`` intersection, so by phase 3–4
+    # the intersection of disjoint phase tool sets was empty and
+    # ``fabric.select`` rejected everything (silent degradation to prose).
+    _base_policy = policy
 
     for op in operations[:max_operations]:
         phase = phase_sm.current_phase if phase_sm else None
@@ -631,52 +652,66 @@ def run_positioned(
 
         tpf = None
         if fabric is not None:
-            phase_tools = phase.tools if phase is not None else None
+            # Narrow from the PRISTINE caller policy (audit A-PR-2): the
+            # pre-6.2.2 code narrowed from the loop-carried (accumulated)
+            # policy and duplicated the block, emptying the allowlist by
+            # phase 3–4 for disjoint phase tool sets.
+            phase_tools = phase.tools if phase is not None and phase.tools else None
             if phase_tools is not None:
-                policy = policy or PolicyContext()
-                if policy.allowlist is None:
+                op_policy = _base_policy or PolicyContext()
+                if op_policy.allowlist is None:
                     policy = PolicyContext(
-                        blocked_safety_classes=policy.blocked_safety_classes,
-                        data_residency=policy.data_residency,
-                        policy_domains=policy.policy_domains,
+                        blocked_safety_classes=op_policy.blocked_safety_classes,
+                        data_residency=op_policy.data_residency,
+                        policy_domains=op_policy.policy_domains,
                         allowlist=set(phase_tools),
-                        blocklist=policy.blocklist,
-                        authorised_scope=policy.authorised_scope,
-                        approved_sinks=policy.approved_sinks,
+                        blocklist=op_policy.blocklist,
+                        authorised_scope=op_policy.authorised_scope,
+                        approved_sinks=op_policy.approved_sinks,
                     )
                 else:
                     policy = PolicyContext(
-                        blocked_safety_classes=policy.blocked_safety_classes,
-                        data_residency=policy.data_residency,
-                        policy_domains=policy.policy_domains,
-                        allowlist=policy.allowlist & set(phase_tools),
-                        blocklist=policy.blocklist,
-                        authorised_scope=policy.authorised_scope,
-                        approved_sinks=policy.approved_sinks,
+                        blocked_safety_classes=op_policy.blocked_safety_classes,
+                        data_residency=op_policy.data_residency,
+                        policy_domains=op_policy.policy_domains,
+                        allowlist=op_policy.allowlist & set(phase_tools),
+                        blocklist=op_policy.blocklist,
+                        authorised_scope=op_policy.authorised_scope,
+                        approved_sinks=op_policy.approved_sinks,
                     )
-            if phase is not None and phase.tools:
-                policy = policy or PolicyContext()
-                if policy.allowlist is None:
-                    policy = PolicyContext(
-                        blocked_safety_classes=policy.blocked_safety_classes,
-                        data_residency=policy.data_residency,
-                        policy_domains=policy.policy_domains,
-                        allowlist=set(phase.tools),
-                        blocklist=policy.blocklist,
-                        authorised_scope=policy.authorised_scope,
-                        approved_sinks=policy.approved_sinks,
-                    )
-                else:
-                    policy = PolicyContext(
-                        blocked_safety_classes=policy.blocked_safety_classes,
-                        data_residency=policy.data_residency,
-                        policy_domains=policy.policy_domains,
-                        allowlist=policy.allowlist & set(phase.tools),
-                        blocklist=policy.blocklist,
-                        authorised_scope=policy.authorised_scope,
-                        approved_sinks=policy.approved_sinks,
-                    )
-            selection = fabric.select(op, query_text=user_request, profile=profile, policy=policy)
+            else:
+                policy = _base_policy
+            sel_query_text = user_request
+            sel_extra: dict[str, Any] = {}
+            if selection_pre_hook is not None:
+                try:
+                    hook_out = selection_pre_hook(
+                        op=op,
+                        phase=phase,
+                        phase_tools=phase_tools,
+                        policy=policy,
+                        user_request=user_request,
+                        phase_guidance=phase_guidance,
+                    ) or {}
+                    if isinstance(hook_out, dict):
+                        policy = hook_out.get("policy", policy)
+                        _qt = hook_out.get("query_text")
+                        if _qt:
+                            sel_query_text = _qt
+                        if hook_out.get("query_embedding") is not None:
+                            sel_extra["query_embedding"] = hook_out["query_embedding"]
+                        if hook_out.get("k") is not None:
+                            sel_extra["k"] = hook_out["k"]
+                except Exception as exc:  # hooks are advisory; never break the loop
+                    logger.warning("[CRP-STL] selection_pre_hook failed: %s", exc)
+            selection = fabric.select(
+                op, query_text=sel_query_text, profile=profile, policy=policy, **sel_extra
+            )
+            if selection_post_hook is not None:
+                try:
+                    selection_post_hook(op=op, phase=phase, selection=selection)
+                except Exception as exc:  # noqa: BLE001 — advisory
+                    logger.debug("[CRP-STL] selection_post_hook failed: %s", exc)
             if selection.selected:
                 tpf = build_tool_positioning_frame(frame, selection, profile=profile, depth=eff_depth)
 

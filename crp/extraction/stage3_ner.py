@@ -246,37 +246,20 @@ class NERExtractor:
             return None
 
         try:
-            import sys
+            # U-C1: cap torch's intra-op pool only for the duration of the
+            # load (the win32 OpenMP duplicate-runtime race is a *load-time*
+            # crash guard — see crp/__init__.py), then restore the host's
+            # prior value via the sanctioned helper. Never reset to
+            # cpu_count() — that silently undoes a host-configured cap.
+            from crp.ml.torch_threads import single_threaded_load
 
-            if sys.platform == "win32":
-                # Extra hardening beyond the process-level env vars set in
-                # crp/__init__.py: cap torch's intra-op thread pool to avoid
-                # the Windows-only OpenMP duplicate-runtime race during model
-                # weight loading — see crp/__init__.py comment.
-                try:
-                    import torch  # type: ignore[import-untyped]
+            with single_threaded_load():
+                from transformers import pipeline  # type: ignore[import-untyped]
 
-                    torch.set_num_threads(1)
-                except Exception:
-                    pass
-
-            from transformers import pipeline  # type: ignore[import-untyped]
-
-            ner = pipeline(  # type: ignore[call-overload]
-                "ner", model=self._model_id, aggregation_strategy="simple",
-                device=-1,
-            )
-            if sys.platform == "win32":
-                # The OpenMP race the single-thread cap guards against is a
-                # *load-time* crash. Now that weights are loaded, restore
-                # parallel inference — otherwise every NER/safety forward in
-                # the process runs ~10x slower than it should.
-                try:
-                    import torch  # type: ignore[import-untyped]
-
-                    torch.set_num_threads(max(1, os.cpu_count() or 1))
-                except Exception:
-                    pass
+                ner = pipeline(  # type: ignore[call-overload]
+                    "ner", model=self._model_id, aggregation_strategy="simple",
+                    device=-1,
+                )
             _PIPELINE_CACHE[self._model_id] = ner
             self._available = True
             logger.info("NER pipeline loaded: %s", self._model_id)

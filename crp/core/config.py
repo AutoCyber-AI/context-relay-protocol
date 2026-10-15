@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -83,6 +84,13 @@ _DEFAULTS: dict[str, Any] = {
     #   "multi_window" — use full LLM windows to process each input chunk and
     #                    relay extracted facts between windows.
     "input_continuation_mode": "auto_ingest",
+    # Dispatch idempotency (§23) — served from an in-session dedup cache
+    # instead of re-dispatching. Same (system, task, kwargs) within the TTL
+    # returns the cached result with zero provider calls; concurrent identical
+    # requests are single-flighted. Kill switch: dispatch_idempotency=False.
+    "dispatch_idempotency": True,
+    "dispatch_idempotency_ttl_s": 300.0,
+    "dispatch_idempotency_inflight_wait_s": 30.0,
     # Transcript capture for the compliance audit chain (§7.14, schema 2.1.0).
     # OFF by default — zero overhead unless explicitly enabled.
     #   audit_capture_transcripts — persist per-window messages + raw output
@@ -91,12 +99,19 @@ _DEFAULTS: dict[str, Any] = {
     #   audit_transcript_max_bytes — per-transcript serialized byte cap.
     #   audit_transcript_redact_pii — store a PII-redacted variant instead of
     #                                 raw content (redaction state is recorded
-    #                                 on the transcript event).
+    #                                 on the transcript event).  Defaults to
+    #                                 True whenever capture is enabled
+    #                                 (secure-by-default); set explicitly to
+    #                                 False to opt out.  Applies to the full
+    #                                 message array, not just the top-level
+    #                                 fields; residual recall is limited to
+    #                                 the regex scanner (recorded on the
+    #                                 event as pii_recall="scanner-limited").
     #   audit_transcript_dir — storage directory ("" → CRP_AUDIT_TRANSCRIPT_DIR
     #                          env → memory-only when neither is set).
     "audit_capture_transcripts": False,
     "audit_transcript_max_bytes": 1_048_576,
-    "audit_transcript_redact_pii": False,
+    "audit_transcript_redact_pii": True,
     "audit_transcript_dir": "",
 }
 
@@ -138,12 +153,16 @@ _ENV_MAP: dict[str, str] = {
     "AUDIT_TRANSCRIPT_MAX_BYTES": "audit_transcript_max_bytes",
     "AUDIT_TRANSCRIPT_REDACT_PII": "audit_transcript_redact_pii",
     "AUDIT_TRANSCRIPT_DIR": "audit_transcript_dir",
+    "DISPATCH_IDEMPOTENCY": "dispatch_idempotency",
+    "DISPATCH_IDEMPOTENCY_TTL_S": "dispatch_idempotency_ttl_s",
+    "DISPATCH_IDEMPOTENCY_INFLIGHT_WAIT_S": "dispatch_idempotency_inflight_wait_s",
 }
 
 _BOOL_KEYS = frozenset({"enabled", "log_envelopes", "encrypt_cold_state",
                          "enable_stage_3", "enable_stage_4", "enable_stage_5",
                          "enable_stage_6", "eager_load_models",
-                         "audit_capture_transcripts", "audit_transcript_redact_pii"})
+                         "audit_capture_transcripts", "audit_transcript_redact_pii",
+                         "dispatch_idempotency"})
 _INT_KEYS = frozenset({
     "max_continuations", "max_dispatch_rate", "session_timeout",
     "ingest_quarantine", "max_ram_mb", "max_model_ram_mb", "max_threads",
@@ -416,7 +435,17 @@ class ConfigurationResolver:
         # Layer 4: Client() init kwargs
         unknown_keys = [k for k in init_kwargs if k not in values]
         if unknown_keys:
-            logger.warning("Unknown config keys ignored (§audit L3): %s", unknown_keys)
+            # Audit A-PR-6 / I-C2b: silently swallowing unknown keys lets
+            # cross-version dead config (e.g. 6.2.0 transcript keys received
+            # by a 6.1.x runtime) no-op invisibly.  Warn loudly; raise under
+            # CRP_CONFIG_STRICT=1.
+            msg = f"Unknown config keys ignored (§audit L3): {unknown_keys}"
+            if os.environ.get("CRP_CONFIG_STRICT", "").lower() in (
+                "1", "true", "yes",
+            ):
+                raise ValueError(msg + " (CRP_CONFIG_STRICT=1)")
+            logger.warning(msg)
+            warnings.warn(msg, UserWarning, stacklevel=2)
         for key, value in init_kwargs.items():
             if key in values:
                 values[key] = value

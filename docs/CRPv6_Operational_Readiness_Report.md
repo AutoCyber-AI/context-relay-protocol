@@ -91,7 +91,7 @@ tests/test_operation_state.py
 The previous full `pytest tests/` run crashed on Windows inside `tests/test_decision_provenance.py` with a GLiNER/torch OpenMP access-violation. This has been mitigated:
 
 - `crp/__init__.py` sets `KMP_DUPLICATE_LIB_OK=TRUE` and `OMP_NUM_THREADS=1` on Windows before any heavy import.
-- `crp/extraction/stage3_gliner.py` calls `torch.set_num_threads(1)` on Windows.
+- `crp/ml/torch_threads.py::single_threaded_load` is the single sanctioned thread-pool guard: model loaders cap torch to `CRP_TORCH_THREADS` (default 1) only for the duration of weight loading on Windows, then restore the host's prior value (production-audit U-C1 — no bare `set_num_threads(cpu_count())` anywhere in library code).
 - `crp/extraction/pipeline.py` honours `CRP_GLINER_DISABLED=1` and skips GLiNER entirely.
 - `crp/extraction/stage3_ner.py` is now the default NER stage, using `dslim/bert-base-NER` (pure transformers, Windows-safe) with a spaCy fallback; GLiNER is opt-in only via `CRP_NER_MODEL=urchade/gliner_base`.
 

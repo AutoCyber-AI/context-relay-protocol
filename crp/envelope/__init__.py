@@ -15,7 +15,12 @@ from .decomposer import DecompositionResult, decompose_task_aspects
 from .formatter import EnvelopeSection, format_envelope
 from .packer import PackedFact, PackingResult, estimate_tokens, pack_facts
 from .reranker import CrossEncoderCache, rerank
-from .retrieval_integrity import apply_recency_decay, detect_contradication, resolve_fact_authority
+from .retrieval_integrity import (
+    apply_recency_decay,
+    detect_contradiction,
+    detect_contradication,
+    resolve_fact_authority,
+)
 from .scoring import ScoredFact, ScoringConfig, score_facts
 
 __all__ = [
@@ -44,6 +49,7 @@ __all__ = [
     "update_coverage_after_window",
     # Retrieval integrity (SPEC-027)
     "apply_recency_decay",
+    "detect_contradiction",
     "detect_contradication",
     "resolve_fact_authority",
 ]

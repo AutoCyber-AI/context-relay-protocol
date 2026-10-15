@@ -142,24 +142,18 @@ class GLiNERExtractor:
                 return None
 
         try:
-            import sys
+            # U-C1: cap torch's intra-op pool only for the duration of the
+            # load (the win32 OpenMP duplicate-runtime race is a *load-time*
+            # crash guard — see crp/__init__.py), then restore the host's
+            # prior value via the sanctioned helper. The previous code set
+            # 1 and NEVER restored it, leaving the whole process on a
+            # single torch thread after the first GLiNER load.
+            from crp.ml.torch_threads import single_threaded_load
 
-            if sys.platform == "win32":
-                # Extra hardening beyond the process-level env vars set in
-                # crp/__init__.py: also cap torch's own intra-op thread pool.
-                # Prevents a Windows-only native access violation caused by
-                # multiple OpenMP runtimes (numpy/scipy/sklearn/torch) racing
-                # during model weight loading — see crp/__init__.py comment.
-                try:
-                    import torch  # type: ignore[import-untyped]
+            with single_threaded_load():
+                from gliner import GLiNER  # type: ignore[import-untyped]
 
-                    torch.set_num_threads(1)
-                except Exception:
-                    pass
-
-            from gliner import GLiNER  # type: ignore[import-untyped]
-
-            self._model = GLiNER.from_pretrained("urchade/gliner_base")  # type: ignore[assignment]
+                self._model = GLiNER.from_pretrained("urchade/gliner_base")  # type: ignore[assignment]
             self._available = True
             logger.info("GLiNER model loaded successfully")
             return self._model

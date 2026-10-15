@@ -120,7 +120,13 @@ class TestTranscriptCaptureOnOff:
             orch.compliance_audit.verify_transcripts()
 
     def test_on_emits_event_per_window(self, tmp_path):
-        orch = _make_orch(tmp_path, audit_capture_transcripts=True)
+        # Explicit opt-out: redaction now defaults ON whenever capture is on
+        # (U-C3); this test covers the raw (non-redacted) storage path.
+        orch = _make_orch(
+            tmp_path,
+            audit_capture_transcripts=True,
+            audit_transcript_redact_pii=False,
+        )
         orch.dispatch("system", "task")
         events = _entries(orch, ComplianceEventType.TRANSCRIPT_RECORDED)
         assert len(events) == 1
@@ -337,8 +343,10 @@ class TestSizeCap:
         orch.dispatch("system", "task")
         events = _entries(orch, ComplianceEventType.TRANSCRIPT_RECORDED)
         path = tmp_path / "transcripts" / f"{events[0]['data']['raw_output_id']}.json"
-        # Cap is a soft bound: head budget (cap/2) + marker + JSON envelope.
-        assert path.stat().st_size < 4096 + 4096
+        # U-C2: the cap is enforced on the FINAL serialized size — the stored
+        # file must never exceed it (no 2× "soft bound").
+        assert path.stat().st_size <= 4096
+        assert events[0]["data"]["stored_bytes"] <= 4096
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,8 @@ Fixes three correctness gaps in CRP's retrieval layer:
 from __future__ import annotations
 
 import logging
+import re
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -67,7 +69,13 @@ def _extract_number(text: str) -> float | None:
     return None
 
 
-def detect_contradication(fact_a: Any, fact_b: Any) -> ContradictionSignal | None:
+# Word-boundary negation match (audit U-L4): the pre-6.2.2 substring test
+# matched "not" inside unrelated words ("the knot holds" read as a negation
+# of "holds").
+_NEGATION_RE = re.compile(r"\b(?:not|no|never|false|disabled|inactive)\b")
+
+
+def detect_contradiction(fact_a: Any, fact_b: Any) -> ContradictionSignal | None:
     """Flag contradicting facts — emit to DPE §6 contradiction detection (SPEC-027 §3).
 
     Lightweight heuristics (sub-millisecond). Returns None if no contradiction
@@ -95,10 +103,9 @@ def detect_contradication(fact_a: Any, fact_b: Any) -> ContradictionSignal | Non
                     confidence=0.7,
                 )
 
-    # Boolean contradiction: explicit negation words
-    negations = {"not", "no", "never", "false", "disabled", "inactive"}
-    a_has_neg = any(w in content_a.lower() for w in negations)
-    b_has_neg = any(w in content_b.lower() for w in negations)
+    # Boolean contradiction: explicit negation words (word-boundary match)
+    a_has_neg = bool(_NEGATION_RE.search(content_a.lower()))
+    b_has_neg = bool(_NEGATION_RE.search(content_b.lower()))
     if a_has_neg != b_has_neg:
         words_a = set(content_a.lower().split())
         words_b = set(content_b.lower().split())
@@ -112,6 +119,21 @@ def detect_contradication(fact_a: Any, fact_b: Any) -> ContradictionSignal | Non
             )
 
     return None
+
+
+def detect_contradication(fact_a: Any, fact_b: Any) -> ContradictionSignal | None:
+    """Deprecated misspelled alias for :func:`detect_contradiction` (audit U-L4).
+
+    Kept for backwards compatibility; emits ``DeprecationWarning``.  Will be
+    removed in a future release.
+    """
+    warnings.warn(
+        "detect_contradication is a misspelling of detect_contradiction; "
+        "please use the correctly-spelled name",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return detect_contradiction(fact_a, fact_b)
 
 
 def resolve_fact_authority(facts: list[Any]) -> list[Any]:
@@ -153,7 +175,7 @@ def resolve_fact_authority(facts: list[Any]) -> list[Any]:
         has_contra = False
         for i in range(len(g)):
             for j in range(i + 1, len(g)):
-                if detect_contradication(g[i], g[j]) is not None:
+                if detect_contradiction(g[i], g[j]) is not None:
                     has_contra = True
                     break
             if has_contra:

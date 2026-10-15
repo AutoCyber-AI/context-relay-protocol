@@ -176,6 +176,88 @@ def _trail_root(trail: ComplianceAuditTrail) -> tuple[str, int]:
     return tree.root(), len(entries)
 
 
+def anchor_hashes(
+    leaf_hashes: list[str],
+    transport: AnchorTransport | str | Path,
+    signer: ActionSigner | None = None,
+) -> AnchorRecord:
+    """Anchor an arbitrary sequence of 64-char hex leaf hashes.
+
+    Generic form of :func:`anchor_trail` — works over any hash-linked
+    ledger (compliance trail, manifest ledger, …) without requiring a
+    :class:`ComplianceAuditTrail` instance. *transport* may be an
+    :class:`AnchorTransport` or a filesystem path (wrapped in
+    :class:`LocalFileTransport`).
+    """
+    if isinstance(transport, (str, Path)):
+        transport = LocalFileTransport(transport)
+    tree = MerkleTree(leaf_hashes)
+    root = tree.root()
+    record = AnchorRecord(
+        root_hash=root,
+        entry_count=len(leaf_hashes),
+        anchored_at=datetime.now(timezone.utc).isoformat(),
+        method=getattr(transport, "method", None) or _method_tag(transport),
+    )
+    if signer is None:
+        try:
+            signer = ActionSigner()
+        except ImportError:
+            signer = None  # zero-dependency mode: unsigned anchor
+    if signer is not None:
+        digest = hashlib.sha256(record.tbs_bytes()).hexdigest()
+        record.signature = signer.sign(digest)
+        record.signer_public_key = signer.public_key_pem().decode("ascii")
+    transport.write(record)
+    logger.info(
+        "Anchored %d leaves: root=%s method=%s signed=%s",
+        len(leaf_hashes), root[:16] or "(empty)", record.method, bool(record.signature),
+    )
+    return record
+
+
+def verify_hashes_anchor(
+    leaf_hashes: list[str],
+    anchor_path: str | Path,
+    transport: AnchorTransport | None = None,
+) -> bool:
+    """Verify an arbitrary leaf-hash sequence against a previously written anchor.
+
+    Same contract as :func:`verify_anchor` but for any hash-linked ledger:
+    recomputes the Merkle root over *leaf_hashes* and compares root + count
+    (and the Ed25519 signature when present). Tail truncation or extension
+    of the sequence fails verification. Fails closed on any problem.
+    """
+    transport = transport or LocalFileTransport(anchor_path)
+    try:
+        record = transport.read()
+    except ValueError:
+        logger.error("Anchor unreadable or malformed: %s", anchor_path)
+        return False
+
+    tree = MerkleTree(leaf_hashes)
+    root = tree.root()
+    if record.entry_count != len(leaf_hashes) or not _hmac.compare_digest(record.root_hash, root):
+        logger.error(
+            "Anchor mismatch: record(root=%s, n=%d) vs hashes(root=%s, n=%d)",
+            record.root_hash[:16], record.entry_count, root[:16], len(leaf_hashes),
+        )
+        return False
+
+    if record.signature:
+        try:
+            digest = hashlib.sha256(record.tbs_bytes()).hexdigest()
+            if not ActionSigner.verify(
+                record.signer_public_key.encode("ascii"), digest, record.signature
+            ):
+                logger.error("Anchor signature invalid")
+                return False
+        except ImportError:
+            logger.error("Signed anchor but 'cryptography' is unavailable; failing closed")
+            return False
+    return True
+
+
 def anchor_trail(
     trail: ComplianceAuditTrail,
     transport: AnchorTransport,
@@ -221,6 +303,61 @@ def anchor_to_file(
 ) -> AnchorRecord:
     """Convenience wrapper: anchor ``trail`` to a local JSON file at ``path``."""
     return anchor_trail(trail, LocalFileTransport(path), signer=signer)
+
+
+def verify_audit_file(anchor_path: str | Path, audit_path: str | Path) -> bool:
+    """Verify a persisted ``<sid>.audit.jsonl`` file against its anchor (U-C9).
+
+    Used on session resume, where the live trail is a fresh empty chain and
+    cannot be anchored-compared directly: recomputes the Merkle root over the
+    file's per-line ``entry_hash`` values and compares it (and the entry
+    count) to the anchored record.  When the record is signed, the Ed25519
+    signature must also verify — an unverifiable signed record fails closed.
+
+    Returns False on any mismatch, tampering, or unreadable input.
+    """
+    try:
+        record = LocalFileTransport(anchor_path).read()
+    except ValueError:
+        logger.error("Anchor unreadable or malformed: %s", anchor_path)
+        return False
+
+    hashes: list[str] = []
+    try:
+        with open(audit_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                entry_hash = json.loads(line).get("entry_hash")
+                if not isinstance(entry_hash, str) or not entry_hash:
+                    logger.error("Malformed audit line in %s", audit_path)
+                    return False
+                hashes.append(entry_hash)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.error("Audit file unreadable: %s: %s", audit_path, exc)
+        return False
+
+    root = MerkleTree(hashes).root()
+    if record.entry_count != len(hashes) or not _hmac.compare_digest(record.root_hash, root):
+        logger.error(
+            "Anchor mismatch: record(root=%s, n=%d) vs file(root=%s, n=%d)",
+            record.root_hash[:16], record.entry_count, root[:16], len(hashes),
+        )
+        return False
+
+    if record.signature:
+        try:
+            digest = hashlib.sha256(record.tbs_bytes()).hexdigest()
+            if not ActionSigner.verify(
+                record.signer_public_key.encode("ascii"), digest, record.signature
+            ):
+                logger.error("Anchor signature invalid")
+                return False
+        except ImportError:
+            logger.error("Signed anchor but 'cryptography' is unavailable; failing closed")
+            return False
+    return True
 
 
 def verify_anchor(

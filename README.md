@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Status-v6.1.1-blue.svg" alt="Status: v6.1.1">
   <a href="https://github.com/AutoCyber-AI/context-relay-protocol/actions"><img src="https://img.shields.io/github/actions/workflow/status/AutoCyber-AI/context-relay-protocol/ci.yml?label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-3%2C482-brightgreen.svg" alt="3,482 tests">
+  <img src="https://img.shields.io/badge/tests-3%2C582-brightgreen.svg" alt="3,582 non-live tests">
 </p>
 
 <p align="center">
@@ -54,7 +54,7 @@
 - **Unbounded context** — automatic continuation and stitching past context windows, plus bi-temporal CKF memory.
 - **Human-in-the-loop checkpoints** for destructive or ambiguous actions.
 - **Live Agent Console** — self-hosted (`examples/self_hosted_console.py`) or at `console.crprotocol.io`, with chain-of-thought narrative and governance cards.
-- **Quality gate:** 3,482 tests passing — ruff and mypy at zero errors.
+- **Quality gate:** 3,582 non-live tests passing (live-LLM tiers excluded).
 
 **30-second quickstart**
 

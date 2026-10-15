@@ -17,6 +17,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from typing import IO, Any
@@ -83,17 +84,29 @@ class TelemetryWriter:
             self._owns_file = False
         self._count = 0
         self._closed = False
+        # Write+flush pairing lock and closed guard (audit U-L6): without the
+        # lock, concurrent writers could interleave a line with another
+        # thread's flush; without the guard, write-after-close silently
+        # failed on a closed file (or succeeded on an injected one).
+        self._write_lock = threading.Lock()
         # Ensure close on interpreter shutdown (§audit H3)
         atexit.register(self.close)
 
     # -- writing ----------------------------------------------------------
 
     def write(self, record: WindowTelemetry) -> None:
-        """Serialize *record* and append one JSON line. Flushes immediately."""
+        """Serialize *record* and append one JSON line. Flushes immediately.
+
+        Raises:
+            RuntimeError: If the writer has been closed (audit U-L6).
+        """
         line = json.dumps(record.to_dict(), separators=(",", ":"))
-        self._file.write(line + "\n")
-        self._file.flush()
-        self._count += 1
+        with self._write_lock:
+            if self._closed:
+                raise RuntimeError("TelemetryWriter is closed")
+            self._file.write(line + "\n")
+            self._file.flush()
+            self._count += 1
 
     @property
     def records_written(self) -> int:

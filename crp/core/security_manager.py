@@ -46,6 +46,7 @@ class SecurityManager:
         session_id: str,
         session_key: bytes,
         config: Any,
+        action_signer: Any | None = None,
     ) -> None:
         from crp.security.audit_trail import ComplianceAuditTrail
         from crp.security.binding import SessionBindingManager
@@ -128,7 +129,10 @@ class SecurityManager:
         self.human_oversight = HumanOversightController()
 
         # Compliance audit trail — tamper-evident HMAC chain (§7.14)
-        self.compliance_audit = ComplianceAuditTrail(session_id=session_id)
+        self.compliance_audit = ComplianceAuditTrail(
+            session_id=session_id,
+            action_signer=action_signer,
+        )
 
         # Risk classifier + compliance reporter (§7.15)
         self.risk_classifier = RiskClassifier()

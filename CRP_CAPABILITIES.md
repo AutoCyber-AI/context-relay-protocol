@@ -3,7 +3,7 @@
 > **Purpose**: Enumerate EVERY capability of the Context Relay Protocol, and define
 > how each will be verified through live testing.
 >
-> **Status**: 13/13 spec conformance. 185 focused tests passing (6 smoke + 34 tool relay + 61 relay strategies + 84 agentic). §20–§22 implemented.
+> **Status**: 13/13 spec conformance. 191 focused tests passing (6 smoke + 39 tool relay + 61 relay strategies + 85 agentic). §20–§22 implemented.
 
 ---
 
@@ -411,20 +411,20 @@ Proves CRP works in production with real tool outputs and multi-step reasoning.
 
 | Category | Capabilities | Verified By |
 |----------|-------------|-------------|
-| Core Dispatch | 14 methods (incl. tool, reflexive, progressive, stream-aug, agentic) | 185 unit tests + Tier 1 live |
+| Core Dispatch | 14 methods (incl. tool, reflexive, progressive, stream-aug, agentic) | unit suite + Tier 1 live |
 | Agentic Architecture (§22) | 6 cognitive modules, multi-step plans, revision loop | 84 agentic tests |
-| Session Management | 9 features | 185 unit tests + Tier 1 live |
-| Extraction Pipeline | 6 stages + quality gate | 185 unit tests + Tier 4 live |
-| Envelope Builder | 6 phases | 185 unit tests + Tier 2 live |
-| State Management | 8 features across 4 tiers | 185 unit tests + Tier 2 live |
-| CKF Retrieval | 4 modes | 185 unit tests + Tier 4 live |
-| Continuation | 5 subsystems, 3-way termination | 185 unit tests + Tier 5 live |
-| Security | 8 layers, 13 permissions, 21 injection patterns | 185 unit tests + Tier 3 live |
-| Advanced | 7 features | 185 unit tests + Tier 5 live |
+| Session Management | 9 features | unit suite + Tier 1 live |
+| Extraction Pipeline | 6 stages + quality gate | unit suite + Tier 4 live |
+| Envelope Builder | 6 phases | unit suite + Tier 2 live |
+| State Management | 8 features across 4 tiers | unit suite + Tier 2 live |
+| CKF Retrieval | 4 modes | unit suite + Tier 4 live |
+| Continuation | 5 subsystems, 3-way termination | unit suite + Tier 5 live |
+| Security | 8 layers, 13 permissions, 21 injection patterns | unit suite + Tier 3 live |
+| Advanced | 7 features | unit suite + Tier 5 live |
 | Provider Support | 5 providers | Tier 5 live |
-| Configuration | 6 adaptivity features | 185 unit tests |
+| Configuration | 6 adaptivity features | unit suite |
 | Protocol Axioms | 10 guarantees | Design + test coverage |
 
 **Total unique capabilities cataloged: 100+**
-**Total test assertions backing them: 185 unit tests**
+**Total test assertions backing them: 3,582 non-live tests (191 focused on the §22 areas above)**
 **Live verification tests defined: 35 scenarios across 5 tiers**

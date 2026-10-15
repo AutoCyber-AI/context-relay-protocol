@@ -468,7 +468,9 @@ class TestOrchestrator:
         assert report.security_flags.injection_markers_detected == 0
 
     def test_dispatch_increments_counters(self) -> None:
-        orch = self._make_orchestrator()
+        # U-C6: identical redispatches within TTL are deduplicated, so the
+        # counter assertions need the dedup feature off for this legacy test.
+        orch = self._make_orchestrator(dispatch_idempotency=False)
         orch.dispatch("s", "t")
         orch.dispatch("s", "t")
         status = orch.session_status()
@@ -513,7 +515,11 @@ class TestOrchestrator:
             orch.configure(max_windows_per_session=999)
 
     def test_budget_cap_windows(self) -> None:
-        orch = self._make_orchestrator(max_windows_per_session=1)
+        # U-C6: the second identical dispatch would be served from the
+        # dedup cache instead of reaching the budget check.
+        orch = self._make_orchestrator(
+            max_windows_per_session=1, dispatch_idempotency=False
+        )
         orch.dispatch("s", "t")
         with pytest.raises(BudgetExhaustedError):
             orch.dispatch("s", "t")

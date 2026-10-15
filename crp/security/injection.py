@@ -36,6 +36,9 @@ def _safety_loader() -> Any:
     from transformers import pipeline  # type: ignore[import-untyped]
 
     model_id = os.getenv("CRP_SAFETY_MODEL", model_location("crp.security.safety"))
+    # U-C1: no torch thread-pool mutation here — the process-global pool
+    # belongs to the host. Load-time capping, where needed, lives in the
+    # sanctioned helper crp.ml.torch_threads.single_threaded_load.
     pipe = pipeline(
         device=-1,
         task="text-classification",
@@ -43,16 +46,6 @@ def _safety_loader() -> Any:
         truncation=True,
         max_length=512,
     )
-    if sys.platform == "win32":
-        # Load-time OpenMP race is past — restore parallel inference
-        # (crp/__init__ caps OMP_NUM_THREADS=1 process-wide, which
-        # would otherwise make every forward ~10x slower).
-        try:
-            import torch  # type: ignore[import-untyped]
-
-            torch.set_num_threads(max(1, os.cpu_count() or 1))
-        except Exception:  # noqa: BLE001
-            pass
     return pipe
 
 

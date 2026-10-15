@@ -179,13 +179,16 @@ class AsyncBufferedSink:
     def _run(self) -> None:
         while True:
             item = self._q.get()
-            if item is None:
-                return
             try:
-                self._target.emit(item)
-            except Exception as exc:  # pragma: no cover - defensive
-                _log.warning("CRP ledger async target raised: %s", exc)
+                if item is None:
+                    return
+                try:
+                    self._target.emit(item)
+                except Exception as exc:  # pragma: no cover - defensive
+                    _log.warning("CRP ledger async target raised: %s", exc)
             finally:
+                # task_done for the sentinel too (audit U-L10): without it any
+                # queue.join() user hangs forever after close().
                 self._q.task_done()
 
     def close(self, timeout: float = 5.0) -> None:
@@ -199,3 +202,19 @@ class AsyncBufferedSink:
                 time.sleep(0.01)
         self._q.put(None)
         self._worker.join(timeout=timeout)
+        # Best-effort drain-on-exit (audit U-L10): if the worker is still
+        # alive (timeout), flush remaining queued events synchronously so
+        # they are not silently lost at interpreter exit.
+        if self._worker.is_alive():
+            _log.warning("CRP ledger async sink worker did not drain in time")
+            while True:
+                try:
+                    item = self._q.get_nowait()
+                except queue.Empty:
+                    break
+                if item is None:
+                    continue
+                try:
+                    self._target.emit(item)
+                except Exception as exc:  # pragma: no cover - defensive
+                    _log.warning("CRP ledger async target raised: %s", exc)

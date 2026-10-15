@@ -258,28 +258,51 @@ def _build_remediation_pr_body(proposals: list[Any]) -> str:
     return "\n".join(lines)
 
 
-# ── Click application ───────────────────────────────────────────────────
+def _crp_version() -> str:
+    """Module version — authoritative; the installed dist metadata can be
+    stale (editable installs: importlib.metadata reports the dist-info
+    version, e.g. '4.0.0', while the package moved on)."""
+    from crp._version import __version__
+
+    return __version__
+
+
+# ── Click application ─────────────────────────────────────────────────
+
+# References to wrapped stdio streams — a GC'd TextIOWrapper finalizer closes
+# the underlying buffer, so wrappers must outlive the process (bug class:
+# 36 CLI-coverage tests failed with "I/O operation on closed file" under
+# click's CliRunner on Windows).
+_KEPT_STREAMS: list = []
+
 
 def cli() -> None:
     """CRP CLI entry point — delegates to click group."""
-    # Fix Windows cp1252 encoding — ensure UTF-8 for Unicode output
+    # Fix Windows cp1252 encoding — ensure UTF-8 for Unicode output.
+    # Prefer in-place reconfigure() over wrapping the buffer in a NEW
+    # TextIOWrapper: wrapping drops the old wrapper's reference, and its GC
+    # finalizer closes the shared underlying buffer mid-run.
     if sys.platform == "win32":
         import io
         for stream_name in ("stdout", "stderr"):
             stream = getattr(sys, stream_name)
-            if hasattr(stream, "buffer"):
-                wrapped = io.TextIOWrapper(
-                    stream.buffer, encoding="utf-8", errors="replace",
-                )
-                wrapped.reconfigure(line_buffering=True)
-                setattr(sys, stream_name, wrapped)
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except (AttributeError, ValueError, io.UnsupportedOperation):
+                if hasattr(stream, "buffer"):
+                    wrapped = io.TextIOWrapper(
+                        stream.buffer, encoding="utf-8", errors="replace",
+                    )
+                    wrapped.reconfigure(line_buffering=True)
+                    _KEPT_STREAMS.append(wrapped)
+                    setattr(sys, stream_name, wrapped)
 
     click = _require_click()
 
     # Build the Click group lazily so the module can be imported
     # without click being installed (for embedded library use).
     @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-    @click.version_option(package_name="crp")
+    @click.version_option(version=_crp_version(), prog_name="crp")
     def _cli():
         """CRP — Context Relay Protocol CLI."""
 

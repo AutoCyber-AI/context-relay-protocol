@@ -31,6 +31,24 @@ The core value proposition: instead of one shared context window where everythin
 
 ## CRPv6 Launch Readiness Checklist
 
+### 2026-10-14 — Production audit hardening landed (v6.2.2)
+- ✅ Upstream correctness U-C1…U-C15 fixed: process-global
+  `torch.set_num_threads` replaced by save/restore guards
+  (`crp/ml/torch_threads.py`, grep-gate conformance test); transcript byte
+  cap enforced on serialized size (U-C2) + PII redaction covers messages
+  (U-C3); manifest ledger is keyed (U-C5, `CRP_MANIFEST_SECRET`) and
+  restart-continuous (U-C4, no genesis forks); dispatch idempotency wired
+  into the real dispatch path (U-C6, single-flight + TTL); session-binding
+  tautology removed (U-C7); per-call `max_continuations` plumbed (U-C8);
+  audit persistence atomic + anchored (U-C9, Ed25519 Merkle tip).
+- ✅ First-class `selection_pre_hook`/`selection_post_hook` seam on
+  `run_positioned` (consumer steering without source patching — audit I-C4).
+- ✅ Conformance suites added: `tests/test_selection_hooks.py`,
+  `tests/test_torch_thread_guard.py`, `tests/test_ledger_chain_integrity.py`,
+  `tests/test_dispatch_idempotency.py`, `tests/test_transcript_uc2_uc3.py`,
+  `tests/test_conformance_batch6d.py`.
+- ✅ Docs truth: README/CAPABILITIES figures corrected to measured numbers.
+
 Canonical status of the CRPv6 launch push.  Items marked ✅ are verified in this
 branch; items marked ⬜ are the remaining Wave 2 / Wave 3 work.  Update this section
 after every material change.

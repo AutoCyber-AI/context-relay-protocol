@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from crp.extraction.types import Fact, FactGraph
@@ -109,6 +109,11 @@ class ScoredFact:
     novelty_weight: float = 1.0
     dependency_bonus: float = 0.0
     composite_score: float = 0.0
+    # Set by envelope.rerank on the NEW objects it returns (audit U-C11):
+    # a second rerank of already-blended input would compound the CE weight
+    # (0.4 × 0.4 …) and reshuffle ties, so rerank() treats flagged input as
+    # final and only re-sorts stably.
+    rerank_blend_applied: bool = field(default=False, repr=False)
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +268,11 @@ def score_facts(
     aspect_embs = decomposition.aspect_embeddings
     full_emb = decomposition.full_embedding
     scored: list[ScoredFact] = []
-    recent_scored: dict[str, float] = {}  # for dependency bonus (last 50)
+    # Order-independent dependency bonus (audit U-C11): the pre-6.2.2 code
+    # used a rolling last-50 window keyed on iteration order, so the same fact
+    # set scored differently under permutation.  Two passes: first compute the
+    # base score for every fact, then derive graph bonuses from the full set.
+    base_scores: dict[str, float] = {}
 
     for f_obj in facts:
         f_emb = fact_embeddings.get(f_obj.id)
@@ -293,27 +302,23 @@ def score_facts(
         else:
             nov = novelty_weight(_seen.get(f_obj.id, 0))
 
-        # Dependency bonus (uses last 50 scored facts)
-        dep = dependency_bonus(f_obj, graph, recent_scored)
-
-        composite = sim * rec * nov + dep
-
-        sf = ScoredFact(
+        base = sim * rec * nov
+        base_scores[f_obj.id] = base
+        scored.append(ScoredFact(
             fact=f_obj,
             similarity=sim,
             recency_weight=rec,
             novelty_weight=nov,
-            dependency_bonus=dep,
-            composite_score=composite,
-        )
-        scored.append(sf)
+            dependency_bonus=0.0,
+            composite_score=base,
+        ))
 
-        # Track for dependency bonus of subsequent facts (rolling window of 50)
-        recent_scored[f_obj.id] = composite
-        if len(recent_scored) > 50:
-            # Remove oldest (first inserted) — dict preserves insertion order
-            oldest_key = next(iter(recent_scored))
-            del recent_scored[oldest_key]
+    # Second pass: dependency bonus from the complete base-score map — the
+    # result no longer depends on fact iteration order.
+    for sf in scored:
+        dep = dependency_bonus(sf.fact, graph, base_scores)
+        sf.dependency_bonus = dep
+        sf.composite_score = sf.composite_score + dep
 
     # Sort descending by composite score
     scored.sort(key=lambda s: s.composite_score, reverse=True)

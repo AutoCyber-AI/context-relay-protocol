@@ -2,6 +2,169 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.2.2] — 2026-10-14 — Production audit hardening (upstream U-C1…U-C15, latents, conformance gates)
+
+### Added (this release, cross-batch)
+- **Selection hook seam** (`run_positioned(selection_pre_hook=…, selection_post_hook=…)`)
+  — first-class host steering for tool selection (policy/query/embedding/k
+  adjustment pre-selection, offered-set observability post-selection),
+  replacing consumer-side source patching (audit I-C4). Conformance:
+  `tests/test_selection_hooks.py`.
+- **Torch thread guards (U-C1)** — `crp/ml/torch_threads.py` save/restore
+  helpers; all five process-global `torch.set_num_threads` call sites now
+  restore the host's prior value (GLiNER's `set_num_threads(1)` is
+  restored after load). Conformance: `tests/test_torch_thread_guard.py`
+  (grep-gate bans bare `set_num_threads` in library code).
+- **Keyed manifest ledger (U-C5)** — domain-separated HMAC-SHA256 chain via
+  injectable `KeyProvider` (`CRP_MANIFEST_SECRET` auto-enables; legacy
+  unkeyed SHA-256 byte-identical by default); `anchor()`/`verify_anchored()`.
+- **Ledger restart continuity (U-C4)** — `ManifestLedger.record()` reloads
+  on-disk entries on cache miss; duplicate genesis raises `LedgerChainError`
+  (no silent chain forks). Conformance: `tests/test_ledger_chain_integrity.py`.
+- **Dispatch idempotency (U-C6)** — `RequestDeduplicator` wired into
+  `dispatch()` (cache hit returns the cached result; concurrent followers
+  coalesce via single-flight), `SessionLock` is a real writer-preferring RW
+  lock, config keys `dispatch_idempotency`/`_ttl_s`/`_inflight_wait_s`.
+  Conformance: `tests/test_dispatch_idempotency.py`.
+
+> **Compatibility note:** `ComplianceEventType` is an open enum — custom
+> string event types are accepted by `ComplianceAuditTrail.record()` by
+> design. Never assert membership counts across minor versions.
+
+### Fixed
+- **Dispatch session-binding tautology removed (U-C7).** `_dispatch_locked`
+  signed a session-binding payload and immediately verified it against the
+  object that had just signed it — a check that could not fail. Replaced
+  with an explanatory note; the binding record itself is unchanged.
+- **Per-call `max_continuations` now actually applies (U-C8 / A-PR-1).** All
+  five dispatch variants (`dispatch`, `dispatch_with_tools`,
+  `dispatch_stream_augmented`, `dispatch_agentic`, `dispatch_stream`) accept
+  a per-call `max_continuations` kwarg that overrides the session
+  `ContinuationConfig` for that call only (previously the kwarg was accepted
+  and silently ignored — WASA's `dispatch_text` depth caps were no-ops).
+  Unknown dispatch kwargs now emit a `UserWarning`
+  (`CRP_DISPATCH_STRICT_KWARGS=1` promotes to `TypeError`).
+- **Audit persistence is atomic, durable, and restart-verifiable (U-C9,
+  A-PR-5, U-L5).** Orchestrator `close()` wrote the audit JSONL with a bare
+  `open(path, "w")` (a mid-write crash left a truncated file that looked
+  authoritative) and the trail existed only in memory during a session.
+  Every `record()` now appends to a crash-durable JSONL sink (flush +
+  policy fsync) when the orchestrator enables it (default on;
+  `CRP_AUDIT_DURABLE_APPEND=0` opts out); the clean close releases the
+  append handle BEFORE the atomic tmp+fsync+`os.replace` rewrite (Windows:
+  `os.replace` over an open handle fails with `WinError 5`), and writes an
+  Ed25519-anchored Merkle tip (`<sid>.audit.jsonl.anchor.json`).
+  `ComplianceAuditTrail.verify_file()` recomputes per-entry content hashes
+  and linkage (detects one-byte edits and middle-line removal) and,
+  with a public key, requires valid audit_v2 receipts on every entry;
+  `crp/security/audit_anchor.py::verify_audit_file()` validates the file
+  against the anchor on session resume (tail truncation / rewrites fail
+  closed). A mixed-version chain (signer at 2.0.0 + transcript events at
+  2.1.0) verifies under `verify_chain(verify_receipts=True)`; `export()`
+  now stamps `audit_trail_version` with the newest per-entry schema
+  version instead of the stale constant.
+- **Sessions slide on activity (U-C10).** `expires_at` was fixed at
+  `created_at + timeout`, so a long-lived session expired mid-use.
+  `SessionHandle.touch()` slides the expiry forward and the orchestrator's
+  session check touches it with the configured `session_timeout`
+  (inactivity-based expiry per CAP §2.8).
+- **Envelope scoring/reranking determinism (U-C11).** The dependency bonus
+  depended on the input order of the last 50 scored facts; it now derives
+  from the complete base-score map (order-independent). `rerank()` computes
+  blended scores into NEW `ScoredFact` objects (no caller mutation) and
+  flags them, so a second `rerank` of blended input is a stable fixed point
+  instead of compounding the cross-encoder weight (0.4 × 0.4 …). The
+  cross-encoder load/predict/unload lifecycle is guarded by a lock (no
+  unload mid-predict), and the dead `TASK_SIM_INVALIDATION_THRESHOLD`
+  constant is removed.
+- **Sentence-transformer loader is race- and network-safe (U-C12).**
+  Concurrent first loads of the shared decomposer model could double-load
+  or wedge; a module lock plus a negative cache now serialize attempts, and
+  offline machines never hang on a HF download unless
+  `CRP_ALLOW_MODEL_DOWNLOADS=1` is set explicitly.
+- **SQLite backend is process-safe and closable (U-C13).** Rewritten around
+  one shared WAL-mode connection with `busy_timeout=5000` (multi-instance
+  visibility, no more `database is locked`), plus an explicit `close()` and
+  a write-after-close `RuntimeError`.
+- **Import-time and shutdown hygiene (U-C15, A-PR-4).** Structured logging
+  is now opt-in (`structured_logging=True` / `CRP_STRUCTURED_LOGGING=1`)
+  instead of unconditionally reconfiguring the root logger at orchestrator
+  construction; orchestrator shutdown uses one module-level weakref atexit
+  hook; `close()`/`async_close()` shut the worker pool down before taking
+  the state lock (no deadlock when pool tasks call back into `close()`).
+- **Unknown config init kwargs surface (A-PR-6).**
+  `ConfigurationResolver.resolve()` warns (`UserWarning` + log) on unknown
+  init kwargs and raises `ValueError` under `CRP_CONFIG_STRICT=1`.
+- **Continuation low-novelty decider guard (A-PR-7).** `ContinuationConfig`
+  gains `stop_novelty_threshold` (0.2) / `max_low_novelty_stops` (3): when
+  the gap scorer keeps forcing continuations on natural stops but the
+  model's output novelty (novel-6-gram fraction) stays sub-threshold, the
+  loop terminates with reason `low_novelty_stop` instead of burning the
+  whole window cap on a stalled generation (WASA live evidence: 22-window
+  stall at finish=stop, gap_score ~0.94). Set `max_low_novelty_stops=0` to
+  disable.
+- **Positioned per-phase narrowing derives from the pristine caller policy
+  (A-PR-2).** `run_positioned` previously narrowed the loop-carried
+  (accumulated) policy each phase, so by phase 3–4 of a disjoint-tool
+  phase plan the allowlist was empty and `fabric.select` rejected
+  everything (silent degradation to prose). Each phase now intersects the
+  caller's original policy with that phase's tools.
+- **Latent fixes U-L1–U-L10.** Packer: `max_chars < 4` guard, no early
+  `break` after a compressed fallback (keeps scanning for smaller later
+  facts), post-pack verification shrink loop (U-L1/U-L2). Retrieval
+  integrity: word-boundary negation regex (knot/not fix) and correctly
+  spelled `detect_contradiction` (deprecated `detect_contradication` alias
+  kept, U-L4). Idempotency: canonical JSON key computation — mixed-type
+  kwargs no longer crash and nested-dict insertion order no longer changes
+  the key (U-L8). Telemetry writer: write+flush under one lock, explicit
+  error on write-after-close (U-L6). Ledger backends: `task_done()` in
+  `finally` (no queue-slot leak on handler exceptions) and a synchronous
+  best-effort drain on close (U-L10). Envelope packer small-window safety
+  verified by tests.
+- **Documentation truth (audit §6.5).** README test badge/claim and
+  `CRP_CAPABILITIES.md` per-area test counts updated to measured numbers
+  (3,582 non-live tests; 191 §22-focused), replacing the stale
+  "3,482"/"185" figures.
+
+### Added
+- `CRPOrchestrator(action_signer=...)` (A-PR-5) — inject an installation
+  Ed25519 signer so every audit entry is receipted from entry #0.
+- `SessionHandle.touch()`, `ComplianceAuditTrail.verify_file()`,
+  `enable_durable_append()/flush_durable()/close_durable()`,
+  `atomic_write_text()`, `verify_audit_file()` (see above).
+- Conformance suite `tests/test_conformance_batch6d.py` (21 tests):
+  idempotency-key canonicalisation, audit ledger integrity incl.
+  one-byte-edit / middle-line-removal / anchor tamper / mixed-version
+  receipt chain, envelope determinism (order-independent dependency
+  bonus, non-mutating + idempotent rerank), per-call continuation caps,
+  sliding session expiry, low-novelty continuation stop, per-phase policy
+  narrowing.
+
+### Transcript governance hardening (production audit U-C2 / U-C3)
+
+### Fixed
+- **Transcript byte cap enforced on the final serialized size (U-C2).**
+  Previously only `record.output` was truncated, measured in *characters*
+  against `cap/2`, with no post-truncation re-check — the stored `messages`
+  array (full assembled prompt) stayed unbounded and multi-byte UTF-8 could
+  overshoot the cap (empirically: 22 931 bytes stored under a 4096-byte cap).
+  `TranscriptStore.store()` now measures `len(blob.encode())` and shrinks
+  stored content in priority order (messages → output → system_prompt →
+  task_input), halving the current field per pass until the serialized JSON
+  fits; truncation is byte-accurate (never splits a multi-byte char), the
+  `truncated` flag is set, and full-content hashes remain on the record so
+  the audit chain linkage survives.
+- **Transcript PII redaction default-on and covers the message array (U-C3).**
+  `audit_transcript_redact_pii` now defaults to **True** whenever transcript
+  capture is enabled (explicit `False` / `CRP_AUDIT_TRANSCRIPT_REDACT_PII=false`
+  opts out). Redaction previously applied only to the top-level
+  `system_prompt` / `task_input` / `output` fields while `messages` persisted
+  the full assembled prompt — including PII pulled into the envelope from
+  warm-store/CKF facts — raw. Every message's `content` (string and
+  text-part list forms) now goes through the same scanner/redactor, and the
+  `TRANSCRIPT_RECORDED` event records `pii_recall="scanner-limited"` to
+  document the regex scanner's residual-recall limits.
+
 ## [6.2.1] — STL model-failure threshold (long-run resilience)
 
 ### Added

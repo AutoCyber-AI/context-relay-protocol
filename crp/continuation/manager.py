@@ -234,6 +234,15 @@ class ContinuationConfig:
     l3_extractor: Any = None  # LLM-assisted requirement extractor callback (§5B.1)
     embedding_fn: Any = None  # text→embedding function for semantic gap analysis (§5B.3)
     max_accumulated_facts: int = 5000  # cap fact history to bound memory (§audit H7)
+    # A-PR-7 decider guard: when the model stops naturally (finish=stop) but
+    # the gap scorer keeps insisting on continuation, terminate after this
+    # many consecutive stop-continuations whose novel-6-gram fraction is
+    # below ``stop_novelty_threshold`` — regardless of the gap score.  The
+    # pre-6.2.2 decider could stall for the full 50-window budget on
+    # low-novelty stop output (WASA live evidence: 22-window stall at
+    # finish=stop, gap_score ~0.94).  Set max_low_novelty_stops=0 to disable.
+    stop_novelty_threshold: float = 0.2
+    max_low_novelty_stops: int = 3
 
 
 @dataclass
@@ -304,6 +313,9 @@ class ContinuationManager:
         self._state = ContinuationState()
         self._outputs: list[str] = []
         self._accumulated_facts: list[Fact] = []  # all facts across windows (§5G.2)
+        # A-PR-7: consecutive stop-continuations with sub-threshold novel
+        # content (see process_window).
+        self._stop_novelty_streak = 0
 
     @property
     def state(self) -> ContinuationState:
@@ -726,10 +738,46 @@ class ContinuationManager:
                         _is_near_duplicate = True
                         break
 
+        # A-PR-7: measure this window's novelty (novel-6-gram fraction vs all
+        # prior windows) and maintain the low-novelty stop streak.  Only
+        # windows where the trigger wants to continue on a natural stop
+        # (gap_override) count — wall-hit (finish=length) continuations are
+        # genuine truncation recovery, and a trigger-level stop ends the loop
+        # on its own.
+        if (
+            self._config.max_low_novelty_stops > 0
+            and self._state.trigger_result.should_continue
+            and finish_reason is not None
+            and finish_reason.lower() not in ("length", "max_tokens")
+        ):
+            _novelty = 1.0
+            if output.strip() and len(self._state.window_outputs) > 1:
+                _cur_grams = _window_6grams(output)
+                if _cur_grams:
+                    _seen_grams: set = set()
+                    for _prev in self._state.window_outputs[:-1]:
+                        _seen_grams |= _window_6grams(_prev["output"])
+                    if _seen_grams:
+                        _novelty = len(_cur_grams - _seen_grams) / len(_cur_grams)
+            if _novelty < self._config.stop_novelty_threshold:
+                self._stop_novelty_streak += 1
+            else:
+                self._stop_novelty_streak = 0
+
         # 3-way termination check
+        # A-PR-7 decider guard: terminate when finish=stop continuations keep
+        # firing on sub-threshold-novelty output regardless of the gap score
+        # (gap_override would otherwise loop until the raw window cap).
+        _force_low_novelty_stop = (
+            self._config.max_low_novelty_stops > 0
+            and self._stop_novelty_streak >= self._config.max_low_novelty_stops
+        )
         if _is_repeat or _is_near_duplicate:
             self._state.finished = True
             self._state.termination_reason = "repetition_detected"
+        elif _force_low_novelty_stop:
+            self._state.finished = True
+            self._state.termination_reason = "low_novelty_stop"
         elif self._state.gap_result.is_complete:
             self._state.finished = True
             self._state.termination_reason = "gap_fulfilled"

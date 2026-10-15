@@ -45,6 +45,19 @@ class SessionHandle:
         if self.expires_at == 0.0:
             self.expires_at = self.created_at + 86400  # 24h default
 
+    def touch(self, timeout_s: float = 86400) -> None:
+        """Slide ``expires_at`` forward — inactivity-based expiry (audit U-C10).
+
+        CAP §2.8 documents sessions as "auto-expire after inactivity"; the
+        pre-6.2.2 behaviour computed ``expires_at = created_at + timeout``
+        once, making the timeout an absolute lifetime that could kill a
+        long-active session mid-work.  Each accepted session operation calls
+        this to restart the inactivity clock.
+        """
+        new_expiry = time.time() + timeout_s
+        if new_expiry > self.expires_at:
+            self.expires_at = new_expiry
+
     @property
     def is_expired(self) -> bool:
         """Return True if the current time is past ``expires_at``."""

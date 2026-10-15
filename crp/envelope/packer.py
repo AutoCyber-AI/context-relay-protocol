@@ -101,6 +101,8 @@ def _compress_fact(text: str, max_tokens: int, chars_per_token: float) -> str:
     max_chars = int(max_tokens * chars_per_token)
     if len(text) <= max_chars:
         return text
+    if max_chars < 4:  # guard tiny budgets — "..." alone must not blow the cap (audit U-L1)
+        return text[:max(1, max_chars)]
     return text[: max_chars - 3] + "..."
 
 
@@ -186,9 +188,13 @@ def pack_facts(
                 packed_ids.add(sf.fact.id)
                 used_tokens += ct
                 result.compressed_count += 1
-            break  # budget exhausted after compressed fit attempt
-        else:
-            break  # not enough room even for compression
+            # Audit U-L1: on compressed-fit FAILURE (or after a successful
+            # compressed fit, which may leave slack with a real tokenizer),
+            # keep trying — a smaller, lower-scored fact later in the list
+            # may still fit.  The pre-6.2.2 `break` abandoned the whole
+            # remaining list after the first failure.
+        # else: remaining < MIN_REMAINING_FOR_COMPRESSED — keep scanning;
+        # a later fact may still fit uncompressed within `remaining`.
 
     # Phase 5: Bookend strategy — duplicate top-3 facts at END
     bookend_candidates = [pf for pf in result.packed_facts if not pf.is_compressed][:BOOKEND_COUNT]
@@ -205,6 +211,22 @@ def pack_facts(
             result.packed_facts.append(bpf)
             used_tokens += bookend_tokens
             result.bookend_count += 1
+
+    # Post-pack verification (audit U-L2): with a real tokenizer available,
+    # the 3.3-chars/token estimator cannot be trusted — re-count and, on
+    # overshoot, drop lowest-scored packed facts until within budget.
+    if count_tokens is not None:
+        while result.packed_facts:
+            total = sum(pf.tokens for pf in result.packed_facts)
+            if total <= budget_tokens:
+                break
+            # Re-count with the real tokenizer and drop the tail if still over.
+            dropped = result.packed_facts.pop()
+            used_tokens -= dropped.tokens
+            if dropped.fact_id in packed_ids and not any(
+                pf.fact_id == dropped.fact_id for pf in result.packed_facts
+            ):
+                packed_ids.discard(dropped.fact_id)
 
     result.total_tokens = used_tokens
     result.facts_packed = len(packed_ids)

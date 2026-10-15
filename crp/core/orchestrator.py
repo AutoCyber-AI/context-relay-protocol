@@ -86,6 +86,24 @@ from crp.core.extraction_facade import ExtractionMixin, ExtractionResult
 
 logger = logging.getLogger("crp.orchestrator")
 
+# Live orchestrators, weakly held, closed by a single atexit hook (audit
+# U-C15): the pre-6.2.2 code registered atexit.register(self._atexit_close)
+# per instance — a strong reference that kept every orchestrator alive
+# forever and fired late closes on long-dead objects at interpreter exit.
+import weakref
+
+_OPEN_ORCHESTRATORS: "weakref.WeakSet[CRPOrchestrator]" = weakref.WeakSet()
+_ATEXIT_REGISTERED = False
+
+
+def _atexit_close_all() -> None:
+    """Close every still-open orchestrator at interpreter exit (never raises)."""
+    for orch in list(_OPEN_ORCHESTRATORS):
+        try:
+            orch._atexit_close()
+        except Exception:  # noqa: BLE001
+            pass
+
 
 # ---------------------------------------------------------------------------
 # Auto-detection: zero-config provider resolution
@@ -250,6 +268,7 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         llm: LLMProvider | None = None,
         model: str | None = None,
         app_profile: ApplicationProfile | None = None,
+        action_signer: Any | None = None,
         **init_kwargs: Any,
     ) -> None:
         """Initialise the orchestrator and all subsystems."""
@@ -281,12 +300,21 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         )
         self._closed = False
 
-        # Wire structured logging (§audit M2)
+        # Wire structured logging (§audit M2) — OPT-IN only (audit U-C15).
+        # Library construction must not add handlers to / force the level of
+        # the host application's loggers.  Enable via config
+        # structured_logging=True or env CRP_STRUCTURED_LOGGING=1.
         from crp.observability.structured_logging import (
             configure_structured_logging,
             set_session_context,
         )
-        configure_structured_logging()
+        _structured_on = (
+            bool(self._config.get("structured_logging", False))
+            or os.environ.get("CRP_STRUCTURED_LOGGING", "").lower()
+            in ("1", "true", "yes", "on")
+        )
+        if _structured_on:
+            configure_structured_logging()
         set_session_context(self._session.session_id)
 
         # Thread safety — RLock guards all mutable state (§audit C1)
@@ -368,6 +396,10 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
             session_id=self._session.session_id,
             session_key=b"",  # session_binding creates its own key
             config=self._config,
+            # First-class Ed25519 receipt signer (audit A-PR-5 / I-C6):
+            # passing it here means entry #0 (SESSION_CREATED) is receipted
+            # too, instead of only entries recorded after external attach.
+            action_signer=action_signer,
         )
         # Backward-compatible attribute delegation
         self._injection_detector = self._security.injection_detector
@@ -388,6 +420,30 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         self._compliance_audit = self._security.compliance_audit
         self._risk_classifier = self._security.risk_classifier
         self._compliance_reporter = self._security.compliance_reporter
+
+        # Crash-durable per-event audit append (audit U-C9).  Default-on;
+        # opt out via config audit_durable_append=False or env
+        # CRP_AUDIT_DURABLE_APPEND=0.  Advisory — never fails construction.
+        _durable_on = (
+            self._config.get("audit_durable_append", True)
+            and os.environ.get("CRP_AUDIT_DURABLE_APPEND", "1").lower()
+            not in ("0", "false", "no", "off")
+        )
+        if _durable_on:
+            try:
+                _audit_dir = os.path.join(
+                    os.environ.get("CRP_DATA_DIR", "."),
+                    "crp_sessions",
+                )
+                self._compliance_audit.enable_durable_append(
+                    os.path.join(
+                        _audit_dir,
+                        f"{self._session.session_id}.audit.jsonl",
+                    ),
+                    fsync_every=int(self._config.get("audit_durable_fsync_every", 1)),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Durable audit append disabled: %s", exc)
 
         # Source grounding — store original passages alongside facts (§17)
         from crp.advanced.source_grounding import SourceGroundingEngine
@@ -558,8 +614,13 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         # Lock immutable fields after session creation
         self._config.lock()
 
-        # Register atexit handler for graceful shutdown (§audit H6)
-        atexit.register(self._atexit_close)
+        # Register in the weak live-set; a single process-wide atexit hook
+        # closes whatever is still open at exit (audit U-C15).
+        global _ATEXIT_REGISTERED
+        _OPEN_ORCHESTRATORS.add(self)
+        if not _ATEXIT_REGISTERED:
+            _ATEXIT_REGISTERED = True
+            atexit.register(_atexit_close_all)
 
     # ------------------------------------------------------------------
     # Application-profile helpers (SPEC-008 extension)
@@ -767,6 +828,10 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
     def _check_session(self) -> None:
         """Raise if session is closed or expired.
 
+        Successful checks slide the inactivity expiry forward (audit U-C10)
+        so a session under active use is never killed by the absolute
+        creation-time deadline.
+
         Raises:
             SessionClosedError: If the session has been closed.
             SessionExpiredError: If the session has expired.
@@ -775,6 +840,11 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
             raise SessionClosedError()
         if self._session.is_expired:
             raise SessionExpiredError()
+        try:
+            timeout = float(self._config.get("session_timeout", 86400))
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            timeout = 86400.0
+        self._session.touch(timeout)
 
     def _check_budget(self, input_tokens: int) -> None:
         """Raise BudgetExhaustedError if caps would be exceeded.
@@ -1146,6 +1216,12 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         interpreter shutdown.
         """
         try:
+            # Executor shutdown outside the session lock (audit A-PR-4) — see
+            # close() for why holding the lock across the wait deadlocks.
+            try:
+                self._executor.shutdown(wait=True)
+            except Exception:  # noqa: BLE001
+                pass
             # Suppress logging during shutdown to avoid I/O-on-closed-file errors
             logging.disable(logging.CRITICAL)
             # Use timeout to prevent deadlock if lock is held (§audit3 ORCH-C5)
@@ -1164,7 +1240,16 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         """Close session — flush warm→cold, persist CKF, zero keys (§2.5).
 
         This method is thread-safe and idempotent.
+
+        The dispatch thread pool is shut down BEFORE the session lock is
+        taken (audit A-PR-4 / I-B1): ``shutdown(wait=True)`` blocks behind
+        in-flight dispatches, and those dispatches themselves need this
+        lock — holding it across the wait deadlocks and wedged async_close.
         """
+        try:
+            self._executor.shutdown(wait=True)
+        except Exception:  # noqa: BLE001
+            pass
         with self._lock:
             self._close_locked()
 
@@ -1173,8 +1258,9 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         if self._closed:
             return
 
-        # Shut down thread pool executor (§audit3: wait for in-flight tasks)
-        self._executor.shutdown(wait=True)
+        # The dispatch executor is shut down by close()/_atexit_close BEFORE
+        # the session lock is acquired (audit A-PR-4) — never here, while the
+        # lock is held: in-flight dispatches need this lock to finish.
 
         # ---------- Compliance imports (§7.14) ----------
         from crp.security.audit_trail import ComplianceEventType
@@ -1241,6 +1327,10 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
                 logger.debug("Event log persistence skipped: %s", exc)
 
         # ---------- Persist compliance audit trail (§7.14) ----------
+        # Atomic + durable write (tmp + fsync + os.replace + dir fsync) and an
+        # external anchor record (audit U-C9): the pre-6.2.2 path used a bare
+        # open(audit_path, "w"), so a crash during close left a truncated file
+        # that looked authoritative, and a crash mid-session lost everything.
         try:
             persist_dir = os.path.join(
                 os.environ.get("CRP_DATA_DIR", "."),
@@ -1251,11 +1341,29 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
                 persist_dir,
                 f"{self._session.session_id}.audit.jsonl",
             )
+            # Release the durable append handle BEFORE the atomic rewrite:
+            # on Windows os.replace over a file with an open handle fails
+            # (WinError 5).  The in-memory export below is authoritative.
+            self._compliance_audit.flush_durable()
+            self._compliance_audit.close_durable()
             audit_jsonl = self._compliance_audit.export_jsonl()
-            with open(audit_path, "w", encoding="utf-8") as f:
-                f.write(audit_jsonl)
+            from crp.security.audit_trail import atomic_write_text
+            atomic_write_text(audit_path, audit_jsonl)
             logger.debug("Compliance audit trail persisted: %s (%d entries)",
                          audit_path, self._compliance_audit.entry_count)
+            # External anchor (tip Merkle root + entry count), fsync'd next to
+            # the export so tail truncation / rewrites are detectable on
+            # resume (audit U-C9, U-C5). Advisory — never fails the close.
+            try:
+                from crp.security import audit_anchor as _audit_anchor
+                _signer = getattr(self._compliance_audit, "_action_signer", None)
+                _audit_anchor.anchor_to_file(
+                    self._compliance_audit,
+                    f"{audit_path}.anchor.json",
+                    signer=_signer,
+                )
+            except Exception as anchor_exc:  # noqa: BLE001
+                logger.warning("Audit anchor write skipped: %s", anchor_exc)
         except Exception as exc:
             logger.error("Compliance audit trail persistence failed: %s", exc)
 
@@ -1359,6 +1467,37 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
                 logger.warning("CKF restore failed for session %s: %s", session_id, exc)
         else:
             logger.warning("No persisted session found at %s", persist_path)
+
+        # Verify the audit-trail anchor when one exists (audit U-C9): a
+        # truncated or rewritten <sid>.audit.jsonl disagrees with the anchored
+        # Merkle root / entry count.  Advisory — never blocks the resume.
+        _audit_path = os.path.join(base_dir, "crp_sessions", f"{session_id}.audit.jsonl")
+        _anchor_path = f"{_audit_path}.anchor.json"
+        if os.path.exists(_audit_path) and os.path.exists(_anchor_path):
+            try:
+                from crp.security import audit_anchor as _audit_anchor
+                if not _audit_anchor.verify_audit_file(_anchor_path, _audit_path):
+                    logger.error(
+                        "Audit anchor verification FAILED for session %s — "
+                        "the persisted audit trail was truncated or rewritten "
+                        "since the last close (audit U-C9).",
+                        session_id,
+                    )
+                    orch._compliance_audit.record(
+                        "compliance.audit_anchor_mismatch",
+                        session_id=orch._session.session_id,
+                        data={
+                            "operation": "resume",
+                            "original_session_id": session_id,
+                            "anchor_path": _anchor_path,
+                        },
+                    )
+                else:
+                    logger.info(
+                        "Audit anchor verified for session %s", session_id,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Audit anchor verification skipped: %s", exc)
 
         return orch
 
@@ -1595,11 +1734,19 @@ class CRPOrchestrator(DispatchMixin, ExtractionMixin):
         )
 
     async def async_close(self) -> None:
-        """Async version of close() — runs in the orchestrator's thread pool."""
+        """Async version of close().
+
+        Runs the close directly on the event loop's default executor rather
+        than self-scheduling on the orchestrator's own pool (audit A-PR-4 /
+        I-B1): the old path submitted ``close`` to ``self._executor`` and
+        then shut that executor down from inside the submitted task, which
+        both deadlocks (cannot-join-current-thread) and serializes behind
+        every queued dispatch.
+        """
         import asyncio
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(self._executor, self.close)
+        await loop.run_in_executor(None, self.close)
 
     async def async_dispatch_stream(
         self,

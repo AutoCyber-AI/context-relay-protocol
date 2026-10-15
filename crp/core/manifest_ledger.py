@@ -19,8 +19,14 @@ in-memory lineage index keyed by ``source_id``.
 Storage format
 --------------
 One JSON object per line (JSONL). Each line is a complete signed manifest
-plus a ``turn`` field and a ``recorded_at`` epoch stamp. Append-only;
-tamper-evident via the HMAC signature carried inside each record.
+plus a ``turn`` field and a ``recorded_at`` epoch stamp. Append-only.
+Each record additionally carries ``prev_hash`` + ``entry_hash`` forming a
+per-session hash chain; when a ``chain_key_provider`` (or the
+``CRP_MANIFEST_SECRET`` env var) is configured the chain is HMAC-SHA256
+keyed, so rewriting history requires the secret. Without a key the chain
+falls back to plain SHA-256 (legacy, recomputable by anyone with file
+access — a one-time warning is logged). Periodic external anchoring via
+:meth:`ManifestLedger.anchor` makes tail truncation detectable too.
 
 Replay
 ------
@@ -74,30 +80,44 @@ class LedgerChainError(ManifestValidationError):
     """Raised when the ledger hash-chain fails verification."""
 
 
+_CHAIN_DOMAIN = b"CRP-LEDGER-CHAIN-v2\x00"
+
+
 def _compute_entry_hash(
     session_id: str,
     turn: int,
     recorded_at: float,
     manifest_canonical: bytes,
     prev_hash: str,
+    *,
+    key: bytes | None = None,
 ) -> str:
-    """SHA-256 over (session_id, turn, recorded_at, manifest, prev_hash).
+    """Hash over (session_id, turn, recorded_at, manifest, prev_hash).
 
     Gives every ledger entry a deterministic fingerprint that depends on
     every preceding entry in the same session — editing or reordering
     records breaks the chain.
+
+    When *key* is provided the hash is an HMAC-SHA256 under that key
+    (CRP 2.3 keyed chain): anyone tampering with a record must know the
+    secret to recompute a valid link, so file access alone no longer
+    suffices to rewrite history undetected. When *key* is ``None`` the
+    legacy unkeyed SHA-256 construction is used, byte-for-byte identical
+    to pre-keying releases, so existing on-disk ledgers keep verifying.
     """
-    h = hashlib.sha256()
-    h.update(session_id.encode("utf-8"))
-    h.update(b"|")
-    h.update(str(turn).encode("ascii"))
-    h.update(b"|")
-    h.update(f"{recorded_at:.6f}".encode("ascii"))
-    h.update(b"|")
-    h.update(manifest_canonical)
-    h.update(b"|")
-    h.update(prev_hash.encode("ascii"))
-    return h.hexdigest()
+    buf = bytearray()
+    buf += session_id.encode("utf-8")
+    buf += b"|"
+    buf += str(turn).encode("ascii")
+    buf += b"|"
+    buf += f"{recorded_at:.6f}".encode("ascii")
+    buf += b"|"
+    buf += manifest_canonical
+    buf += b"|"
+    buf += prev_hash.encode("ascii")
+    if key is None:
+        return hashlib.sha256(bytes(buf)).hexdigest()
+    return hmac.new(key, _CHAIN_DOMAIN + bytes(buf), hashlib.sha256).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +196,7 @@ class ManifestLedger:
         session_dir: str | os.PathLike[str] = "crp_sessions",
         *,
         forward_to: Iterable[Any] | None = None,
+        chain_key_provider: KeyProvider | None = None,
     ) -> None:
         """Construct a filesystem-backed ledger.
 
@@ -189,12 +210,24 @@ class ManifestLedger:
             audit event so SIEM forwarders / syslog / JSONL replicators see
             the ledger write in real time.  Implementations that raise are
             logged and skipped — forwarding never blocks ledger writes.
+        chain_key_provider
+            Optional :class:`KeyProvider` used to key the entry hash chain
+            (HMAC-SHA256 per entry). When given, tampering with the JSONL
+            requires the secret — plain SHA-256 chains are recomputable by
+            anyone with file access. When ``None`` but the
+            ``CRP_MANIFEST_SECRET`` environment variable is set, an
+            :class:`EnvVarKeyProvider` is used (fail closed: verification
+            then only accepts keyed entries). When neither is available the
+            chain falls back to the legacy unkeyed construction for backward
+            compatibility with pre-keying ledgers.
         """
         self._dir = Path(session_dir)
         self._lock = threading.Lock()
         # In-memory: session_id -> list[Entry]
         self._cache: dict[str, list[ManifestLedgerEntry]] = {}
         self._forward_sinks: list[Any] = list(forward_to) if forward_to else []
+        self._chain_key_provider = chain_key_provider
+        self._warned_unkeyed = False
 
     @property
     def session_dir(self) -> Path:
@@ -227,7 +260,13 @@ class ManifestLedger:
         if not session_id:
             raise ValueError("session_id must be non-empty")
         with self._lock:
-            entries = self._cache.setdefault(session_id, [])
+            # U-C4: never derive prev_hash/turn from an empty cache — a fresh
+            # process must fold the durable chain head in first, otherwise a
+            # routine restart silently appends a second genesis entry and
+            # forks the chain.
+            if session_id not in self._cache:
+                self._cache[session_id] = self._load_entries(session_id)
+            entries = self._cache[session_id]
             resolved_turn = turn if turn is not None else (len(entries) + 1)
             prev_hash = entries[-1].entry_hash if entries else ""
             recorded_at = time.time()
@@ -239,6 +278,7 @@ class ManifestLedger:
                 recorded_at,
                 manifest_canonical,
                 prev_hash,
+                key=self._chain_key(),
             )
             entry = ManifestLedgerEntry(
                 session_id=session_id,
@@ -274,29 +314,51 @@ class ManifestLedger:
 
     # ------------------------------------------------------------------ load
 
+    def _load_entries(self, session_id: str) -> list[ManifestLedgerEntry]:
+        """Read a session's ledger file from disk (caller must hold the lock).
+
+        Raises :class:`ManifestValidationError` on a corrupt line and
+        :class:`LedgerChainError` on a forked chain (multiple genesis entries
+        written by independent processes) — a fork must surface loudly, not
+        silently chain onto one branch.
+        """
+        entries: list[ManifestLedgerEntry] = []
+        path = self._path_for(session_id)
+        if path.exists():
+            with path.open("r", encoding="utf-8") as fp:
+                for lineno, line in enumerate(fp, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entries.append(ManifestLedgerEntry.from_jsonl(line))
+                    except (ValueError, KeyError, ManifestValidationError) as exc:
+                        raise ManifestValidationError(
+                            f"Corrupt ledger entry at {path}:{lineno}: {exc}"
+                        ) from exc
+        # U-C4: duplicate-genesis detection. Only *chained* entries (non-empty
+        # entry_hash, i.e. written by CRP 2.3+) are considered — legacy 2.2
+        # rows have no entry_hash at all and are tolerated by verify_chain.
+        gen = [e for e in entries if e.entry_hash and not e.prev_hash]
+        if len(gen) > 1:
+            raise LedgerChainError(
+                f"Ledger for session {session_id!r} is forked: "
+                f"{len(gen)} independent genesis entries "
+                f"(turns {[e.turn for e in gen]})"
+            )
+        return entries
+
     def load(self, session_id: str) -> list[ManifestLedgerEntry]:
         """Rehydrate a session's ledger from disk into memory.
 
         Idempotent — calling repeatedly returns the same list. Missing
-        files yield ``[]``.
+        files yield ``[]``. Raises :class:`LedgerChainError` if the file
+        contains a forked chain (duplicate genesis entries).
         """
         with self._lock:
             if session_id in self._cache:
                 return list(self._cache[session_id])
-            entries: list[ManifestLedgerEntry] = []
-            path = self._path_for(session_id)
-            if path.exists():
-                with path.open("r", encoding="utf-8") as fp:
-                    for lineno, line in enumerate(fp, 1):
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            entries.append(ManifestLedgerEntry.from_jsonl(line))
-                        except (ValueError, KeyError, ManifestValidationError) as exc:
-                            raise ManifestValidationError(
-                                f"Corrupt ledger entry at {path}:{lineno}: {exc}"
-                            ) from exc
+            entries = self._load_entries(session_id)
             self._cache[session_id] = entries
             return list(entries)
 
@@ -396,6 +458,47 @@ class ManifestLedger:
             else:
                 self._cache.pop(session_id, None)
 
+    # ------------------------------------------------------- chain key (U-C5)
+
+    def _chain_key(self) -> bytes | None:
+        """Resolve the active chain key for *recording* (None = legacy unkeyed).
+
+        Explicit ``chain_key_provider`` wins; otherwise the
+        ``CRP_MANIFEST_SECRET`` env var enables keying automatically; otherwise
+        the legacy unkeyed construction is used (with a one-time warning —
+        the chain is then recomputable by anyone with file access).
+        """
+        provider = self._chain_key_provider
+        if provider is None and os.environ.get("CRP_MANIFEST_SECRET"):
+            provider = EnvVarKeyProvider()  # defined below; resolved at call time
+        if provider is None:
+            if not self._warned_unkeyed:
+                self._warned_unkeyed = True
+                _log.warning(
+                    "ManifestLedger chain is UNKEYED (no chain_key_provider and "
+                    "CRP_MANIFEST_SECRET unset) — entry hashes are plain SHA-256 "
+                    "and rewritable by anyone with file access. Set "
+                    "CRP_MANIFEST_SECRET or pass chain_key_provider= to key the "
+                    "chain."
+                )
+            return None
+        return provider.current()
+
+    def _chain_key_candidates(self) -> list[bytes]:
+        """Every key that should verify chain entries (rotation support).
+
+        Empty list means the legacy unkeyed construction is in effect.
+        """
+        provider = self._chain_key_provider
+        if provider is None and os.environ.get("CRP_MANIFEST_SECRET"):
+            provider = EnvVarKeyProvider()  # defined below; resolved at call time
+        if provider is None:
+            return []
+        try:
+            return list(provider.candidates())
+        except ManifestValidationError:
+            return []
+
     def verify_chain(
         self,
         session_id: str,
@@ -412,28 +515,92 @@ class ManifestLedger:
         CRP 2.3 tamper-evidence: any post-write edit of a JSONL line
         changes that entry's recomputed hash and causes every subsequent
         entry to report ``prev_hash_mismatch``.
+
+        Keyed chains (see ``chain_key_provider``): every candidate key is
+        tried (rotation grace) and verification is **fail closed** — when a
+        provider is configured, unkeyed/foreign-key entries are flagged
+        rather than silently accepted under the public algorithm.
         """
         broken: list[tuple[int, str]] = []
         prev = ""
+        keys = self._chain_key_candidates()
         for entry in self.load(session_id):
             if not entry.entry_hash:
                 if strict:
                     broken.append((entry.turn, "entry_hash_missing"))
                 prev = ""  # can't chain further; reset
                 continue
-            expected = _compute_entry_hash(
-                entry.session_id,
-                entry.turn,
-                entry.recorded_at,
-                entry.manifest._canonical_payload(),  # type: ignore[attr-defined]
-                entry.prev_hash,
-            )
-            if not hmac.compare_digest(expected, entry.entry_hash):
+            canonical = entry.manifest._canonical_payload()  # type: ignore[attr-defined]
+            if keys:
+                ok = any(
+                    hmac.compare_digest(
+                        _compute_entry_hash(
+                            entry.session_id,
+                            entry.turn,
+                            entry.recorded_at,
+                            canonical,
+                            entry.prev_hash,
+                            key=k,
+                        ),
+                        entry.entry_hash,
+                    )
+                    for k in keys
+                )
+            else:
+                ok = hmac.compare_digest(
+                    _compute_entry_hash(
+                        entry.session_id,
+                        entry.turn,
+                        entry.recorded_at,
+                        canonical,
+                        entry.prev_hash,
+                    ),
+                    entry.entry_hash,
+                )
+            if not ok:
                 broken.append((entry.turn, "entry_hash_mismatch"))
             elif entry.prev_hash != prev and prev != "":
                 broken.append((entry.turn, "prev_hash_mismatch"))
             prev = entry.entry_hash
         return broken
+
+    # ------------------------------------------------- anchoring (U-C5, §6.4.2)
+
+    def anchor(
+        self,
+        session_id: str,
+        anchor_path: str | os.PathLike[str],
+        *,
+        signer: Any = None,
+    ) -> Any:
+        """Externally anchor the session's chain tip (Merkle root over entry
+        hashes, signed, persisted to *anchor_path*).
+
+        Anchoring makes tail truncation detectable: ``verify_anchored``
+        recomputes the root over the current entries and compares (and checks
+        the Ed25519 signature when ``cryptography`` is available). See
+        ``crp.security.audit_anchor`` / ``crp.security.audit_merkle``.
+        """
+        from crp.security.audit_anchor import anchor_hashes
+
+        entries = self.load(session_id)
+        return anchor_hashes(
+            [e.entry_hash for e in entries],
+            anchor_path,
+            signer=signer,
+        )
+
+    def verify_anchored(
+        self,
+        session_id: str,
+        anchor_path: str | os.PathLike[str],
+    ) -> bool:
+        """Verify the session's current entries against a previously written
+        anchor. Truncated or extended chains fail verification."""
+        from crp.security.audit_anchor import verify_hashes_anchor
+
+        entries = self.load(session_id)
+        return verify_hashes_anchor([e.entry_hash for e in entries], anchor_path)
 
     def scan_sessions(self) -> list[str]:
         """Enumerate every session with a ledger file on disk.

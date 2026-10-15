@@ -30,6 +30,74 @@ from typing import Any
 logger = logging.getLogger("crp.security.audit_trail")
 
 
+def atomic_write_text(path: str, text: str) -> None:
+    """Atomically and durably write ``text`` to ``path`` (audit U-C9).
+
+    tmp-file + fsync + ``os.replace`` + directory fsync: a crash mid-write
+    can never leave a truncated file at the destination (the previous
+    pre-6.2.2 close-time ``open(path, "w")`` export could, and the result
+    looked authoritative).
+    """
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp_path, path)
+    try:
+        dir_fd = os.open(os.path.dirname(path) or ".", os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except OSError:  # pragma: no cover - best effort on exotic filesystems
+        pass
+
+
+class _DurableAuditWriter:
+    """Crash-durable JSONL appender for audit trail entries (audit U-C9).
+
+    Appends one line per recorded entry so a process crash mid-session
+    leaves previously recorded events on disk — before this existed the
+    whole in-memory trail was lost unless ``close()`` ran cleanly, and the
+    close-time export itself was a non-atomic ``open(path, "w")``.
+
+    Lines are flushed every append and fsync'd every ``fsync_every``
+    appends (and on :meth:`flush`).  The clean close path later rewrites
+    the same file atomically from the authoritative in-memory chain, so
+    the append log is a crash-safety net, not the final format.
+    """
+
+    def __init__(self, path: str, fsync_every: int = 1) -> None:
+        self._path = path
+        self._fsync_every = max(1, int(fsync_every))
+        self._fh = open(path, "a", encoding="utf-8")
+        self._appends = 0
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    def append(self, entry_dict: dict) -> None:
+        """Append one entry line; flush always, fsync per policy."""
+        self._fh.write(json.dumps(entry_dict, separators=(",", ":")) + "\n")
+        self._fh.flush()
+        self._appends += 1
+        if self._appends % self._fsync_every == 0:
+            os.fsync(self._fh.fileno())
+
+    def flush(self) -> None:
+        """Flush + fsync any buffered line (called at clean close)."""
+        self._fh.flush()
+        os.fsync(self._fh.fileno())
+
+    def close(self) -> None:
+        try:
+            self.flush()
+        finally:
+            self._fh.close()
+
+
 # ---------------------------------------------------------------------------
 # Ed25519 action receipts (audit_v2) — optional, zero-dependency safe
 # ---------------------------------------------------------------------------
@@ -457,6 +525,49 @@ class ComplianceAuditTrail:
         # audit_capture_transcripts is enabled) — powers verify_transcripts()
         # and include_transcripts exports.
         self._transcript_store: Any | None = None
+        # Crash-durable per-event append sink (audit U-C9) — None unless the
+        # orchestrator enabled it via enable_durable_append().
+        self._durable_writer: _DurableAuditWriter | None = None
+
+    def enable_durable_append(self, path: str, fsync_every: int = 1) -> None:
+        """Enable crash-durable per-event JSONL appending (audit U-C9).
+
+        Every subsequently recorded entry is appended (and, per policy,
+        fsync'd) so a process crash cannot lose the trail recorded so far.
+        Idempotent: enabling twice keeps the first writer.
+        """
+        with self._lock:
+            if self._durable_writer is None:
+                os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+                self._durable_writer = _DurableAuditWriter(path, fsync_every)
+
+    def flush_durable(self) -> None:
+        """Flush + fsync the durable writer (clean close path)."""
+        with self._lock:
+            if self._durable_writer is not None:
+                self._durable_writer.flush()
+
+    def close_durable(self) -> None:
+        """Flush, close and detach the durable writer (clean close path).
+
+        Must run BEFORE any code rewrites ``durable_path`` atomically:
+        on Windows an open append handle on the target makes
+        ``os.replace`` fail with ``WinError 5`` (access denied), and any
+        record() after this point would write to a closed file.  After
+        close, :meth:`record` skips durable appending (in-memory chain is
+        authoritative for the final export).
+        """
+        with self._lock:
+            writer = self._durable_writer
+            self._durable_writer = None
+            if writer is not None:
+                writer.close()
+
+    @property
+    def durable_path(self) -> str | None:
+        """Path of the durable append log, when enabled."""
+        w = self._durable_writer
+        return w.path if w is not None else None
 
     def attach_transcript_store(self, store: Any) -> None:
         """Attach a :class:`crp.security.transcript_store.TranscriptStore`.
@@ -544,6 +655,14 @@ class ComplianceAuditTrail:
                 entry.schema_version = "2.1.0"
             self._entries.append(entry)
             self._sequence += 1
+            # Crash-durable append (audit U-C9) — never let the sink break
+            # the audit record itself.
+            writer = self._durable_writer
+            if writer is not None:
+                try:
+                    writer.append(entry.to_dict())
+                except OSError as exc:  # pragma: no cover - disk full etc.
+                    logger.error("Durable audit append failed: %s", exc)
 
         return entry
 
@@ -621,6 +740,75 @@ class ComplianceAuditTrail:
                     return False, entry.sequence
 
             return True, -1
+
+    @classmethod
+    def verify_file(
+        cls,
+        path: str,
+        public_key_pem: bytes | None = None,
+    ) -> tuple[bool, int]:
+        """Offline verification of an exported audit JSONL file (A-PR-5 / I-C5).
+
+        Recomputes each line's content hash from the exported fields — so ANY
+        edit to the file is detected, unlike the keyless recompute-the-chain
+        check integrators used to perform (the chain is plain SHA-256 over
+        public fields and fully re-derivable by an editor) — validates the
+        ``previous_hash`` linkage, and, when ``public_key_pem`` is supplied,
+        requires a valid Ed25519 receipt on every entry.
+
+        Args:
+            path: Path to an exported ``<sid>.audit.jsonl`` file.
+            public_key_pem: Optional Ed25519 public key (PEM) for strict
+                audit_v2 receipt verification of every entry.
+
+        Returns:
+            ``(is_valid, broken_at_line)`` — 0-based JSONL line index of the
+            first problem, or -1 when the file is valid.
+        """
+        try:
+            with open(path, encoding="utf-8") as fh:
+                lines = [ln for ln in fh.read().splitlines() if ln.strip()]
+        except OSError as exc:
+            logger.error("Cannot read audit file %s: %s", path, exc)
+            return False, 0
+
+        prev_hash = "0" * 64
+        for i, line in enumerate(lines):
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                logger.error("Audit file line %d is not valid JSON", i)
+                return False, i
+            try:
+                content = json.dumps(
+                    {
+                        "event_type": entry["event_type"],
+                        "timestamp": entry["timestamp"],
+                        "session_id": entry["session_id"],
+                        "data": entry.get("data", {}),
+                        "sequence": entry["sequence"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            except (KeyError, TypeError):
+                logger.error("Audit file line %d is missing required fields", i)
+                return False, i
+            entry_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+            if entry_hash != entry.get("entry_hash"):
+                logger.error("Audit file content hash mismatch at line %d", i)
+                return False, i
+            if entry.get("previous_hash", "") != prev_hash:
+                logger.error("Audit file chain link mismatch at line %d", i)
+                return False, i
+            if public_key_pem is not None and (
+                not entry.get("receipt")
+                or not ActionSigner.verify(public_key_pem, entry_hash, entry["receipt"])
+            ):
+                logger.error("Audit file receipt invalid at line %d", i)
+                return False, i
+            prev_hash = entry_hash
+        return True, -1
 
     def verify_transcripts(self, *, session_id: str | None = None) -> Any:
         """Verify stored transcripts against this trail (schema 2.1.0).
@@ -735,7 +923,14 @@ class ComplianceAuditTrail:
                 by_type[e.event_type] = by_type.get(e.event_type, 0) + 1
 
             export_data = {
-                "audit_trail_version": "1.0",
+                # Real schema version (audit U-C14b): entries carry per-entry
+                # schema_version values ("1.0.0"/"2.0.0"/"2.1.0"); the export
+                # envelope must expose the newest so consumers can detect
+                # audit_v2 (2.0.0) / transcript-capable (2.1.0) chains.
+                "audit_trail_version": max(
+                    (getattr(e, "schema_version", "1.0.0") for e in entries),
+                    default="1.0.0",
+                ),
                 "exported_at": time.time(),
                 "chain_integrity": {
                     "valid": valid,

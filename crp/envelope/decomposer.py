@@ -10,13 +10,17 @@ is unavailable.
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
+import os
 import re
-import sys
+import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from crp.core.task_intent import TaskIntent
+
+logger = logging.getLogger("crp.envelope.decomposer")
 
 # ---------------------------------------------------------------------------
 # Embedding abstraction — lightweight fallback when ML deps absent
@@ -24,35 +28,76 @@ from crp.core.task_intent import TaskIntent
 
 # Sentinel that indicates sentence-transformers is available
 _ST_AVAILABLE: bool = False
+_ST_FAILED: bool = False  # negative cache — do not retry a failed load every call (audit U-C12)
 _EMBED_MODEL: object | None = None
 _EMBED_DIM: int = 384  # all-MiniLM-L6-v2 output dim
+# Guards lazy init (audit U-C12): without it two threads can both construct
+# the SentenceTransformer (double RAM spike under memory pressure).
+_ST_LOCK = threading.RLock()
+
+
+def _downloads_allowed() -> bool:
+    """Whether a not-locally-cached model may be fetched from Hugging Face.
+
+    Default False (embedded mode must not hit the network as a side effect of
+    dispatch — audit U-C12); opt in with CRP_ALLOW_MODEL_DOWNLOADS=1.
+    Models already present in the local HF cache load without any network
+    access and are unaffected by this gate.
+    """
+    return os.environ.get("CRP_ALLOW_MODEL_DOWNLOADS", "").lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def _model_is_cached(repo_id: str) -> bool:
+    """True when the model snapshot exists in the local HF cache."""
+    try:
+        from huggingface_hub import snapshot_download
+
+        snapshot_download(repo_id=repo_id, local_files_only=True)
+        return True
+    except Exception:  # noqa: BLE001 — any resolution failure means "not cached"
+        return False
 
 
 def _try_load_sentence_transformer() -> bool:
-    """Attempt lazy load of sentence-transformers model.  Returns True on success."""
-    global _ST_AVAILABLE, _EMBED_MODEL  # noqa: PLW0603
+    """Attempt lazy load of sentence-transformers model.  Returns True on success.
+
+    Lock-guarded with a negative cache (audit U-C12): the pre-6.2.2 version
+    was lock-free (two threads could double-load) and retried the load on
+    every call after a failure.  When the model is not in the local cache and
+    CRP_ALLOW_MODEL_DOWNLOADS is not set, the load is skipped rather than
+    triggering a surprise ~90 MB download inside dispatch().
+    """
+    global _ST_AVAILABLE, _ST_FAILED, _EMBED_MODEL  # noqa: PLW0603
     if _ST_AVAILABLE:
         return True
-    try:
-        from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
+    if _ST_FAILED:
+        return False
+    with _ST_LOCK:
+        if _ST_AVAILABLE or _ST_FAILED:
+            return _ST_AVAILABLE
+        repo_id = "sentence-transformers/all-MiniLM-L6-v2"
+        try:
+            if not _downloads_allowed() and not _model_is_cached(repo_id):
+                _ST_FAILED = True
+                logger.info(
+                    "Embedding model %s not in local cache and model downloads "
+                    "are disabled (set CRP_ALLOW_MODEL_DOWNLOADS=1 to allow) — "
+                    "using fallback embeddings", repo_id,
+                )
+                return False
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
 
-        _EMBED_MODEL = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-        _ST_AVAILABLE = True
-        if sys.platform == "win32":
-            # crp/__init__ caps OMP_NUM_THREADS=1 process-wide as a *load-time*
-            # OpenMP crash guard. Loading is done — restore parallel inference
-            # or every embedding call runs ~3-4x slower than it should.
-            try:
-                import os as _os
-
-                import torch  # type: ignore[import-untyped]
-
-                torch.set_num_threads(max(1, _os.cpu_count() or 1))
-            except Exception:  # noqa: BLE001
-                pass
-    except Exception:  # noqa: BLE001
-        pass
-    return _ST_AVAILABLE
+            _EMBED_MODEL = SentenceTransformer(repo_id)
+            _ST_AVAILABLE = True
+            # U-C1: never reset the process-global torch thread pool here — the
+            # host's own setting (torch default or an explicit host cap) stays in
+            # force. Load-time capping, where needed, lives in the sanctioned
+            # helper crp.ml.torch_threads.single_threaded_load.
+        except Exception:  # noqa: BLE001
+            _ST_FAILED = True  # negative cache — don't retry on every call
+        return _ST_AVAILABLE
 
 
 def get_embedding_fn() -> Callable[[str], list[float]] | None:

@@ -15,8 +15,10 @@ import os
 import re
 import time
 import uuid
+import warnings
 from collections.abc import Generator
 from dataclasses import dataclass
+from dataclasses import replace as _dc_replace
 from typing import TYPE_CHECKING, Any
 
 from crp.continuation.manager import ContinuationConfig, ContinuationManager
@@ -58,6 +60,7 @@ if TYPE_CHECKING:
     from crp.ckf.fabric import ContextualKnowledgeFabric
     from crp.core.circuit_breaker import CircuitBreaker
     from crp.core.config import CRPConfig
+    from crp.core.idempotency import RequestDeduplicator
     from crp.core.session import SessionHandle
     from crp.core.window import WindowDAG
     from crp.envelope.builder import EnvelopeResult
@@ -306,6 +309,26 @@ class DispatchMixin:
     _compliance_reporter: ComplianceReporter
     # Transcript capture (schema 2.1.0) — lazily created by _get_transcript_store
     _transcript_store: TranscriptStore | None
+    # Request deduplicator (§23) — lazily created by _get_deduplicator
+    _deduplicator: RequestDeduplicator | None = None
+
+    def _get_deduplicator(self) -> RequestDeduplicator | None:
+        """Return the session's idempotency deduplicator, or None when disabled.
+
+        Wired per §23: ``dispatch()`` consults this cache before dispatching
+        so an identical retried request within the TTL is served from cache
+        instead of double-dispatching (double cost, double facts). Kill
+        switch: ``dispatch_idempotency=False`` in CRPConfig.
+        """
+        if self._deduplicator is not None:
+            return self._deduplicator
+        if not bool(self._config.get("dispatch_idempotency", True)):
+            return None
+        from crp.core.idempotency import DEFAULT_TTL, RequestDeduplicator
+
+        ttl = float(self._config.get("dispatch_idempotency_ttl_s", DEFAULT_TTL))
+        self._deduplicator = RequestDeduplicator(ttl=ttl)
+        return self._deduplicator
 
     if TYPE_CHECKING:
         def _check_session(self) -> None: ...
@@ -496,19 +519,31 @@ class DispatchMixin:
         this path) right after ``node.raw_output_id`` is minted, so the id
         stops dangling: the store resolves it to the persisted messages +
         raw output.  OFF unless ``audit_capture_transcripts`` is enabled;
-        never raises into the dispatch pipeline.
+        never raises into the dispatch pipeline.  When capture is on, PII
+        redaction defaults ON (``audit_transcript_redact_pii=False`` opts
+        out) and covers the full message array, not just the top-level
+        fields; the event records ``pii_recall="scanner-limited"``.
         """
         if not self._config.get("audit_capture_transcripts", False):
             return
         try:
-            redact = bool(self._config.get("audit_transcript_redact_pii", False))
+            # Redaction defaults ON whenever capture is enabled (secure by
+            # default); an explicit ``audit_transcript_redact_pii=False`` opts
+            # out.  Residual recall is limited to the regex scanner — the
+            # event records pii_recall="scanner-limited".
+            redact = bool(self._config.get("audit_transcript_redact_pii", True))
             store = self._get_transcript_store()
             pii_types: set[str] = set()
 
             sys_stored, task_stored, out_stored = system_prompt, task_input, output
+            messages_stored = [dict(m) for m in messages] if messages else []
             if redact:
                 # Integrate with the existing advisory _pii_scanner results:
                 # the stored variant replaces detected spans with markers.
+                # Every stored content field goes through the scanner —
+                # including each message's content, which carries the full
+                # assembled prompt (system/task duplicates AND any PII pulled
+                # into the envelope from warm-store/CKF facts).
                 for attr, value in (
                     ("system_prompt", system_prompt),
                     ("task_input", task_input),
@@ -522,6 +557,21 @@ class DispatchMixin:
                         task_stored = redact_text(value, scan)
                     else:
                         out_stored = redact_text(value, scan)
+                for msg in messages_stored:
+                    content = msg.get("content")
+                    if isinstance(content, str):
+                        scan = self._pii_scanner.scan(content)
+                        pii_types |= scan.pii_types_found
+                        msg["content"] = redact_text(content, scan)
+                    elif isinstance(content, list):
+                        redacted_parts = []
+                        for part in content:
+                            if isinstance(part, dict) and isinstance(part.get("text"), str):
+                                scan = self._pii_scanner.scan(part["text"])
+                                pii_types |= scan.pii_types_found
+                                part = {**part, "text": redact_text(part["text"], scan)}
+                            redacted_parts.append(part)
+                        msg["content"] = redacted_parts
 
             record = TranscriptRecord(
                 raw_output_id=node.raw_output_id,
@@ -532,7 +582,7 @@ class DispatchMixin:
                 continuation_index=continuation_index,
                 system_prompt=sys_stored,
                 task_input=task_stored,
-                messages=list(messages) if messages else [],
+                messages=messages_stored,
                 output=out_stored,
                 redacted=redact,
                 pii_types=sorted(pii_types),
@@ -560,6 +610,7 @@ class DispatchMixin:
                     "truncated": record.truncated,
                     "redacted": redact,
                     "pii_types": sorted(pii_types),
+                    "pii_recall": "scanner-limited" if redact else "raw",
                 },
             )
         except Exception as exc:  # noqa: BLE001 — capture must never break dispatch
@@ -875,6 +926,74 @@ class DispatchMixin:
             self._resource_manager.trigger_gc()
 
     # ------------------------------------------------------------------
+    # Per-call dispatch kwargs (A-PR-1 / A-PR-8; audits U-C8, I-C1)
+    # ------------------------------------------------------------------
+
+    #: Kwargs every dispatch variant understands.  Anything else is warned
+    #: about (or rejected under CRP_DISPATCH_STRICT_KWARGS=1) instead of being
+    #: silently dropped — silent swallowing of unknown dispatch kwargs caused
+    #: two independent consumer bug classes (audit A-PR-8).
+    _KNOWN_DISPATCH_KWARGS: frozenset = frozenset(
+        {"max_output_tokens", "max_continuations", "observed_sources"}
+    )
+
+    def _resolve_max_continuations(self, kwargs: dict) -> int | None:
+        """Pop the per-call ``max_continuations`` override (A-PR-1).
+
+        Returns None when the caller did not supply the kwarg (the session
+        config value applies), otherwise a non-negative int.  Previously the
+        kwarg was silently swallowed at every consumption site, making every
+        per-call continuation cap (depth/extended caps, novelty caps) inert
+        (audits I-C1 / U-C8).
+        """
+        val = kwargs.pop("max_continuations", None)
+        if val is None:
+            return None
+        try:
+            cap = int(val)
+        except (TypeError, ValueError):
+            raise TypeError(
+                f"max_continuations must be an int, got {val!r}"
+            ) from None
+        if cap < 0:
+            raise ValueError("max_continuations must be >= 0")
+        return cap
+
+    def _effective_continuation_config(
+        self, per_call: int | None
+    ) -> ContinuationConfig:
+        """Continuation config honouring a per-call cap override."""
+        base = getattr(self, "_continuation_config", None)
+        if per_call is None:
+            if base is not None:
+                return base
+            return ContinuationConfig(
+                max_continuations=int(self._config.get("max_continuations", 50))
+            )
+        if base is not None:
+            eff = _dc_replace(base)
+            eff.max_continuations = per_call
+            return eff
+        return ContinuationConfig(max_continuations=per_call)
+
+    def _check_unknown_dispatch_kwargs(self, kwargs: dict) -> None:
+        """Surface unknown dispatch kwargs (A-PR-8) instead of dropping them."""
+        unknown = sorted(set(kwargs) - self._KNOWN_DISPATCH_KWARGS)
+        if not unknown:
+            return
+        msg = (
+            "Unknown dispatch kwarg(s) ignored: "
+            + ", ".join(unknown)
+            + " — known kwargs: "
+            + ", ".join(sorted(self._KNOWN_DISPATCH_KWARGS))
+        )
+        if os.environ.get("CRP_DISPATCH_STRICT_KWARGS", "").lower() in (
+            "1", "true", "yes",
+        ):
+            raise TypeError(msg)
+        warnings.warn(msg, UserWarning, stacklevel=3)
+
+    # ------------------------------------------------------------------
     # Core dispatch
     # ------------------------------------------------------------------
 
@@ -896,9 +1015,58 @@ class DispatchMixin:
         7. Continuation loop if wall hit + gap remaining + info flowing
 
         Returns (stitched_output, QualityReport). Output is UNMODIFIED (Axiom 9).
+
+        §23 idempotency: an identical (system_prompt, task_input, kwargs)
+        request within the TTL is served from the dedup cache — no second
+        provider call, no double fact ingestion. Concurrent identical
+        requests are single-flighted: followers wait for the owner's
+        dispatch and reuse its result. Disabled via
+        ``dispatch_idempotency=False`` in CRPConfig.
         """
-        with self._lock:
-            return self._dispatch_locked(system_prompt, task_input, **kwargs)
+        dedup = self._get_deduplicator()
+        key: str | None = None
+        owner = False
+        event: Any = None
+        if dedup is not None:
+            try:
+                key = dedup.compute_key(system_prompt, task_input, **kwargs)
+            except Exception as exc:  # key derivation must never break dispatch
+                logger.debug("idempotency key computation failed: %s", exc)
+                key = None
+        if dedup is not None and key is not None:
+            cached = dedup.check(key)
+            if cached is not None:
+                logger.debug("dispatch idempotency: cache hit for key %s…", key[:8])
+                return cached.output, cached.report
+            owner, event = dedup.acquire_inflight(key)
+            if not owner:
+                # Another thread is dispatching this exact request — wait for
+                # it and serve from cache instead of double-dispatching.
+                wait_s = float(
+                    self._config.get("dispatch_idempotency_inflight_wait_s", 30.0)
+                )
+                if event.wait(wait_s):
+                    cached = dedup.check(key)
+                    if cached is not None:
+                        return cached.output, cached.report
+                # Owner finished without a cacheable result (or timed out):
+                # take over as the new owner and dispatch ourselves.
+                owner, event = dedup.acquire_inflight(key)
+
+        result: tuple[str, QualityReport] | None = None
+        try:
+            with self._lock:
+                result = self._dispatch_locked(system_prompt, task_input, **kwargs)
+            return result
+        finally:
+            if dedup is not None and key is not None and owner and event is not None:
+                try:
+                    if result is not None:
+                        dedup.store(key, result[0], result[1])
+                except Exception as exc:  # caching must never break dispatch
+                    logger.warning("idempotency store failed: %s", exc)
+                finally:
+                    dedup.release_inflight(key, event)
 
     def _dispatch_locked(
         self,
@@ -917,19 +1085,18 @@ class DispatchMixin:
         _facts_before = self._warm_store.fact_count
         self._check_session()
 
-        # ---------- Session binding verification (§7.1, §6A.3) ----------
-        if self._session_binding.binding is not None:
-            _binding_payload = (
-                self._session.session_id + ":" + str(len(task_input))
-            ).encode("utf-8")
-            _binding_sig = self._session_binding.sign_request(_binding_payload)
-            if not self._session_binding.verify_request_signature(
-                _binding_payload, _binding_sig
-            ):
-                raise RuntimeError(
-                    "Session binding verification failed — "
-                    "cryptographic integrity compromised"
-                )
+        # Per-call continuation cap override + unknown-kwarg surfacing (A-PR-1/8)
+        _per_call_max_cont = self._resolve_max_continuations(kwargs)
+        self._check_unknown_dispatch_kwargs(kwargs)
+
+        # ---------- Session binding (§7.1, §6A.3) ----------
+        # NOTE: a previous revision signed a payload here and immediately
+        # verified that signature against the same object that produced it —
+        # a tautology that could only fail if HMAC itself were broken
+        # (audit U-C7, "security theater").  Genuine request authentication
+        # requires a caller-supplied signature verified against an
+        # independently-held key at the SDK boundary; there is no such
+        # boundary inside this process, so the self-check was removed.
 
         # ---------- Compliance imports (§7.14) ----------
         from crp.security.consent import ProcessingPurpose
@@ -1562,9 +1729,7 @@ class DispatchMixin:
         _per_window_detail: list[dict] = []  # per-continuation-window telemetry
 
         from crp.continuation.manager import ContinuationManager
-        cont_config = getattr(self, "_continuation_config", None) or ContinuationConfig(
-            max_continuations=int(self._config.get("max_continuations", 50)),
-        )
+        cont_config = self._effective_continuation_config(_per_call_max_cont)
         cont_mgr = ContinuationManager(cont_config)
         cont_state = cont_mgr.process_window(
             task_intent=task_input,
@@ -2475,6 +2640,8 @@ class DispatchMixin:
         _dispatch_start_ns = time.monotonic_ns()
         _facts_before = self._warm_store.fact_count
         self._check_session()
+        _per_call_max_cont = self._resolve_max_continuations(kwargs)
+        self._check_unknown_dispatch_kwargs(kwargs)
 
         # ---------- RBAC + validation (same as dispatch) ----------
         from crp.security.rbac import Permission
@@ -2645,7 +2812,9 @@ class DispatchMixin:
         # windows just like plain dispatch().  Tool rounds are complete; these
         # windows only extend the answer.
         from crp.continuation.manager import ContinuationManager
-        cont_mgr = ContinuationManager(self._continuation_config)
+        cont_mgr = ContinuationManager(
+            self._effective_continuation_config(_per_call_max_cont)
+        )
         _cont_facts = self._extraction.extract(output, source_window_id=window_id).facts
         cont_state = cont_mgr.process_window(
             task_intent=task_input,
@@ -2663,7 +2832,9 @@ class DispatchMixin:
                 cont_state.termination_reason = "wall_time_deadline"
                 break
             _cont_window_count += 1
-            if _cont_window_count > int(self._config.get("max_continuations", 50)):
+            if _cont_window_count > self._effective_continuation_config(
+                _per_call_max_cont
+            ).max_continuations:
                 cont_state.termination_reason = "max_continuations"
                 break
 
@@ -3443,16 +3614,18 @@ class DispatchMixin:
         Returns:
             (output_text, QualityReport) — same interface as dispatch().
         """
+        _dispatch_start_ns = time.monotonic_ns()
+        _facts_before = self._warm_store.fact_count
+        self._check_session()
+        _per_call_max_cont = self._resolve_max_continuations(kwargs)
+        self._check_unknown_dispatch_kwargs(kwargs)
+
         from crp.core.relay_strategies import (
             AugmentationEvent,
             StreamAugmentationState,
             build_augmented_continuation,
             find_relevant_facts_for_sentence,
         )
-
-        _dispatch_start_ns = time.monotonic_ns()
-        _facts_before = self._warm_store.fact_count
-        self._check_session()
 
         # ---------- RBAC + validation ----------
         from crp.security.rbac import Permission
@@ -3621,9 +3794,7 @@ class DispatchMixin:
         # these windows only extend the answer.
         task_intent = TaskIntent(task_input=task_input, system_prompt=system_prompt)
         initial_extraction = self._extraction.extract(output, source_window_id=window_id)
-        cont_config = getattr(self, "_continuation_config", None) or ContinuationConfig(
-            max_continuations=int(self._config.get("max_continuations", 50)),
-        )
+        cont_config = self._effective_continuation_config(_per_call_max_cont)
         cont_mgr = ContinuationManager(cont_config)
         cont_state = cont_mgr.process_window(
             task_intent=task_input,
@@ -3636,7 +3807,9 @@ class DispatchMixin:
         _cont_window_count = 0
         _last_output = output
         _cont_deadline = time.monotonic() + int(self._config.get("dispatch_timeout", 3600))
-        _max_continuations = int(self._config.get("max_continuations", 50))
+        _max_continuations = self._effective_continuation_config(
+            _per_call_max_cont
+        ).max_continuations
         while not cont_state.finished:
             if time.monotonic() > _cont_deadline:
                 cont_state.termination_reason = "wall_time_deadline"
@@ -3809,6 +3982,8 @@ class DispatchMixin:
         _dispatch_start_ns = time.monotonic_ns()
         _facts_before = self._warm_store.fact_count
         self._check_session()
+        _per_call_max_cont = self._resolve_max_continuations(kwargs)
+        self._check_unknown_dispatch_kwargs(kwargs)
 
         # ---------- RBAC + validation (same as dispatch) ----------
         from crp.security.rbac import Permission
@@ -4637,6 +4812,8 @@ class DispatchMixin:
         - Continues automatically when the provider hits the token wall.
         """
         self._check_session()
+        _per_call_max_cont = self._resolve_max_continuations(kwargs)
+        self._check_unknown_dispatch_kwargs(kwargs)
 
         # RBAC permission + rate limit check (§7.10)
         from crp.security.rbac import Permission
@@ -4705,9 +4882,7 @@ class DispatchMixin:
 
         start_ms = time.monotonic_ns()
         task_intent = TaskIntent(task_input=task_input, system_prompt=system_prompt)
-        cont_config = getattr(self, "_continuation_config", None) or ContinuationConfig(
-            max_continuations=int(self._config.get("max_continuations", 50)),
-        )
+        cont_config = self._effective_continuation_config(_per_call_max_cont)
         cont_mgr = ContinuationManager(cont_config)
         cont_state: Any = None
         accumulated_output = ""
@@ -4715,7 +4890,9 @@ class DispatchMixin:
         total_input_tokens = input_tokens
         total_output_tokens = 0
         total_llm_ms = 0.0
-        max_continuations = int(self._config.get("max_continuations", 50))
+        max_continuations = self._effective_continuation_config(
+            _per_call_max_cont
+        ).max_continuations
         _cont_deadline = time.monotonic() + int(self._config.get("dispatch_timeout", 3600))
         last_output = ""
         first_node = node

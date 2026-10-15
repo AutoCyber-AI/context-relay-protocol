@@ -54,13 +54,17 @@ def _init_session(args: list[str] | None = None) -> str:
     return out.strip()
 
 
-def test_cli_version_currently_broken() -> None:
-    # DOCUMENTED BUG (not fixed — source change forbidden): the CLI declares
-    # ``click.version_option(package_name="crp")`` but the installed
-    # distribution is named ``crprotocol``, so importlib.metadata lookup
-    # raises RuntimeError("'crp' is not installed") at runtime.
-    with pytest.raises(RuntimeError, match="'crp' is not installed"):
-        _invoke(["--version"])
+def test_cli_version() -> None:
+    # FIXED (6.2.2): the CLI used ``click.version_option(package_name="crp")``
+    # but the installed distribution is named ``crprotocol``, so the metadata
+    # lookup raised RuntimeError("'crp' is not installed") at runtime. The
+    # version now comes from ``crp._version.__version__`` directly.
+    code, out, _ = _invoke(["--version"])
+    assert code == 0
+    from crp._version import __version__
+
+    assert __version__ in out, f"version {__version__} not in output: {out!r}"
+    assert "crp" in out
 
 
 def test_cli_help() -> None:

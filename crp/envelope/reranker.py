@@ -12,7 +12,8 @@ Blended score: 0.6 × CE_score + 0.4 × bi_encoder_score
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+import threading
+from dataclasses import dataclass, field, replace as _dc_replace
 
 from crp.core.task_intent import TaskIntent
 
@@ -27,7 +28,6 @@ MIN_FACTS_FOR_RERANK = 10
 CE_WEIGHT = 0.6
 BI_WEIGHT = 0.4
 IDLE_UNLOAD_WINDOWS = 10
-TASK_SIM_INVALIDATION_THRESHOLD = 0.9
 
 # ---------------------------------------------------------------------------
 # Cross-encoder model management (lazy load, idle unload)
@@ -36,31 +36,37 @@ TASK_SIM_INVALIDATION_THRESHOLD = 0.9
 _CE_MODEL: object | None = None
 _CE_AVAILABLE: bool | None = None  # None = not yet attempted
 _CE_LAST_USED_WINDOW: int = 0
+# Guards the module-global model lifecycle (audit U-C11): without it, two
+# threads could lazy-load the model twice (double RAM spike) and
+# maybe_unload_cross_encoder could free it mid-predict in another thread.
+_CE_LOCK = threading.RLock()
 
 
 def _try_load_cross_encoder() -> bool:
     """Attempt lazy load of cross-encoder model.  Returns True on success."""
     global _CE_MODEL, _CE_AVAILABLE  # noqa: PLW0603
-    if _CE_AVAILABLE is True:
-        return True
-    if _CE_AVAILABLE is False:
-        return False
-    try:
-        from sentence_transformers import CrossEncoder  # type: ignore[import-untyped]
+    with _CE_LOCK:
+        if _CE_AVAILABLE is True:
+            return True
+        if _CE_AVAILABLE is False:
+            return False
+        try:
+            from sentence_transformers import CrossEncoder  # type: ignore[import-untyped]
 
-        _CE_MODEL = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
-        _CE_AVAILABLE = True
-    except Exception:  # noqa: BLE001
-        _CE_AVAILABLE = False
-    return _CE_AVAILABLE or False
+            _CE_MODEL = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
+            _CE_AVAILABLE = True
+        except Exception:  # noqa: BLE001
+            _CE_AVAILABLE = False
+        return _CE_AVAILABLE or False
 
 
 def maybe_unload_cross_encoder(current_window: int) -> None:
     """Unload cross-encoder if idle for > IDLE_UNLOAD_WINDOWS."""
     global _CE_MODEL, _CE_AVAILABLE, _CE_LAST_USED_WINDOW  # noqa: PLW0603
-    if _CE_MODEL is not None and (current_window - _CE_LAST_USED_WINDOW) > IDLE_UNLOAD_WINDOWS:
-        _CE_MODEL = None
-        _CE_AVAILABLE = None
+    with _CE_LOCK:
+        if _CE_MODEL is not None and (current_window - _CE_LAST_USED_WINDOW) > IDLE_UNLOAD_WINDOWS:
+            _CE_MODEL = None
+            _CE_AVAILABLE = None
 
 
 def preload_cross_encoder() -> bool:
@@ -91,7 +97,9 @@ class CrossEncoderCache:
     Key: (task_hash, fact_id).  Invalidation rules:
     - Full clear on compaction.
     - Remove entry on fact supersession.
-    - Full clear if task similarity < 0.9 (compared via hash change).
+    - Full clear when the task hash changes (exact-match invalidation;
+      the retired ``TASK_SIM_INVALIDATION_THRESHOLD`` similarity constant
+      was never wired in — audit U-C11 — and has been removed).
     """
 
     _cache: dict[tuple[str, str], float] = field(default_factory=dict)
@@ -171,6 +179,12 @@ def rerank(
     if len(scored_facts) < MIN_FACTS_FOR_RERANK:
         return scored_facts  # already sorted by bi-encoder score
 
+    # Already-blended input (audit U-C11): a second rerank would compound
+    # the CE weighting and reshuffle tie order, so treat flagged input as
+    # final — stable re-sort only, which is a fixed point.
+    if all(sf.rerank_blend_applied for sf in scored_facts):
+        return sorted(scored_facts, key=lambda s: s.composite_score, reverse=True)
+
     # Select candidates for reranking
     candidates = scored_facts[:TOP_K_RERANK]
     remainder = scored_facts[TOP_K_RERANK:]
@@ -200,11 +214,16 @@ def rerank(
         else:
             pairs_to_score.append((i, sf.fact.text))
 
-    # Batch predict uncached pairs
+    # Batch predict uncached pairs — hold the lifecycle lock so the model
+    # cannot be unloaded mid-predict by maybe_unload_cross_encoder (U-C11).
     if pairs_to_score:
         input_pairs = [(query, text) for _, text in pairs_to_score]
         try:
-            raw_scores = _CE_MODEL.predict(input_pairs)  # type: ignore[attr-defined]
+            with _CE_LOCK:
+                model = _CE_MODEL
+                if model is None:  # pragma: no cover - raced unload
+                    return scored_facts
+                raw_scores = model.predict(input_pairs)  # type: ignore[attr-defined]
             for (idx, _), raw in zip(pairs_to_score, raw_scores):
                 score_val = float(raw)
                 ce_scores[idx] = score_val
@@ -214,13 +233,22 @@ def rerank(
             # Model failure — fall back to bi-encoder scores
             return scored_facts
 
-    # Compute blended scores
-    for i, sf in enumerate(candidates):
-        ce_score = ce_scores.get(i, 0.0)
-        sf.composite_score = CE_WEIGHT * ce_score + BI_WEIGHT * sf.composite_score
+    # Compute blended scores into NEW ScoredFact objects (audit U-C11): the
+    # pre-6.2.2 code wrote the blend into the caller's input objects, so a
+    # second rerank of the same list compounded the CE weighting (0.4 × 0.4 …)
+    # and the mutation leaked into the caller's envelope state.
+    blended = [
+        _dc_replace(
+            sf,
+            composite_score=CE_WEIGHT * ce_scores.get(i, 0.0)
+            + BI_WEIGHT * sf.composite_score,
+            rerank_blend_applied=True,
+        )
+        for i, sf in enumerate(candidates)
+    ]
 
     # Re-sort candidates by blended score
-    candidates.sort(key=lambda s: s.composite_score, reverse=True)
+    blended.sort(key=lambda s: s.composite_score, reverse=True)
 
     # Append remainder (already below top-K, keep original order)
-    return candidates + remainder
+    return blended + remainder

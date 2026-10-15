@@ -26,3 +26,11 @@ Auto-generated reference for the ``crp.ml`` subpackage.
       filters:
         - "!^_"
 
+## `ml.torch_threads`
+
+::: crp.ml.torch_threads
+    options:
+      show_source: false
+      filters:
+        - "!^_"
+

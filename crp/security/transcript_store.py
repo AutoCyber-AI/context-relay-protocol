@@ -50,6 +50,20 @@ ENV_TRANSCRIPT_DIR = "CRP_AUDIT_TRANSCRIPT_DIR"
 
 _HASH_PREFIX_LEN = 16  # matches LLM_CALL_COMPLETED *_hash truncation
 
+#: Marker appended to head-truncated content fields.
+_TRUNCATION_MARKER = "\n[... truncated by transcript byte cap ...]"
+_MARKER_LEN = len(_TRUNCATION_MARKER.encode("utf-8"))
+
+
+def _head_bytes(text: str, budget: int) -> str:
+    """Head-truncate *text* to at most *budget* UTF-8 bytes, never splitting a char."""
+    if budget <= 0:
+        return ""
+    encoded = text.encode("utf-8")
+    if len(encoded) <= budget:
+        return text
+    return encoded[:budget].decode("utf-8", errors="ignore")
+
 
 def hash_text(text: str) -> str:
     """Full SHA-256 hex digest of *text* (utf-8)."""
@@ -188,11 +202,16 @@ class TranscriptStore:
     *storage_dir* plus a ``manifest.jsonl`` index.  When *storage_dir* is
     None the store is memory-only (useful for tests and ephemeral sessions).
 
-    Size cap: serialized records larger than *max_bytes* have their raw
-    ``output`` field head-truncated (``truncated=True``) so the cap is
-    honoured on disk; content hashes of the FULL pre-truncation content are
-    kept on the record and on the audit event, so the chain linkage survives
-    truncation — the full output remains re-derivable from the caller.
+    Size cap: the cap is enforced on the FINAL serialized record size
+    (encode-then-measure).  When a record exceeds *max_bytes*, stored content
+    is shrunk — messages first (they largely duplicate system_prompt /
+    task_input), then output, then system_prompt, then task_input — halving
+    the current field each pass until the serialized blob fits.  Truncation
+    is byte-accurate (multi-byte UTF-8 is never split) and
+    ``truncated=True`` is set.  Content hashes of the FULL pre-truncation
+    content are kept on the record and on the audit event, so the chain
+    linkage survives truncation — the full output remains re-derivable from
+    the caller.
     """
 
     def __init__(
@@ -229,9 +248,11 @@ class TranscriptStore:
     def store(self, record: TranscriptRecord) -> str:
         """Persist *record*; returns the transcript reference (file path or id).
 
-        Applies the byte cap: if the serialized record exceeds *max_bytes* the
-        output field is head-truncated and ``truncated`` is set.  Full-content
-        hashes are computed BEFORE truncation and stored on the record.
+        Applies the byte cap on the FINAL serialized size: content fields are
+        shrunk (messages first — they largely duplicate system_prompt /
+        task_input — then output, then system_prompt, then task_input) until
+        the encoded JSON fits *max_bytes*.  Full-content hashes are computed
+        BEFORE truncation and stored on the record.
         """
         with self._lock:
             # Hash the full (pre-truncation) stored content.
@@ -244,15 +265,7 @@ class TranscriptStore:
             record.bytes_in = sum(len(str(m)) for m in record.messages)
             record.bytes_out = len(record.output)
 
-            blob = json.dumps(record.to_dict(), separators=(",", ":"), default=str)
-            if len(blob.encode("utf-8")) > self._max_bytes and not record.truncated:
-                budget = max(self._max_bytes // 2, 256)
-                record.output = record.output[:budget] + "\n[... truncated by transcript byte cap ...]"
-                record.truncated = True
-                # The stored variant now hashes differently; keep the full
-                # pre-truncation hash in output_sha256 for chain linkage.
-                record.stored_output_sha256 = hash_text(record.output)
-                blob = json.dumps(record.to_dict(), separators=(",", ":"), default=str)
+            blob = self._serialize_under_cap(record)
             record.stored_bytes = len(blob.encode("utf-8"))
 
             path = self._path_for(record.raw_output_id)
@@ -266,6 +279,76 @@ class TranscriptStore:
                 self._memory[record.raw_output_id] = record
                 ref = record.raw_output_id
         return ref
+
+    @staticmethod
+    def _serialize(record: TranscriptRecord) -> str:
+        return json.dumps(record.to_dict(), separators=(",", ":"), default=str)
+
+    def _serialize_under_cap(self, record: TranscriptRecord) -> str:
+        """Serialize *record*, shrinking stored content until it fits the cap.
+
+        The cap is measured on the final encoded blob.  Fields are shrunk in
+        priority order (messages → output → system_prompt → task_input), the
+        current field halved per pass (byte-accurate), so the loop always
+        makes progress and terminates.  Stored-content hashes are recomputed
+        post-truncation so :meth:`verify_entry` compares like with like.
+        """
+        if len(self._serialize(record).encode("utf-8")) <= self._max_bytes:
+            return self._serialize(record)
+        record.truncated = True
+        for _ in range(512):  # safety bound; the loop strictly shrinks content
+            blob = self._serialize(record)
+            if len(blob.encode("utf-8")) <= self._max_bytes:
+                break
+            field, size = self._largest_content_field(record)
+            if size <= 0:
+                break  # content exhausted; only the envelope remains
+            self._shrink_field(record, field)
+        # Stored-content hashes cover what is actually on disk.
+        record.messages_sha256 = hash_messages(record.messages)
+        record.stored_output_sha256 = hash_text(record.output)
+        return self._serialize(record)
+
+    @staticmethod
+    def _messages_content_bytes(record: TranscriptRecord) -> int:
+        """Total UTF-8 byte size of the message contents (0 when exhausted)."""
+        return sum(
+            len(str(m.get("content", "")).encode("utf-8")) for m in record.messages
+        )
+
+    @classmethod
+    def _largest_content_field(cls, record: TranscriptRecord) -> tuple[str, int]:
+        """Return the (priority-ordered) content field with the largest byte size."""
+        sizes = {
+            "messages": cls._messages_content_bytes(record),
+            "output": len(record.output.encode("utf-8")),
+            "system_prompt": len(record.system_prompt.encode("utf-8")),
+            "task_input": len(record.task_input.encode("utf-8")),
+        }
+        for name in ("messages", "output", "system_prompt", "task_input"):
+            if sizes[name] > 0:
+                return name, sizes[name]
+        return "", 0
+
+    @staticmethod
+    def _shrink_field(record: TranscriptRecord, field: str) -> None:
+        """Halve *field*'s stored content (byte-accurate), marking the cut."""
+        if field == "messages":
+            if not record.messages:
+                return
+            idx = max(
+                range(len(record.messages)),
+                key=lambda i: len(str(record.messages[i].get("content", "")).encode("utf-8")),
+            )
+            msg = record.messages[idx]
+            content = str(msg.get("content", ""))
+            budget = len(content.encode("utf-8")) // 2
+            msg["content"] = _head_bytes(content, budget) if budget > _MARKER_LEN + 8 else ""
+            return
+        text = getattr(record, field)
+        budget = len(text.encode("utf-8")) // 2
+        shrunk = _head_bytes(text, budget - _MARKER_LEN) + _TRUNCATION_MARKER
+        setattr(record, field, shrunk if budget > _MARKER_LEN + 8 else "")
 
     def _append_manifest(self, record: TranscriptRecord, ref: str) -> None:
         if self._dir is None:

@@ -2,6 +2,42 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.2.3] — 2026-10-16 — Long-gen duplicate-collapse hardening
+
+### Fixed (calibrated on a real user run: qwen2.5-7b, custom 5-section
+### 'Philosophy & Cognitive Science' topic, grounding on)
+- **Renumbered section rewrites surviving collapse** — the model re-announced
+  an already-written section as `### 3. 2. Language, Perception...` (and
+  outline-depth headings like `5.4. ...`). `_normalize_heading` stripped only
+  ONE numeric prefix, so the heading never matched and the rewrite stayed in
+  the document. The normalizer now strips stacked prefixes to the bare title.
+- **Recycled fragments inside a kept block** — a window closed `## Conclusion`,
+  then appended paragraphs recycling earlier sections with no markdown heading
+  of their own. Two gaps combined: single-block output skipped collapse
+  entirely, and when the fragment pushed the WHOLE block over the 0.50
+  block-overlap bar, the empty-kept guard resurrected the original verbatim.
+  A paragraph-level pass now drops near-verbatim (>= 0.50) recycled paragraphs
+  inside kept blocks; the salvage path keeps the genuine content (the real
+  conclusion) instead of discarding the whole block.
+- **Pasted instruction lines becoming sections** — pasting an LLM-style
+  prompt ('Conduct a comprehensive ... 1. ... 2. ...') into the section-titles
+  box made line 1 a section, so window 1 wrote the instruction text as content
+  and a real section fell off the plan. `parse_section_titles` (longgen +
+  comparison demos) now uses only numbered lines as sections when any are
+  present, strips their numbers (the strategy re-adds canonical numbering),
+  and keeps the one-line-one-title behaviour for unnumbered pastes.
+- **Word target stranding on a thin window** — the planned-window margin is
+  +3 (was +2): live runs showed one ~250-word window against a ~500-word
+  estimate still leaving the document below target. The near-duplicate and
+  low-novelty stop guards (6.1.7+, 6.2.2) keep the extra budget from
+  runaway.
+
+### Docs
+- `docs/DEMO_REPRODUCTION_AND_VIDEO_GUIDE.md`: rewrote the stale v6.1.1
+  mega-blockquote preamble as proper sections current for 6.2.3, and
+  documented the 6.2.3 custom-section-title parsing in the Long-Gen
+  recording section.
+
 ## [6.2.2] — 2026-10-14 — Production audit hardening (upstream U-C1…U-C15, latents, conformance gates)
 
 ### Added (this release, cross-batch)

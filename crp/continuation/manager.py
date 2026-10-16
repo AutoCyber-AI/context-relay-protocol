@@ -49,6 +49,12 @@ def _window_6grams(text: str) -> set[str]:
 # 6-gram overlap with already-written content is very high.
 _BLOCK_DUP_THRESHOLD = 0.50
 _BLOCK_MIN_WORDS = 40
+# Paragraph-level recycling inside a KEPT block: a window may close its real
+# content, then append paragraphs that recycle earlier sections with no
+# markdown heading of their own — the block-level ratio misses those because
+# the genuine text dilutes it. Only near-verbatim recycling (>= 0.50) drops.
+_PARA_MIN_WORDS = 40
+_PARA_DUP_THRESHOLD = 0.50
 
 # Subsection titles that legitimately recur under every section of a guide.
 # A block under one of these needs the high _BLOCK_DUP_THRESHOLD overlap to be
@@ -78,7 +84,15 @@ def _normalize_heading(text: str) -> str:
     Modeling and Storage' and '### 3. Data Modeling and Storage' must match."""
     h = re.sub(r"^#{1,6}\s*", "", text.strip().lower())
     h = re.sub(r"^section\s+\d{1,3}\s*[:.)-]?\s*", "", h)
-    h = re.sub(r"^\d{1,3}\s*[.)]\s*", "", h)
+    # Strip STACKED list prefixes: real artifacts include '3. 2. Language...'
+    # (a re-announced section re-numbered by the model) and '5.4. ...' (an
+    # outline depth that leaked into a heading). Loop until no leading
+    # numeric token remains so both collapse to the bare title.
+    while True:
+        stripped = re.sub(r"^\d{1,3}\s*[.)]\s*", "", h)
+        if stripped == h:
+            break
+        h = stripped
     return re.sub(r"[^a-z0-9 ]", "", h).strip()
 
 
@@ -105,6 +119,40 @@ def _split_markdown_blocks(text: str) -> list[str]:
     return ["\n".join(b) for b in blocks if "\n".join(b).strip()]
 
 
+def _dedup_block_paragraphs(
+    block: str, prior_grams: set[str], kept_grams: set[str],
+) -> tuple[str, int]:
+    """Drop near-verbatim recycled paragraphs inside a KEPT block.
+
+    Real qwen2.5-7b artifact (6.2.2 era): a window wrote '## Conclusion',
+    then appended paragraphs recycling earlier sections with no markdown
+    heading of their own ('Introduction' as plain text, a re-stated
+    determinism paragraph). The block-level overlap misses these because the
+    genuine conclusion text dilutes the ratio. Paragraphs >= 40 words whose
+    6-gram overlap with all prior/kept content reaches 0.50 are near-verbatim
+    recycling and are dropped. If every paragraph would drop, the block is
+    returned unchanged — never leave an empty block.
+    """
+    paragraphs = re.split(r"\n\s*\n", block)
+    if len(paragraphs) < 2:
+        return block, 0
+    seen = prior_grams | kept_grams
+    if not seen:
+        return block, 0
+    kept_paras: list[str] = []
+    dropped = 0
+    for para in paragraphs:
+        if len(_WORD_RE.findall(para)) >= _PARA_MIN_WORDS:
+            grams = _window_6grams(para)
+            if grams and len(grams & seen) / len(grams) >= _PARA_DUP_THRESHOLD:
+                dropped += 1
+                continue
+        kept_paras.append(para)
+    if dropped and kept_paras:
+        return "\n\n".join(kept_paras), dropped
+    return block, 0
+
+
 def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
     """Drop blocks that rewrite content already written (prior windows or
     earlier blocks of this same window).
@@ -114,8 +162,11 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
     remains the terminating authority — never leave an empty document.
     """
     blocks = _split_markdown_blocks(output)
-    if len(blocks) < 2:
-        return output, 0
+    # NOTE: no early return for single-block output. A window can carry all
+    # of its recycling INSIDE one block (e.g. '## Conclusion' followed by
+    # recycled fragments with no headings of their own) — the paragraph pass
+    # below is the only line of defence there. The 'dropped and kept' guard
+    # at the end still prevents an empty result.
 
     prior_grams = _window_6grams(prior_text) if prior_text else set()
     prior_headings = _block_headings(prior_text) if prior_text else set()
@@ -123,6 +174,7 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
     kept_grams: set[str] = set()
     kept_headings: set[str] = set()
     dropped = 0
+    conclusion_seen = False
     for block in blocks:
         heading_line = next(
             (ln for ln in block.split("\n") if ln.startswith("#")), "",
@@ -143,7 +195,23 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
         ):
             dropped += 1
             continue
-        if word_n >= _BLOCK_MIN_WORDS:
+        # A block that RE-ANNOUNCES an earlier heading is checked regardless
+        # of size: the 40-word floor exists to protect small blocks from weak
+        # overlap signals, but a re-announced heading with real overlap is a
+        # rewrite at any length (observed live: 27- and 37-word blocks at
+        # 0.29/0.76 overlap bypassed every check because they sat under the
+        # floor, and the pure-overlap path is unreachable for them). The
+        # same applies to HEADED blocks once a conclusion exists — the
+        # post-conclusion pruning below needs their overlap measured.
+        reannounced = bool(norm_h) and (
+            norm_h in kept_headings or norm_h in prior_headings
+        )
+        check_overlap = (
+            word_n >= _BLOCK_MIN_WORDS
+            or reannounced
+            or (conclusion_seen and bool(norm_h))
+        )
+        if check_overlap:
             grams = _window_6grams(block)
             max_overlap = 0.0
             if grams:
@@ -163,18 +231,53 @@ def collapse_duplicate_blocks(output: str, prior_text: str) -> tuple[str, int]:
             # while boilerplate subheads keep the high overlap-only path so a
             # fresh "Key Concepts" block under a repeated heading (~0.05)
             # survives.
-            heading_dup = (
-                bool(norm_h)
-                and (norm_h in kept_headings or norm_h in prior_headings)
-                and (
-                    (norm_h not in _BOILERPLATE_HEADINGS and max_overlap >= 0.10)
-                    or max_overlap >= 0.50
-                )
+            heading_dup = reannounced and (
+                (norm_h not in _BOILERPLATE_HEADINGS and max_overlap >= 0.10)
+                or max_overlap >= _BLOCK_DUP_THRESHOLD
             )
-            if heading_dup or max_overlap >= _BLOCK_DUP_THRESHOLD:
-                dropped += 1
-                continue
+            # Post-conclusion pruning: once a '## Conclusion' block is kept,
+            # later blocks can only be epilogue. A re-announced heading or
+            # >= 0.35 overlap there is the model re-treading earlier sections
+            # (observed live: re-announced subsections at 0.29/0.42/0.76
+            # after the conclusion). Genuinely new epilogue content has new
+            # headings and low overlap, so it is unaffected.
+            post_conclusion_dup = (
+                conclusion_seen
+                and (reannounced or max_overlap >= 0.35)
+            )
+            if (
+                heading_dup
+                or post_conclusion_dup
+                or (word_n >= _BLOCK_MIN_WORDS
+                    and max_overlap >= _BLOCK_DUP_THRESHOLD)
+            ):
+                # Salvage path: if dropping this block would leave nothing
+                # kept, try paragraph-level removal first — the block may
+                # MIX genuine content with recycled fragments (observed live:
+                # a '## Conclusion' block whose recycled tail pushed the
+                # whole block to 0.51 overlap; dropping it outright would
+                # have discarded a real conclusion).
+                _salvaged, _sdropped = _dedup_block_paragraphs(
+                    block, prior_grams, kept_grams,
+                )
+                if _sdropped and _salvaged.strip() and not kept:
+                    block = _salvaged
+                    dropped += _sdropped
+                    grams = _window_6grams(block)
+                    kept_grams |= grams
+                else:
+                    dropped += 1
+                    continue
+            if word_n >= _BLOCK_MIN_WORDS:
+                block, _pdropped = _dedup_block_paragraphs(
+                    block, prior_grams, kept_grams,
+                )
+                if _pdropped:
+                    dropped += _pdropped
+                    grams = _window_6grams(block)
             kept_grams |= grams
+        if norm_h == "conclusion":
+            conclusion_seen = True
         if norm_h:
             kept_headings.add(norm_h)
         kept.append(block)

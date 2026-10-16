@@ -23,6 +23,7 @@ import time
 import uuid
 from typing import Any
 
+from .longgen_backend import parse_section_titles
 from .strategies.base import BENCHMARK_SECTIONS, word_count
 from .strategies.crp_strategy import CRPStrategy
 from .strategies.hierarchical_strategy import HierarchicalSummarizationStrategy
@@ -86,12 +87,9 @@ def _run_benchmark(run: _BenchmarkRun) -> None:
     sections_slice = int(cfg.get("sections", len(BENCHMARK_SECTIONS)))
     # Optional user-defined section titles (one per line from the UI). When
     # provided they replace the built-in benchmark topic entirely.
-    custom_sections = [
-        str(s).strip() for s in (cfg.get("section_titles") or [])
-        if str(s).strip()
-    ]
-    sections = custom_sections[:sections_slice] if custom_sections \
-        else BENCHMARK_SECTIONS[:sections_slice]
+    sections = parse_section_titles(
+        list(cfg.get("section_titles") or []), sections_slice,
+    ) or BENCHMARK_SECTIONS[:sections_slice]
 
     strategy_kwargs = dict(
         endpoint=endpoint,

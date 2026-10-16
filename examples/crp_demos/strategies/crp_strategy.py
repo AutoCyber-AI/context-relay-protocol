@@ -136,8 +136,8 @@ class CRPStrategy(BaseStrategy):
     ) -> StrategyResult:
         """Invoke CRPOrchestrator.dispatch_stream and translate its event
         stream into the strategy result shape the comparison UI consumes."""
-        from crp.core.orchestrator import CRPOrchestrator
         from crp.continuation.manager import collapse_duplicate_blocks
+        from crp.core.orchestrator import CRPOrchestrator
 
         server_url = self.endpoint[:-3] if self.endpoint.endswith("/v1") \
             else self.endpoint
@@ -149,9 +149,14 @@ class CRPStrategy(BaseStrategy):
             max_tokens=self.max_tokens_per_window,
         )
         # Bound the continuation budget to the word target: estimate ~1.4
-        # tokens per word and allow the planned sections plus a small margin.
+        # tokens per word and allow the planned sections plus a margin.
         # Without this the loop keeps opening windows on word-count gaps the
-        # model can only fill by rephrasing earlier sections.
+        # model can only fill by rephrasing earlier sections. The margin is
+        # +3: +2 covered a thin window, live runs (6.2.2 era) showed a single
+        # underperforming window (~250 words vs ~500 estimated) still
+        # stranding the doc below target — the third window is the cheapest
+        # insurance and the near-duplicate / low-novelty guards (6.1.7+,
+        # 6.2.2) prevent runaway.
         # NOTE: the engine's trigger counts the INITIAL window inside
         # max_continuations (continuation_count == window_count) and fires at
         # >=, so total windows == max_continuations exactly. Passing
@@ -160,7 +165,7 @@ class CRPStrategy(BaseStrategy):
         est_words_per_window = max(150, int(self.max_tokens_per_window / 1.4))
         planned_windows = max(
             len(self.sections) + 1,
-            -(-self.target_words // est_words_per_window) + 2,
+            -(-self.target_words // est_words_per_window) + 3,
         )
         orch = CRPOrchestrator(
             provider=provider,

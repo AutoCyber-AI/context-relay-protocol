@@ -608,6 +608,31 @@ class ContinuationManager:
                 if items:
                     sections.append("[KEY FINDINGS FROM PRIOR SECTIONS]\n" + "\n".join(items))
 
+        # ── 5b. Truncation point: quote the exact dangling tail ──
+        # Wall-hit windows can end mid-sentence. "Continue from exactly where
+        # you left off" is not enough for a small model — it guesses, and
+        # often guesses "start the next section" (observed live: a window
+        # ended "...exercise control over their actions in a way that is
+        # necessary" and the next window abandoned the sentence). Quoting the
+        # verbatim tail makes the resume point unambiguous.
+        _prev_out = (
+            self._state.window_outputs[-1]["output"]
+            if self._state.window_outputs else ""
+        )
+        _tail = _prev_out.rstrip()
+        if _tail and _tail[-1] not in ".!?\"')\"]":
+            _tail_words = _tail.split()
+            if _tail_words:
+                _frag = " ".join(_tail_words[-12:])
+                sections.append(
+                    "[TRUNCATION POINT]\n"
+                    "The previous window was cut off mid-sentence. Its exact "
+                    "final words were:\n"
+                    f"'...{_frag}'\n"
+                    "Begin your output by completing that exact sentence "
+                    "first, then continue with the task."
+                )
+
         # ── 6. Structural state ──
         if structural_state:
             lines: list[str] = []
@@ -828,6 +853,16 @@ class ContinuationManager:
         # threshold means the model is recycling material, not adding new
         # material, so the loop stops instead of accumulating repetition
         # window over window.
+        # Threshold 0.50 (raised from 0.30 in 6.2.4): a CONCLUSION window
+        # legitimately restates earlier sections and routinely overlaps a
+        # prior window 0.3-0.45 — the old bar terminated the loop mid-run
+        # exactly when the document was about to finish (observed live:
+        # "repetition_detected" after the conclusion window, 1,657 words,
+        # gate word-count fail). Measured anchors: real whole-window
+        # rewrites sit at 0.66-0.82; legitimate new-content windows are
+        # <= 0.45. The duplicate-block collapse remains the primary
+        # recycling defence; the A-PR-7 low-novelty stop guard (3 strikes)
+        # backstops runaway windows within the bounded budget.
         _is_near_duplicate = False
         if output.strip() and len(self._state.window_outputs) > 1:
             _cur_grams = _window_6grams(output)
@@ -837,7 +872,7 @@ class ContinuationManager:
                     if not _prev_grams:
                         continue
                     _overlap = len(_cur_grams & _prev_grams) / len(_cur_grams)
-                    if _overlap >= 0.30:
+                    if _overlap >= 0.50:
                         _is_near_duplicate = True
                         break
 

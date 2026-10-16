@@ -252,7 +252,7 @@ class SafetyControlPlane:
             return
         cap.current = value
         self.manifest.set(name, value)
-        logger.info("Tuned %s → %s", name, value)
+        logger.info("Tuned %s -> %s", name, value)
 
     def register_rule(self, rule: CustomSafetyRule) -> None:
         """Register a custom safety rule as a first-class citizen.

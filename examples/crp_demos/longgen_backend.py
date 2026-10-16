@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import logging
 import queue
+import re
 import threading
 import time
 import uuid
@@ -148,6 +149,38 @@ def acceptance_gate(full_text: str, result: dict[str, Any], target_words: int,
             "words": words, "headings": headings}
 
 
+def parse_section_titles(raw_lines: list[str], limit: int) -> list[str]:
+    """Parse the UI's one-title-per-line textarea into section titles.
+
+    Real UX artifact: users paste a whole instruction block, e.g. an
+    unnumbered preamble line ('Conduct a comprehensive ... on the topic X')
+    followed by numbered titles ('1. Foundational Epistemology ...'). The
+    naive first-N-lines rule turned the preamble into a section, so window 1
+    wrote the instruction text as content and a real section fell off the
+    plan. Rule: when ANY line carries a leading number ('1.' / '2)' / '3.'),
+    ONLY numbered lines are sections and their numbers are stripped (the
+    strategy re-adds canonical numbering). With no numbered lines, every
+    non-empty line is a title verbatim (previous behaviour).
+    """
+    lines = [str(s).strip() for s in raw_lines if str(s).strip()]
+    numbered = [
+        (m.group(2).strip(), m.group(1))
+        for line in lines
+        if (m := re.match(r"^\s*(\d{1,2}\s*[.)])\s*(.+)$", line))
+    ]
+    if numbered:
+        # Keep source order, de-duplicate after number stripping, cap at limit.
+        seen: set[str] = set()
+        titles: list[str] = []
+        for title, _num in numbered:
+            key = title.lower()
+            if key not in seen:
+                seen.add(key)
+                titles.append(title)
+        return titles[:limit]
+    return lines[:limit]
+
+
 def _run_longgen(run: _LongGenRun) -> None:
     run.status = "running"
     run.started_at = time.time()
@@ -159,12 +192,9 @@ def _run_longgen(run: _LongGenRun) -> None:
     model = str(cfg.get("model", "meta-llama-3.1-8b-instruct"))
     context_size = int(cfg.get("context_size", 4096))
     # Optional user-defined section titles replace the built-in topic.
-    custom_sections = [
-        str(s).strip() for s in (cfg.get("section_titles") or [])
-        if str(s).strip()
-    ]
-    chosen_sections = custom_sections[:sections_n] if custom_sections \
-        else BENCHMARK_SECTIONS[:sections_n]
+    chosen_sections = parse_section_titles(
+        list(cfg.get("section_titles") or []), sections_n,
+    ) or BENCHMARK_SECTIONS[:sections_n]
 
     # Optional Wikipedia grounding: retrieved intros give the model source
     # material so it writes facts instead of recycling parametric memory.

@@ -586,8 +586,27 @@ class ContinuationManager:
 
         # ── 3. Unfulfilled requirements ──
         if gap_result and gap_result.unfulfilled:
-            items = [f"- {r.text}" for r in gap_result.unfulfilled[:10]]
-            sections.append("[REMAINING REQUIREMENTS]\n" + "\n".join(items))
+            # Drop word-count requirements for already-written sections —
+            # gap analysis extracts them from the task text but they are
+            # never marked fulfilled, so every continuation window re-listed
+            # 'Section N: Minimum 400 words' for completed sections (noise
+            # that also invites re-opening finished work).
+            _completed_nums = self._get_completed_section_numbers()
+            items = []
+            for r in gap_result.unfulfilled[:10]:
+                txt = r.text
+                m = re.match(
+                    r"^#*\s*Section\s+(\d{1,3})\b", txt, re.IGNORECASE,
+                )
+                if (
+                    m
+                    and int(m.group(1)) in _completed_nums
+                    and "word" in txt.lower()
+                ):
+                    continue
+                items.append(f"- {txt}")
+            if items:
+                sections.append("[REMAINING REQUIREMENTS]\n" + "\n".join(items))
 
         # ── 4. Style anchor: last natural paragraph ──
         if last_output:
@@ -597,16 +616,45 @@ class ContinuationManager:
 
         # ── 5. Key findings summary: top facts from all windows so far ──
         if self._accumulated_facts:
-            sorted_facts = sorted(
+            # Curate HARD: for document-writing tasks the extractor emits
+            # headings, sentence fragments and verbatim sentences as "facts".
+            # Feeding them back verbatim taught the model to recap and
+            # recycle (measured live: 274-349 words of findings per
+            # envelope — larger than the window's own ~500-word output
+            # budget; total envelopes ran 735-827 words). Only full,
+            # single-line sentences that are NOT document headings survive,
+            # deduplicated, capped at 8.
+            _heading_keys = {
+                re.sub(r"[^a-z0-9 ]", "", h.text.lower()).strip()
+                for h in self._document_map.headings
+            }
+            _seen_keys: set[str] = set()
+            _items: list[str] = []
+            for f in sorted(
                 self._accumulated_facts,
                 key=lambda f: getattr(f, "confidence", 0.5),
                 reverse=True,
-            )
-            top_facts = sorted_facts[:15]
-            if top_facts:
-                items = [f"- {f.text}" for f in top_facts if hasattr(f, "text")]
-                if items:
-                    sections.append("[KEY FINDINGS FROM PRIOR SECTIONS]\n" + "\n".join(items))
+            ):
+                t = " ".join(getattr(f, "text", "").split())
+                bare = t.rstrip().rstrip("\"')]")
+                key = re.sub(r"[^a-z0-9 ]", "", t.lower()).strip()
+                if (
+                    len(t) < 60 or len(t) > 220
+                    or "\n" in t
+                    or not bare
+                    or bare[-1] not in ".!?"
+                    or key in _heading_keys
+                    or key in _seen_keys
+                ):
+                    continue
+                _seen_keys.add(key)
+                _items.append(f"- {t}")
+                if len(_items) >= 8:
+                    break
+            if _items:
+                sections.append(
+                    "[KEY FINDINGS FROM PRIOR SECTIONS]\n" + "\n".join(_items),
+                )
 
         # ── 5b. Truncation point: quote the exact dangling tail ──
         # Wall-hit windows can end mid-sentence. "Continue from exactly where
@@ -647,7 +695,23 @@ class ContinuationManager:
             if lines:
                 sections.append("[STRUCTURAL POSITION]\n" + "\n".join(lines))
 
-        return "\n\n".join(sections)
+        envelope = "\n\n".join(sections)
+        # Debug hook: dump every envelope to a file for root-cause analysis
+        # (set CRP_ENVELOPE_LOG to a path). Envelopes contain no secrets, but
+        # the log is strictly opt-in to avoid surprise I/O in production.
+        import os
+
+        _log_path = os.environ.get("CRP_ENVELOPE_LOG")
+        if _log_path:
+            try:
+                with open(_log_path, "a", encoding="utf-8") as fh:
+                    fh.write(
+                        f"\n{'=' * 70}\nWINDOW {self._state.window_count}\n"
+                        f"{'=' * 70}\n{envelope}\n"
+                    )
+            except OSError:
+                pass  # debug logging must never break the continuation loop
+        return envelope
 
     def _get_completed_section_numbers(self) -> list[int]:
         """Extract section numbers (e.g. "1.") from document map headings."""
@@ -877,30 +941,42 @@ class ContinuationManager:
                         break
 
         # A-PR-7: measure this window's novelty (novel-6-gram fraction vs all
-        # prior windows) and maintain the low-novelty stop streak.  Only
-        # windows where the trigger wants to continue on a natural stop
-        # (gap_override) count — wall-hit (finish=length) continuations are
-        # genuine truncation recovery, and a trigger-level stop ends the loop
-        # on its own.
-        if (
-            self._config.max_low_novelty_stops > 0
-            and self._state.trigger_result.should_continue
+        # prior windows) and maintain the low-novelty streak. Two counting
+        # paths:
+        #  - natural-stop windows (finish != length) on a continue decision
+        #    count at the configured stop_novelty_threshold (0.2) — the
+        #    original WASA stall case;
+        #  - ANY window — wall hits included — counts at an extreme
+        #    degeneration threshold (0.35 novel): a wall-hit window that is
+        #    65%+ recycled 6-grams is not recovering from truncation, it is
+        #    degenerating (observed live on an abstract topic: per-window rep
+        #    climbing 5% -> 11.6% -> 18.4% -> 23.8% across the last four
+        #    windows, ~1,200 words of output discarded by collapse).
+        _novelty = 1.0
+        if output.strip() and len(self._state.window_outputs) > 1:
+            _cur_grams = _window_6grams(output)
+            if _cur_grams:
+                _seen_grams: set = set()
+                for _prev in self._state.window_outputs[:-1]:
+                    _seen_grams |= _window_6grams(_prev["output"])
+                if _seen_grams:
+                    _novelty = len(_cur_grams - _seen_grams) / len(_cur_grams)
+        _is_natural_stop = (
+            self._state.trigger_result.should_continue
             and finish_reason is not None
             and finish_reason.lower() not in ("length", "max_tokens")
-        ):
-            _novelty = 1.0
-            if output.strip() and len(self._state.window_outputs) > 1:
-                _cur_grams = _window_6grams(output)
-                if _cur_grams:
-                    _seen_grams: set = set()
-                    for _prev in self._state.window_outputs[:-1]:
-                        _seen_grams |= _window_6grams(_prev["output"])
-                    if _seen_grams:
-                        _novelty = len(_cur_grams - _seen_grams) / len(_cur_grams)
-            if _novelty < self._config.stop_novelty_threshold:
-                self._stop_novelty_streak += 1
-            else:
-                self._stop_novelty_streak = 0
+        )
+        _counts_toward_streak = (
+            self._config.max_low_novelty_stops > 0
+            and (
+                (_is_natural_stop and _novelty < self._config.stop_novelty_threshold)
+                or _novelty < 0.35
+            )
+        )
+        if _counts_toward_streak:
+            self._stop_novelty_streak += 1
+        else:
+            self._stop_novelty_streak = 0
 
         # 3-way termination check
         # A-PR-7 decider guard: terminate when finish=stop continuations keep
@@ -1061,15 +1137,26 @@ class ContinuationManager:
             text: Window output text.
 
         Returns:
-            Last few sentences of the last paragraph.
+            Last few sentences of the last COMPLETE paragraph — or "" when
+            the output ends mid-sentence (wall hit). Anchoring on a fragment
+            teaches the model to write fragments (measured live: every
+            continuation envelope in a 7-window run quoted a broken,
+            mid-sentence anchor).
         """
         paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
         if not paragraphs:
             return text[-200:] if len(text) > 200 else text
 
-        # Take last N sentences from last paragraph
-        last = paragraphs[-1]
-        import re
+        # Walk backwards to the last paragraph that ends cleanly.
+        last = ""
+        for para in reversed(paragraphs):
+            stripped = para.rstrip().rstrip("\"')]")
+            if stripped and stripped[-1] in ".!?":
+                last = para
+                break
+        if not last:
+            return ""
+
         sentences = re.split(r"(?<=[.!?])\s+", last)
         n = self._config.style_anchor_sentences
         anchor = " ".join(sentences[-n:]) if len(sentences) >= n else last

@@ -2,6 +2,46 @@
 
 All notable changes to `crprotocol` are documented in this file.
 
+## [6.2.5] — 2026-10-16 — Envelope root-cause: the repetition was fed back to the model
+
+### Fixed (root-caused with per-window envelope capture, `CRP_ENVELOPE_LOG`)
+- **KEY FINDINGS was a recycling engine** — the extractor emits headings,
+  sentence fragments, and verbatim sentences as "facts", and the envelope
+  fed the top 15 back to every window uncurated: 274-349 words per envelope
+  (larger than the window's own ~500-word output budget; total envelopes
+  ran 735-827 words). A 7B model mirrors what it is shown — recap-shaped
+  input produced summary drift and verbatim phrase recycling. Findings are
+  now curated: full single-line sentences (60-220 chars, terminal
+  punctuation) that are NOT document headings, deduplicated, capped at 8
+  (measured after: 130-159 words, all content-bearing).
+- **Style anchor quoted a broken fragment in every window** — the last
+  paragraph of a wall-hit output ends mid-sentence, and that fragment was
+  quoted as the style model, teaching the model to write fragments. The
+  anchor now walks back to the last COMPLETE paragraph, or is omitted.
+- **Stale word-count requirements** — gap analysis never marks "Section N:
+  Minimum 400 words" requirements fulfilled, so every continuation window
+  re-listed them for completed sections. Now filtered against completed
+  section numbers.
+- **Degeneration burn** — the A-PR-7 low-novelty streak now also counts
+  wall-hit windows at an extreme threshold (novel-6-gram fraction < 0.35):
+  observed live on an abstract topic, per-window rep climbed 5% -> 11.6%
+  -> 18.4% -> 23.8% across the last four windows and ~1,200 words of output
+  were discarded by collapse. Degenerate runs now stop up to three windows
+  sooner instead of burning the budget.
+- Debug hook: `CRP_ENVELOPE_LOG=<path>` dumps every continuation envelope
+  for root-cause analysis (opt-in, envelope contents only).
+
+### Measured (user's Philosophy paste, qwen2.5-7b, grounding on)
+- Envelope findings 274-349w -> 130-159w; style anchors 4/4 broken -> 4/4
+  clean; document dup sentences 1.16% (gate bar <2%); doc rep 2.95%.
+- The remaining ~3% rep and word-target misses on this topic are the 7B's
+  parametric ceiling on abstract philosophy (per-window rep climbs from
+  window 5 regardless of prompting) — the UI note's 1,500-2,500-word band
+  and the built-in technical topic (0.2% rep) remain the recommended demo
+  configs. For 2,000-word targets on hard topics, tokens/window 900-1,000
+  (~650-700 words/window) lets each section complete in one window with
+  fewer handoffs.
+
 ## [6.2.4] — 2026-10-16 — Continuation pickup & guard calibration
 
 ### Fixed (calibrated on the 2026-10-16 user run: 1,657 words, dangling

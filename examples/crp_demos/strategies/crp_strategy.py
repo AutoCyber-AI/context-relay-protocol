@@ -18,6 +18,7 @@ prompt loop here: if the real engine fails, the strategy fails visibly and
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Callable, Generator
 from typing import Any
@@ -99,6 +100,79 @@ class _StreamingLlamaCpp(LlamaCppAdapter):  # type: ignore[misc]
                 if choices[0].get("finish_reason"):
                     finish = choices[0]["finish_reason"]
         return finish
+
+
+def _trim_dangling_sentence(text: str) -> tuple[str, bool]:
+    """Cut a segment that ends mid-sentence back to its last sentence end.
+
+    Wall-hit windows can stop anywhere — observed live: a window ended
+    "...exercise control over their actions in a way that is necessary" and
+    the fragment dangled in the deliverable forever. Returns (trimmed, True)
+    when a partial trailing sentence was removed; (text, False) otherwise.
+    The removed fragment is still relayed to the next window through the
+    continuation envelope's [TRUNCATION POINT] section, so the sentence can
+    be completed there.
+    """
+    t = text.rstrip()
+    if not t or t[-1] in ".!?\"')\"]":
+        return text, False
+    idx = max(t.rfind("."), t.rfind("!"), t.rfind("?"))
+    if idx <= 0:
+        return text, False  # single unterminated sentence — nothing to cut
+    return t[: idx + 1] + "\n", True
+
+
+_SENTENCE_SPLIT_KEEP = re.compile(r"((?<=[.!?])\s+)")
+
+
+def _dedup_repeat_sentences(text: str) -> tuple[str, int]:
+    """Drop exact duplicate sentences beyond their first occurrence.
+
+    Small models reuse whole sentences across sections ("However, this view
+    faces significant challenges in explaining how such..."). The acceptance
+    gate penalises duplicate sentences; the document should meet the gate's
+    own bar. Only exact duplicates of substantial sentences (>40 chars) are
+    dropped — shared terminology and stock phrases inside otherwise
+    different sentences are untouched. Separators (including newlines) are
+    captured so the markdown structure survives intact.
+    """
+    parts = _SENTENCE_SPLIT_KEEP.split(text)
+    seen: set[str] = set()
+    out: list[str] = []
+    dropped = 0
+    for i in range(0, len(parts), 2):
+        sent = parts[i]
+        sep = parts[i + 1] if i + 1 < len(parts) else ""
+        key = " ".join(sent.split()).lower()
+        if len(key) > 40:
+            if key in seen:
+                dropped += 1
+                continue  # drop the sentence AND its separator
+            seen.add(key)
+        out.append(sent)
+        out.append(sep)
+    if dropped:
+        return "".join(out), dropped
+    return text, 0
+
+
+def _strip_trailing_bare_headings(text: str) -> tuple[str, int]:
+    """Remove trailing heading lines that have no body under them.
+
+    Observed live: the token budget cut a window right after
+    '### Conclusion (Summarizing the Guide) (at least 400 words)' — a bare
+    heading advertising content that does not exist. A heading with nothing
+    after it carries no content and reads as a bug in the deliverable.
+    """
+    t = text.rstrip()
+    lines = t.split("\n")
+    stripped = 0
+    while lines and lines[-1].lstrip().startswith("#"):
+        lines.pop()
+        stripped += 1
+    if stripped:
+        return "\n".join(lines).rstrip() + "\n", stripped
+    return text, 0
 
 
 class CRPStrategy(BaseStrategy):
@@ -232,11 +306,24 @@ class CRPStrategy(BaseStrategy):
                 # section dedup kills same-titled subsections under
                 # different parents and echo detection can swallow a whole
                 # rewritten section, ~1150 words lost on one live run.)
+                # Mid-sentence fragments: a wall-hit window can stop anywhere
+                # ("...in a way that is necessary"). Cut the dangling partial
+                # sentence back to the last complete one — the fragment is
+                # still relayed to the next window via the continuation
+                # envelope's [TRUNCATION POINT] section, which quotes it
+                # verbatim and asks the model to complete it there.
+                seg_text, _trimmed = _trim_dangling_sentence(seg_text)
                 sep = ""
                 if stitched_doc:
                     sep = "\n" if stitched_doc.endswith("\n") else "\n\n"
                 combined = stitched_doc + sep + seg_text
                 combined, _dropped = collapse_duplicate_blocks(combined, "")
+                # Document-level polish: exact duplicate sentences beyond the
+                # first occurrence (the gate penalises these — the document
+                # should meet the gate's own bar), and bare heading lines at
+                # the very end advertising content the token budget cut off.
+                combined, _sd = _dedup_repeat_sentences(combined)
+                combined, _sh = _strip_trailing_bare_headings(combined)
                 stitched_doc = combined
                 if on_document:
                     on_document(stitched_doc)

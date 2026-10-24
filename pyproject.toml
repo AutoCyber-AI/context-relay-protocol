@@ -38,7 +38,7 @@ full = [
     "spacy>=3.5,<4",
     "gliner>=0.2,<2",
     "blake3>=0.3,<2",
-    "cryptography>=41.0,<44",
+    "cryptography>=41.0,<51",
     "httpx>=0.24,<1",
     "openai>=1.0,<3",
     "anthropic>=0.7,<2",
@@ -57,7 +57,7 @@ nlp = [
 ]
 security = [
     "blake3>=0.3,<2",
-    "cryptography>=41.0,<44",
+    "cryptography>=41.0,<51",
 ]
 cli = [
     "click>=8.0,<9",

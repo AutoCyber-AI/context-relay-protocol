@@ -31,7 +31,7 @@ dependencies = []
 
 [project.optional-dependencies]
 full = [
-    "sentence-transformers>=2.2,<4",
+    "sentence-transformers>=2.2,<7",
     "transformers>=4.40,<5",
     "faiss-cpu>=1.7,<2",
     "hnswlib>=0.7,<1",
@@ -48,7 +48,7 @@ full = [
     "click>=8.0,<9",
 ]
 nlp = [
-    "sentence-transformers>=2.2,<4",
+    "sentence-transformers>=2.2,<7",
     "transformers>=4.40,<5",
     "faiss-cpu>=1.7,<2",
     "hnswlib>=0.7,<1",

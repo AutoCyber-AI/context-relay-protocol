@@ -5,8 +5,8 @@
 ---
 
 <div class="hero-banner hero-comply" markdown>
-<h2>EU AI Act enforcement begins August 2, 2026</h2>
-<p>Fines up to <strong>€35 million</strong> or <strong>7% of global turnover</strong>. CRP Comply generates the compliance evidence regulators require - from your actual AI system behaviour, not consultant PDFs.</p>
+<h2>EU AI Act transparency duties are live. High-risk duties apply from 2 December 2027.</h2>
+<p>Fines run up to <strong>€35 million</strong> or <strong>7% of global turnover</strong>. CRP Comply generates compliance evidence from your actual AI system behaviour, not consultant PDFs - designed to support your audit and regulatory review process.</p>
 <a href="#quick-start" class="md-button">Get Started →</a>
 </div>
 
@@ -53,7 +53,7 @@
 |---|---|
 | **Product** | CRP Comply |
 | **Type** | Compliance Gateway + Dashboard + Report Generator (managed-cloud waitlist; self-host and white-label available) |
-| **Powered By** | Context Relay Protocol™ v5.1.0 - 50 specs, DPE, STL, TCF |
+| **Powered By** | Context Relay Protocol™ v6.1.1 - 9 specification documents, DPE, STL, TCF |
 | **What We Host** | Gateway proxy, web dashboard, audit trail storage, report generation API |
 | **What You Provide** | Your LLM API key (OpenAI, Anthropic, or any OpenAI-compatible endpoint) |
 | **Integration** | Change **one line** - point `base_url` to CRP Comply |
@@ -187,15 +187,15 @@ Your Application Code
 
     ---
 
-    All compliance artifacts in a single export. Hand this to a regulator or auditor - risk assessment, compliance report, DPIA, technical docs, transparency declaration, and session audit.
+    All compliance artifacts in a single export - risk assessment, compliance report, DPIA, technical docs, transparency declaration, and session audit - ready for a regulator or auditor to review.
 
     [:octicons-arrow-right-24: Generate pack](#evidence-pack)
 
--   **Signed Certificate** *(Cloud)*
+-   **Signed Evidence Certificate** *(Cloud)*
 
     ---
 
-    Digitally signed compliance certificate from AutoCyber AI. Verifiable online at `crprotocol.io/verify/`. Covers EU AI Act, ISO 42001, and GDPR Art. 35.
+    A digitally signed attestation from AutoCyber AI that your evidence pack is intact and verifiable online at `crprotocol.io/verify/`. Covers EU AI Act, ISO 42001, and GDPR Art. 35 evidence bundles. It attests to evidence integrity - it is not a regulatory certification or notified-body approval.
 
     [:octicons-arrow-right-24: Learn about Cloud](#cloud-tier)
 
@@ -220,7 +220,7 @@ A full-featured web dashboard with pages for:
 - **Transparency** - auto-generated Art. 13 declarations
 - **Technical Docs** - one-click Art. 11 documentation
 - **Session Audit** - upload and analyse CRP session files
-- **Evidence Pack** - generate regulator-ready bundles
+- **Evidence Pack** - generate evidence bundles for auditor and regulator review
 - **Settings** - API key management, tier configuration
 
 ### REST API
@@ -239,7 +239,7 @@ A full-featured web dashboard with pages for:
 | POST | `/audit` | Session file compliance audit |
 | POST | `/evidence-pack` | Complete conformity evidence |
 | POST | `/full-report` | Full Markdown compliance report |
-| POST | `/certificate` | Digitally signed certificate *(Cloud)* |
+| POST | `/certificate` | Digitally signed evidence certificate *(Cloud)* |
 | POST | `/keys` | Create API key |
 | GET | `/keys` | List API keys |
 | DELETE | `/keys/{id}` | Revoke API key |
@@ -315,7 +315,7 @@ A full-featured web dashboard with pages for:
     Everything in Scale, plus:
 
     - Unlimited proxy requests
-    - **Digitally signed certificates**
+    - **Digitally signed evidence certificates**
     - Dedicated cloud or on-prem deployment
     - Private LLM routing (air-gapped capable)
     - GDPR Art. 17 erasure request tracking + audit chain
@@ -339,12 +339,12 @@ The **Cloud** tier is the officially hosted, AutoCyber AI-managed deployment. It
 
 | Capability | Detail |
 |-----------|--------|
-| **Signed Certificates** | HMAC-SHA256 digitally signed compliance certificates verifiable at `crprotocol.io/verify/{id}` |
+| **Signed Evidence Certificates** | HMAC-SHA256 digitally signed attestations of evidence integrity, verifiable at `crprotocol.io/verify/{id}`. Issued by AutoCyber AI - not a regulatory certification or notified-body approval |
 | **Always Current** | Regulatory changes (delegated acts, technical standards) reflected automatically |
 | **Audit-Ready Infra** | SOC 2 / ISO 27001 aligned infrastructure - your auditor doesn't need to assess your servers |
 | **Data Residency** | Choose hosting region: Australia, EU, or US |
 | **SLA-Backed** | 99.9% uptime guarantee with credit-backed remedies |
-| **CRP Certified Badge** | Display trusted certification on your products and marketing |
+| **CRP Signed Badge** | Show that your evidence packs are signed and independently verifiable |
 | **Priority Support** | Direct access to the CRP compliance engineering team |
 
 ---
@@ -462,7 +462,7 @@ crp-comply technical-docs --category healthcare
 # Audit a persisted CRP session file
 crp-comply audit /path/to/session.json --format markdown
 
-# Generate complete conformity evidence pack for regulators
+# Generate complete conformity evidence pack
 crp-comply evidence-pack --system-name "My AI System" --output evidence.json
 ```
 
@@ -484,7 +484,7 @@ crp-comply evidence-pack --system-name "My AI System" --output evidence.json
 ## Who Is This For?
 
 | Role | Problem | Solution |
-|------|---------|---------|
+|------|---------|----------|
 | **AI Engineer** | Building LLM apps, no time for compliance | Drop-in compliance - every CRP session is already audit-ready |
 | **Compliance Officer** | EU AI Act deadline approaching, need evidence | One-click evidence packs, live compliance scoring |
 | **CTO** | Board wants AI governance, you want to ship | Compliance-as-code - zero manual processes |

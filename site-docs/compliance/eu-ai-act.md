@@ -13,7 +13,7 @@
 ## Business value
 
 - **Reduce audit preparation** - export technical evidence directly from `client.audit.export()`.
-- **Avoid penalties** - non-compliance can cost up to **€35 million or 7%** of global turnover.
+- **Understand penalty exposure** - prohibited-practice violations can cost up to **€35 million or 7%** of global turnover; most high-risk violations up to **€15 million or 3%**.
 - **Defensible risk classification** - reproducible classification with rationale and mapped controls.
 - **Single integration** - compliance is a by-product of normal `client.complete()` / `client.ask()` usage.
 
@@ -25,7 +25,7 @@ CRP includes a built-in risk classifier aligned with the EU AI Act's risk catego
 |------------------|----------------------------------|--------------------------------------|
 | **Unacceptable** | Art. 5 - Prohibited practices    | Blocks deployment                    |
 | **High**         | Art. 6 - Annex III systems       | Full compliance suite                |
-| **Limited**      | Art. 52 - Transparency obligations | Transparency declarations           |
+| **Limited**      | Art. 50 - Transparency obligations | Transparency declarations           |
 | **Minimal**      | Remaining systems                | Standard operation                   |
 
 ```python
@@ -59,7 +59,7 @@ print(f"Mitigations: {assessment.mitigations}")
 | Identify and analyze known/foreseeable risks | `client.compliance.classify(...)` with risk dimensions                |
 | Estimate and evaluate risks          | Quality tier system (S/A/B/C/D) with degradation formulas                     |
 | Adopt risk management measures       | Automatic mitigations per risk level; configured via `client.configure()`     |
-| Testing procedures                   | 1,500+ automated tests, live verification suite                               |
+| Testing procedures                   | 3,500+ automated tests (non-live suite), live verification                    |
 
 ### Article 10 - Data and Data Governance
 
@@ -74,7 +74,7 @@ print(f"Mitigations: {assessment.mitigations}")
 
 | Requirement                          | CRP Implementation                          |
 |--------------------------------------|---------------------------------------------|
-| Detailed description of AI system    | 9 specification documents + v4 specifications |
+| Detailed description of AI system    | 9 specification documents (~19,200 lines) covering the CRPv6 protocol |
 | Elements of the AI system            | Full protocol specification                 |
 | Monitoring and functioning           | Quality reports, telemetry, session status  |
 
@@ -161,15 +161,30 @@ CRP implements **33/35** controls. The 2 gaps are:
 
 ## EU AI Act Timeline
 
+The high-risk application dates were amended by **Regulation (EU) 2026/1744** (the
+Digital Omnibus on AI), published in the Official Journal on 24 July 2026 and in force
+from 27 July 2026:
+
 ```
 2024 Aug ─── EU AI Act enters into force
-2025 Feb ─── Prohibited practices (Art. 5) apply
-2025 Aug ─── GPAI rules (Art. 51-54) apply
-2026 Aug ─── HIGH-RISK REQUIREMENTS APPLY ← YOU ARE HERE
-2027 Aug ─── Full enforcement
+2025 Feb ─── Prohibited practices (Art. 5) + AI literacy (Art. 4) apply
+2025 Aug ─── GPAI model obligations (Art. 51-56) apply
+2026 Aug ─── Article 50 transparency obligations apply (IN FORCE)
+2026 Dec ─── Art. 50(2) watermarking grace ends for pre-existing systems;
+             new Art. 5 bans (non-consensual intimate imagery, CSAM) apply
+2027 Dec ─── ANNEX III HIGH-RISK REQUIREMENTS APPLY (stand-alone systems)
+2028 Aug ─── Annex I high-risk requirements apply (AI embedded in regulated products)
 ```
 
-!!! warning "Deadline"
-    High-risk AI system requirements under Articles 6–17 apply from
-    **August 2, 2026**. Penalties: up to **€35 million or 7%** of global
-    annual turnover, whichever is higher.
+!!! warning "Deadlines"
+    - **Article 50 transparency obligations** (AI interaction disclosure, synthetic-content
+      labelling) have applied since **2 August 2026** - they were *not* deferred.
+    - **Annex III high-risk requirements** (Articles 6-17) apply from
+      **2 December 2027**.
+    - **Annex I product-embedded high-risk requirements** apply from **2 August 2028**.
+    - Penalties: up to **€35 million or 7%** of global annual turnover for
+      prohibited-practice violations; up to **€15 million or 3%** for most other
+      violations, whichever is higher.
+
+    The deferral is additional runway, not a reprieve: conformity assessment, technical
+    documentation, and registration take quarters, not weeks.

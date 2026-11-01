@@ -25,6 +25,13 @@
   <img src="https://img.shields.io/badge/tests-3%2C582-brightgreen.svg" alt="3,582 non-live tests">
 </p>
 
+> [!IMPORTANT]
+> **Usage & Licence — Read First.** CRP is free to **use and implement inside your own products**, including commercial products. It is **not** free to resell, rebrand, or fork into a competing protocol:
+> - ✅ **Allowed:** implement the protocol, embed the SDK (`pip install crprotocol`) in your own products (commercial included), and build on top of it. Specification: [CC BY-SA 4.0](LICENSE.md). SDK code: [Elastic License 2.0](LICENSE.md).
+> - ❌ **Not allowed:** selling CRP itself, offering CRP as a paid hosted/managed service, or forking/rebranding this project as your own protocol or product. Forks are welcome only to contribute back via pull requests (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+> - ™️ **"Context Relay Protocol", "CRP", and the CRP logos are trademarks** of Constantinos Vidiniotis (application pending, IP Australia, Class 9). Forks and independent implementations may not use the CRP name or marks without written permission.
+> - 📧 Commercial licensing, managed-service rights & OEM: [contact@crprotocol.io](mailto:contact@crprotocol.io).
+
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="CHEATSHEET.md">Cheatsheet</a> •
@@ -1502,7 +1509,7 @@ See [LICENSE.md](LICENSE.md) for the full license text.
 ---
 
 <p align="center">
-  <strong>Context Relay Protocol v6.0.0-alpha</strong><br>
+  <strong>Context Relay Protocol v6.1.1</strong><br>
   Zero configuration. Unbounded input. Unbounded output. Amplified reasoning.<br>
   Better context at every scale. Honest degradation. Quality-tiered.<br>
   Peak quality. Every window.
